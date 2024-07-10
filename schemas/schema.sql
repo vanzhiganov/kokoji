@@ -626,6 +626,12 @@ CREATE TABLE standard_buildroot (
 	state INTEGER
 ) WITHOUT OIDS;
 
+CREATE INDEX standard_buildroot_host_id on standard_buildroot(host_id);
+CREATE INDEX standard_buildroot_repo_id on standard_buildroot(repo_id);
+CREATE INDEX standard_buildroot_task_id on standard_buildroot(task_id);
+CREATE INDEX standard_buildroot_create_event on standard_buildroot(create_event);
+CREATE INDEX standard_buildroot_retire_event on standard_buildroot(retire_event);
+
 CREATE TABLE buildroot_tools_info (
 	buildroot_id INTEGER NOT NULL REFERENCES buildroot(id),
 	tool TEXT NOT NULL,
