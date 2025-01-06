@@ -125,6 +125,15 @@ via 'koji edit-tag -x distrepo.cancel_others=True'
             quiet=self.options.quiet,
             poll_interval=self.options.poll_interval, topurl=self.options.topurl)
 
+    def test_handle_dist_repo_with_latest_n(self):
+        arguments = [self.tag_name, self.fake_key, '--latest-n=2']
+        self.__run_test_handle_dist_repo(arguments, return_value=True)
+        self.watch_tasks.assert_called_with(
+            self.session,
+            [self.task_id],
+            quiet=self.options.quiet,
+            poll_interval=self.options.poll_interval, topurl=self.options.topurl)
+
     def test_handle_dist_repo_nowait(self):
         arguments = [self.tag_name, self.fake_key, '--nowait']
         self.__run_test_handle_dist_repo(arguments, return_value=None)
@@ -151,6 +160,14 @@ via 'koji edit-tag -x distrepo.cancel_others=True'
                 ],
                 'err_str': 'allow_missing_signatures and skip_missing_signatures are mutually '
                            'exclusive'
+            },
+            {
+                'arg': [
+                    self.tag_name, self.fake_key,
+                    '--non-latest',
+                    '--latest-n=2'
+                ],
+                'err_str': 'Only --non-latest or --latest-n=N may be specified. Not both.'
             }
         ]
 
@@ -195,6 +212,24 @@ via 'koji edit-tag -x distrepo.cancel_others=True'
         self.session.getTag.side_effect = [tag_2, tag_1]
         self.session.getFullInheritance.return_value = self.INHERITANCE
         expected = self.format_error_message('No arches given and no arches associated with tag')
+        self.assert_system_exit(
+            handle_dist_repo,
+            self.options,
+            self.session,
+            [tag_2['name'], self.fake_key],
+            stderr=expected)
+        expected_calls = [mock.call(tag_2['name']), mock.call(tag_1['id'])]
+        self.session.getTag.assert_has_calls(expected_calls)
+        self.session.getFullInheritance.assert_called_with(tag_2['name'])
+
+        # Case 5. Arches list has no arches
+        tag_1 = copy.copy(self.TAG)
+        tag_1.update({'arches': 'noarch'})
+        tag_2 = copy.copy(self.TAG)
+        tag_2.update({'arches': 'noarch'})
+        self.session.getTag.side_effect = [tag_2, tag_1]
+        self.session.getFullInheritance.return_value = self.INHERITANCE
+        expected = self.format_error_message('No arches left.')
         self.assert_system_exit(
             handle_dist_repo,
             self.options,
@@ -343,6 +378,7 @@ Options:
   --event=EVENT         Use tag content at event
   --volume=VOLUME       Generate repo on given volume
   --non-latest          Include older builds, not just the latest
+  --latest-n=N          Only include the latest N builds
   --multilib=CONFIG     Include multilib packages in the repository using the
                         given config file
   --noinherit           Do not consider tag inheritance
