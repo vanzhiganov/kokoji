@@ -237,6 +237,13 @@ Available tests
 ``none``
     * an alias of false
 
+``bool``
+    * return boolean value of argument. E.g. ``bool scratch`` will return true
+      for scratch builds
+
+``has``
+    * test if policy contains argument field
+
 ``operation``
     * for tag operations, the operation is one of: tag, untag, move. This test
       checks its arguments against the name of the operation and returns true if
@@ -349,5 +356,20 @@ Available tests
     * the user matched is the user performing the action
 
 ``match``
-    * matches a field in the data against glob patterns 
+    * matches a field in the data against glob patterns
     * true if any pattern matches
+
+``match_any``
+    * Matches any item of a list/tuple/set value in the data against glob patterns
+    * True if any of the expressions matches any item in the list/tuple/set, else False.
+      If the field doesn't exist or isn't a list/tuple/set, the test returns False
+
+``match_all``
+    * Matches all items of a list/tuple/set value in the data against glob patterns
+    * True if any of the expressions matches all items in the list/tuple/set, else False.
+      If the field doesn't exist or isn't a list/tuple/set, the test returns False
+
+``compare``
+    * Simple numeric field comparison
+    * Supports basic numeric comparisons. The right operand must be a valid
+      number (<,>,<=,>=,=,!=)
