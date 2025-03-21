@@ -145,6 +145,11 @@ def main(options, session):
             logger.info('Loading plugin: %s' % name)
             tm.scanPlugin(pt.load(name))
 
+    if options.single:
+        # force all task handlers to run in Foreground
+        for key in tm.handlers:
+            tm.handlers[key].Foreground = True
+
     def shutdown(*args):
         raise SystemExit
 
@@ -189,6 +194,9 @@ def main(options, session):
                 # from getting overloaded.
                 logger.debug('Sleeping for %s', options.sleeptime)
                 time.sleep(options.sleeptime)
+            elif options.single:
+                # exit after first task
+                break
         except (SystemExit, KeyboardInterrupt):
             logger.warning("Exiting")
             break
@@ -6752,6 +6760,8 @@ def get_options():
     parser.add_option("-f", "--fg", dest="daemon",
                       action="store_false", default=True,
                       help="run in foreground")
+    parser.add_option("--single", action="store_true",
+                      help="run a single task in foreground, for debugging")
     parser.add_option("--force-lock", action="store_true", default=False,
                       help="force lock for exclusive session")
     parser.add_option("-v", "--verbose", action="store_true", default=False,
@@ -6788,6 +6798,10 @@ def get_options():
         parser.error("incorrect number of arguments")
         # not reached
         assert False  # pragma: no cover
+
+    # --single implies --fg
+    if options.single:
+        options.daemon = False
 
     # load local config
     config = koji.read_config_files(options.configFile, raw=True)
