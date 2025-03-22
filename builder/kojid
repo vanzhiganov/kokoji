@@ -145,11 +145,6 @@ def main(options, session):
             logger.info('Loading plugin: %s' % name)
             tm.scanPlugin(pt.load(name))
 
-    if options.single:
-        # force all task handlers to run in Foreground
-        for key in tm.handlers:
-            tm.handlers[key].Foreground = True
-
     def shutdown(*args):
         raise SystemExit
 
