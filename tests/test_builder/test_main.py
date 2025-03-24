@@ -21,6 +21,7 @@ class TestMain(unittest.TestCase):
         # set up task handler
         self.session = mock.MagicMock()
         self.options = mock.MagicMock()
+        self.options.single = False
         self.options.plugin = []
         self.options.sleeptime = 1
         self.options.pluginpath = ''

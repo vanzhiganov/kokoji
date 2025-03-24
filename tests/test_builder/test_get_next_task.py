@@ -13,6 +13,7 @@ class TestGetNextTask(unittest.TestCase):
 
     def setUp(self):
         self.options = mock.MagicMock()
+        self.options.single = False
         self.session = mock.MagicMock()
         self.tm = koji.daemon.TaskManager(self.options, self.session)
         self.tm.readyForTask = mock.MagicMock()
@@ -65,6 +66,7 @@ class TestTakeTask(unittest.TestCase):
 
     def setUp(self):
         self.options = mock.MagicMock()
+        self.options.single = False
         self.session = mock.MagicMock()
         self.tm = koji.daemon.TaskManager(self.options, self.session)
         self.tm.readyForTask = mock.MagicMock()
