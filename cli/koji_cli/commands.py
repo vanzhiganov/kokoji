@@ -1564,7 +1564,8 @@ def handle_import_cg(goptions, session, args):
             if callback:
                 print('')
 
-    session.CGImport(metadata, serverdir, options.token)
+    buildinfo = session.CGImport(metadata, serverdir, options.token)
+    print('Imported build %(name)s-%(version)s-%(release)s with id %(build_id)s' % buildinfo)
 
 
 def handle_reserve_cg(goptions, session, args):
