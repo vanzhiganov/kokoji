@@ -134,7 +134,7 @@ def handle_unblock_group(goptions, session, args):
     usage = "usage: %prog unblock-group [options] <tag> <group>"
     parser = OptionParser(usage=get_usage_str(usage))
     (options, args) = parser.parse_args(args)
-    if len(args) < 2:
+    if len(args) != 2:
         parser.error("You must specify a tag name and group name")
     tag = args[0]
     group = args[1]
