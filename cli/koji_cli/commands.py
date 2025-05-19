@@ -111,16 +111,35 @@ def handle_block_group(goptions, session, args):
     if not (session.hasPerm('admin') or session.hasPerm('tag')):
         parser.error("This action requires tag or admin privileges")
 
-    dsttag = session.getTag(tag)
-    if not dsttag:
+    taginfo = session.getTag(tag)
+    if not taginfo:
         error("No such tag: %s" % tag)
 
-    groups = dict([(p['name'], p['group_id']) for p in session.getTagGroups(tag, inherit=False)])
-    group_id = groups.get(group, None)
-    if group_id is None:
+    # sanity check
+    groups = session.getTagGroups(taginfo['id'], incl_pkgs=False, incl_reqs=False, incl_blocked=True)
+    for ginfo in groups:
+        if ginfo['name'] == group:
+            break
+    else:
         error("Group %s doesn't exist within tag %s" % (group, tag))
+    if ginfo['blocked']:
+        error("Group %s is already blocked in this tag" % group)
+    # (we don't care if the entry is inherited for this)
 
     session.groupListBlock(tag, group)
+
+
+def handle_unblock_group(goptions, session, args):
+    "[admin] Unblock a group from tag"
+    usage = "usage: %prog unblock-group [options] <tag> <group>"
+    parser = OptionParser(usage=get_usage_str(usage))
+    (options, args) = parser.parse_args(args)
+    if len(args) < 2:
+        parser.error("You must specify a tag name and group name")
+    tag = args[0]
+    group = args[1]
+    activate_session(session, goptions)
+    session.groupListUnblock(tag, group)
 
 
 def handle_remove_group(goptions, session, args):
