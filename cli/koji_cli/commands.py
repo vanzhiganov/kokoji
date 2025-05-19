@@ -137,14 +137,23 @@ def handle_remove_group(goptions, session, args):
     if not (session.hasPerm('admin') or session.hasPerm('tag')):
         parser.error("This action requires tag or admin privileges")
 
-    dsttag = session.getTag(tag)
-    if not dsttag:
+    taginfo = session.getTag(tag)
+    if not taginfo:
         error("No such tag: %s" % tag)
 
-    groups = dict([(p['name'], p['group_id']) for p in session.getTagGroups(tag, inherit=False)])
-    group_id = groups.get(group, None)
-    if group_id is None:
+    # sanity checks
+    groups = session.getTagGroups(taginfo['id'], incl_pkgs=False, incl_reqs=False, incl_blocked=True)
+    for ginfo in groups:
+        if ginfo['name'] == group:
+            break
+    else:
         error("Group %s doesn't exist within tag %s" % (group, tag))
+    if ginfo['blocked']:
+        error("Group %s is blocked in this tag. You could use unblock-group to unblock it" % group)
+    if ginfo['tag_id'] != taginfo['id']:
+        # listing is inherited
+        srctag = session.getTag(ginfo['tag_id'])
+        error("The entry for group %s is inherited from %s. You could use block-group to prevent this" % (group, srctag['name']))
 
     session.groupListRemove(tag, group)
 
