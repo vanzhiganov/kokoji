@@ -3218,6 +3218,52 @@ def handle_unblock_group_req(goptions, session, args):
     activate_session(session, goptions)
     session.groupReqListUnblock(tag, group, req)
 
+def handle_remove_group_req(goptions, session, args):
+    "[admin] Remove entries from a group's requirement listing"
+    usage = "usage: %prog remove-group-req [options] <tag> <group> <req> [<req> ...]"
+    parser = OptionParser(usage=get_usage_str(usage))
+    (options, args) = parser.parse_args(args)
+    if len(args) < 3:
+        parser.error("You must specify a tag name, group name, and one or more requirement names")
+    tag = args[0]
+    group = args[1]
+    requires = args[2:]
+    activate_session(session, goptions)
+    taginfo = session.getTag(tag)
+    if taginfo is None:
+        error("No such tag: %s" % tag)
+
+    # sanity checks
+    groups = session.getTagGroups(taginfo['id'], incl_pkgs=False, incl_blocked=True)
+    for ginfo in groups:
+        if ginfo['name'] == group:
+            break
+    else:
+        error("Group %s is not present in tag %s" % (group, tag))
+    req_idx = {r['name']: r for r in ginfo['grouplist']}
+    sane = True
+    for req in requires:
+        if req not in req_idx:
+            print("Req %s is not included in this group" % req)
+            sane = False
+            continue
+        rinfo = req_idx[req]
+        if rinfo['blocked']:
+            print("Req %s is blocked in this group. You could use unblock-group-req to unblock it" % req)
+            sane = False
+            continue
+        if rinfo['tag_id'] != taginfo['id']:
+            # listing is inherited
+            srctag = session.getTag(rinfo['tag_id'])
+            print("The entry for req %s is inherited from %s. You could use block-group-req to prevent this" % (req, srctag['name']))
+            sane = False
+            continue
+    if not sane:
+        error('Invalid parameters')
+
+    with session.multicall() as m:
+        [m.groupReqListRemove(taginfo['id'], group, req) for req in requires]
+
 
 def anon_handle_list_channels(goptions, session, args):
     "[info] Print channels listing"
