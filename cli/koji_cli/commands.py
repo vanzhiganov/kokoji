@@ -3101,23 +3101,50 @@ def handle_add_group_pkg(goptions, session, args):
 
 
 def handle_remove_group_pkg(goptions, session, args):
-    "[admin] Remove a package from a group's package listing"
+    "[admin] Remove packages from a group's package listing"
     usage = "usage: %prog remove-group-pkg [options] <tag> <group> <pkg> [<pkg> ...]"
     parser = OptionParser(usage=get_usage_str(usage))
-    parser.add_option("--force", action='store_true', help="Override blocks if necessary")
     (options, args) = parser.parse_args(args)
     if len(args) < 3:
         parser.error("You must specify a tag name, group name, and one or more package names")
     tag = args[0]
     group = args[1]
-    opts = {}
-    opts['force'] = options.force
+    packages = args[2:]
     activate_session(session, goptions)
-    dsttag = session.getTag(tag)
-    if dsttag is None:
+    taginfo = session.getTag(tag)
+    if taginfo is None:
         error("No such tag: %s" % tag)
+
+    # sanity checks
+    groups = session.getTagGroups(taginfo['id'], incl_reqs=False, incl_blocked=True)
+    for ginfo in groups:
+        if ginfo['name'] == group:
+            break
+    else:
+        error("Group %s is not present in tag %s" % (group, tag))
+    pkg_idx = {p['package']: p for p in ginfo['packagelist']}
+    sane = True
+    for pkg in packages:
+        if pkg not in pkg_idx:
+            print("Package %s is not included in this group" % pkg)
+            sane = False
+            continue
+        pinfo = pkg_idx[pkg]
+        if pinfo['blocked']:
+            print("Package %s is blocked in this group. You could use unblock-group-pkg to unblock it" % pkg)
+            sane = False
+            continue
+        if pinfo['tag_id'] != taginfo['id']:
+            # listing is inherited
+            srctag = session.getTag(pinfo['tag_id'])
+            print("The entry for package %s is inherited from %s. You could use block-group-pkg to prevent this" % (pkg, srctag['name']))
+            sane = False
+            continue
+    if not sane:
+        error('Invalid parameters')
+
     with session.multicall() as m:
-        [m.groupPackageListRemove(tag, group, pkg, **opts) for pkg in args[2:]]
+        [m.groupPackageListRemove(taginfo['id'], group, pkg) for pkg in packages]
 
 
 def handle_block_group_pkg(goptions, session, args):
