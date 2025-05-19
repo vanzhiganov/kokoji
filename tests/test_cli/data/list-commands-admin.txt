@@ -49,7 +49,8 @@ admin commands:
         regen-repo                Generate a current repo if there is not one
         remove-external-repo      Remove an external repo from a tag or tags, or remove entirely
         remove-group              Remove group from tag
-        remove-group-pkg          Remove a package from a group's package listing
+        remove-group-pkg          Remove packages from a group's package listing
+        remove-group-req          Remove entries from a group's requirement listing
         remove-host-from-channel  Remove a host from a channel
         remove-pkg                Remove a package from the listing for tag
         remove-sig                Remove signed RPMs from db and disk
@@ -65,6 +66,7 @@ admin commands:
         set-pkg-owner             Set the owner for a package
         set-pkg-owner-global      Set the owner for a package globally
         set-task-priority         Set task priority
+        unblock-group             Unblock a group from tag
         unblock-group-pkg         Unblock a package from a group's package listing
         unblock-group-req         Unblock a group's requirement listing
         unblock-pkg               Unblock a package in the listing for tag

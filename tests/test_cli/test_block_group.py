@@ -56,10 +56,11 @@ class TestBlockGroup(utils.CliTestCase):
 
     def test_handle_block_group_nonexistent_group(self):
         tag = 'tag'
+        tagID = 100
         group = 'group'
         arguments = [tag, group]
         self.session.hasPerm.return_value = True
-        self.session.getTag.return_value = tag
+        self.session.getTag.return_value = {'name': tag, 'id': tagID}
         self.session.getTagGroups.return_value = []
 
         # Run it and check immediate output
@@ -75,18 +76,19 @@ class TestBlockGroup(utils.CliTestCase):
         self.activate_session_mock.assert_called_once_with(self.session, self.options)
         self.session.hasPerm.assert_called_once_with('admin')
         self.session.getTag.assert_called_once_with(tag)
-        self.session.getTagGroups.assert_called_once_with(tag, inherit=False)
+        self.session.getTagGroups.assert_called_once_with(tagID, incl_pkgs=False, incl_reqs=False, incl_blocked=True)
         self.session.groupListBlock.assert_not_called()
 
     @mock.patch('sys.stdout', new_callable=six.StringIO)
     def test_handle_block_group(self, stdout):
         tag = 'tag'
+        tagID = 100
         group = 'group'
         arguments = [tag, group]
         self.session.hasPerm.return_value = True
-        self.session.getTag.return_value = tag
+        self.session.getTag.return_value = {'name': tag, 'id': tagID}
         self.session.getTagGroups.return_value = [
-            {'name': 'group', 'group_id': 'groupId'}]
+                {'name': 'group', 'group_id': 'groupId', 'blocked': False}]
 
         # Run it and check immediate output
         rv = handle_block_group(self.options, self.session, arguments)
@@ -98,9 +100,33 @@ class TestBlockGroup(utils.CliTestCase):
         self.activate_session_mock.assert_called_once_with(self.session, self.options)
         self.session.hasPerm.assert_called_once_with('admin')
         self.session.getTag.assert_called_once_with(tag)
-        self.session.getTagGroups.assert_called_once_with(tag, inherit=False)
+        self.session.getTagGroups.assert_called_once_with(tagID, incl_pkgs=False, incl_reqs=False, incl_blocked=True)
         self.session.groupListBlock.assert_called_once_with(tag, group)
         self.assertEqual(rv, None)
+
+    def test_handle_group_already_blocked(self):
+        tag = 'tag'
+        tagID = 100
+        group = 'group'
+        arguments = [tag, group]
+        self.session.hasPerm.return_value = True
+        self.session.getTag.return_value = {'name': tag, 'id': tagID}
+        self.session.getTagGroups.return_value = [
+                {'name': 'group', 'group_id': 'groupId', 'blocked': True}]
+
+        # Run it and check immediate output
+        self.assert_system_exit(
+            handle_block_group,
+            self.options, self.session, arguments,
+            stderr='Group group is already blocked in this tag\n',
+            stdout='',
+            exit_code=1)
+
+        # Finally, assert that things were called as we expected.
+        self.session.hasPerm.assert_called_once_with('admin')
+        self.session.getTag.assert_called_once_with(tag)
+        self.session.getTagGroups.assert_called_once_with(tagID, incl_pkgs=False, incl_reqs=False, incl_blocked=True)
+        self.session.groupListBlock.assert_not_called()
 
     def test_handle_block_group_error_handling(self):
         expected = self.format_error_message(

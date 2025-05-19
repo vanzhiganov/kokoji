@@ -54,12 +54,13 @@ class TestRemoveGroup(utils.CliTestCase):
     @mock.patch('koji_cli.commands.activate_session')
     def test_handle_remove_group_nonexistent_group(self, activate_session_mock, stdout, stderr):
         tag = 'tag'
+        tagID = 100
         group = 'group'
         arguments = [tag, group]
 
         # Mock out the xmlrpc server
         self.session.hasPerm.return_value = True
-        self.session.getTag.return_value = tag
+        self.session.getTag.return_value = {'name': tag, 'id': tagID}
         self.session.getTagGroups.return_value = []
 
         with self.assertRaises(SystemExit):
@@ -69,7 +70,59 @@ class TestRemoveGroup(utils.CliTestCase):
         activate_session_mock.assert_called_once_with(self.session, self.options)
         self.session.hasPerm.assert_called_once_with('admin')
         self.session.getTag.assert_called_once_with(tag)
-        self.session.getTagGroups.assert_called_once_with(tag, inherit=False)
+        self.session.getTagGroups.assert_called_once_with(tagID, incl_pkgs=False, incl_reqs=False, incl_blocked=True)
+        self.session.groupListRemove.assert_not_called()
+
+    @mock.patch('sys.stdout', new_callable=six.StringIO)
+    @mock.patch('sys.stderr', new_callable=six.StringIO)
+    @mock.patch('koji_cli.commands.activate_session')
+    def test_handle_remove_group_blocked_group(self, activate_session_mock, stdout, stderr):
+        tag = 'tag'
+        tagID = 100
+        group = 'group'
+        arguments = [tag, group]
+
+        # Mock out the xmlrpc server
+        self.session.hasPerm.return_value = True
+        self.session.getTag.return_value = {'name': tag, 'id': tagID}
+        self.session.getTagGroups.return_value = [{'name': 'group', 'tag_id': tagID,
+                                                   'blocked': True}]
+
+        with self.assertRaises(SystemExit):
+            handle_remove_group(self.options, self.session, arguments)
+
+        # assert that things were called as we expected.
+        activate_session_mock.assert_called_once_with(self.session, self.options)
+        self.session.hasPerm.assert_called_once_with('admin')
+        self.session.getTag.assert_called_once_with(tag)
+        self.session.getTagGroups.assert_called_once_with(tagID, incl_pkgs=False, incl_reqs=False, incl_blocked=True)
+        self.session.groupListRemove.assert_not_called()
+
+    @mock.patch('sys.stdout', new_callable=six.StringIO)
+    @mock.patch('sys.stderr', new_callable=six.StringIO)
+    @mock.patch('koji_cli.commands.activate_session')
+    def test_handle_remove_group_inherited_group(self, activate_session_mock, stdout, stderr):
+        tag = 'tag'
+        tagID = 100
+        parentID = 99
+        group = 'group'
+        arguments = [tag, group]
+
+        # Mock out the xmlrpc server
+        self.session.hasPerm.return_value = True
+        self.session.getTag.return_value = {'name': tag, 'id': tagID}
+        self.session.getTagGroups.return_value = [{'name': 'group', 'tag_id': parentID,
+                                                   'blocked': False}]
+
+        with self.assertRaises(SystemExit):
+            handle_remove_group(self.options, self.session, arguments)
+
+        # assert that things were called as we expected.
+        activate_session_mock.assert_called_once_with(self.session, self.options)
+        self.session.hasPerm.assert_called_once_with('admin')
+        self.session.getTagGroups.assert_called_once_with(tagID, incl_pkgs=False, incl_reqs=False, incl_blocked=True)
+        expected_calls = [mock.call(tag), mock.call(parentID)]
+        self.assertEqual(self.session.getTag.call_args_list, expected_calls)
         self.session.groupListRemove.assert_not_called()
 
     @mock.patch('sys.stdout', new_callable=six.StringIO)
@@ -77,14 +130,16 @@ class TestRemoveGroup(utils.CliTestCase):
     @mock.patch('koji_cli.commands.activate_session')
     def test_handle_remove_group(self, activate_session_mock, stdout, stderr):
         tag = 'tag'
+        tagID = 100
         group = 'group'
         arguments = [tag, group]
 
         # Mock out the xmlrpc server
         self.session.hasPerm.return_value = True
-        self.session.getTag.return_value = tag
+        self.session.getTag.return_value = {'name': tag, 'id': tagID}
         self.session.getTagGroups.return_value = [
-            {'name': 'group', 'group_id': 'groupId'}]
+                {'name': 'group', 'group_id': 'groupId', 'blocked': False, 'tag_id': tagID}]
+        # so case where group is present and directly in the tag
 
         rv = handle_remove_group(self.options, self.session, arguments)
 
@@ -92,7 +147,7 @@ class TestRemoveGroup(utils.CliTestCase):
         activate_session_mock.assert_called_once_with(self.session, self.options)
         self.session.hasPerm.assert_called_once_with('admin')
         self.session.getTag.assert_called_once_with(tag)
-        self.session.getTagGroups.assert_called_once_with(tag, inherit=False)
+        self.session.getTagGroups.assert_called_once_with(tagID, incl_pkgs=False, incl_reqs=False, incl_blocked=True)
         self.session.groupListRemove.assert_called_once_with(tag, group)
         self.assertEqual(rv, None)
 
