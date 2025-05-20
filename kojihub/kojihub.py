@@ -660,6 +660,12 @@ def make_task(method, arglist, **opts):
     for key in 'arch', 'parent', 'label', 'owner':
         policy_data[key] = opts[key]
     policy_data['user_id'] = opts['owner']
+    default_channel = 'default'
+    if 'default_channel' in opts:
+        default_channel = opts['default_channel']
+        if 'channel' not in opts and context.opts.get('DefaultChannelCompat'):
+            # in the compat case, treat explicit default as an override
+            opts['channel'] = default_channel
     if 'channel' in opts:
         policy_data['req_channel'] = opts['channel']
         channel_info = get_channel(opts['channel'])
@@ -673,7 +679,6 @@ def make_task(method, arglist, **opts):
 
     ruleset = context.policy.get('channel')
     result = ruleset.apply(policy_data)
-    default_channel = opts.get('default_channel', 'default')
     if result is None:
         logger.debug('Channel policy returned no result, using default')
         opts['channel_id'] = get_channel_id(default_channel, strict=True)

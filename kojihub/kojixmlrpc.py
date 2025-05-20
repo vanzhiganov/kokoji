@@ -472,6 +472,8 @@ config_map = [
     ['EnableMaven', 'boolean', False],
     ['EnableWin', 'boolean', False],
 
+    ['DefaultChannelCompat', 'boolean', True],
+
     ['RLIMIT_AS', 'string', None],
     ['RLIMIT_CORE', 'string', None],
     ['RLIMIT_CPU', 'string', None],
