@@ -12,6 +12,7 @@ class TestGetNextBuild(unittest.TestCase):
         self.get_next_release = mock.patch('kojihub.kojihub.get_next_release').start()
         self.new_build = mock.patch('kojihub.kojihub.new_build').start()
         self._dml = mock.patch('kojihub.kojihub._dml').start()
+        self.Savepoint = mock.patch('kojihub.kojihub.Savepoint').start()
         self.binfo = {'name': 'name', 'version': 'version'}
 
     def tearDown(self):
