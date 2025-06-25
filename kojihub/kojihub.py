@@ -4859,9 +4859,11 @@ def get_next_build(build_info):
         return new_build(build_info)
     build_info['release'] = get_next_release(build_info)
     for try_no in range(2, 10):
+        savepoint = Savepoint('get_next_build_pre_insert')
         try:
             return new_build(build_info)
         except IntegrityError:
+            savepoint.rollback()
             build_info['release'] = get_next_release(build_info, try_no)
     # otherwise
     raise koji.GenericError("Can't find available release")
