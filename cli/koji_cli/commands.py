@@ -116,7 +116,8 @@ def handle_block_group(goptions, session, args):
         error("No such tag: %s" % tag)
 
     # sanity check
-    groups = session.getTagGroups(taginfo['id'], incl_pkgs=False, incl_reqs=False, incl_blocked=True)
+    groups = session.getTagGroups(taginfo['id'], incl_pkgs=False, incl_reqs=False,
+                                  incl_blocked=True)
     for ginfo in groups:
         if ginfo['name'] == group:
             break
@@ -161,7 +162,8 @@ def handle_remove_group(goptions, session, args):
         error("No such tag: %s" % tag)
 
     # sanity checks
-    groups = session.getTagGroups(taginfo['id'], incl_pkgs=False, incl_reqs=False, incl_blocked=True)
+    groups = session.getTagGroups(taginfo['id'], incl_pkgs=False, incl_reqs=False,
+                                  incl_blocked=True)
     for ginfo in groups:
         if ginfo['name'] == group:
             break
@@ -172,7 +174,8 @@ def handle_remove_group(goptions, session, args):
     if ginfo['tag_id'] != taginfo['id']:
         # listing is inherited
         srctag = session.getTag(ginfo['tag_id'])
-        error("The entry for group %s is inherited from %s. You could use block-group to prevent this" % (group, srctag['name']))
+        error("The entry for group %s is inherited from %s. "
+              "You could use block-group to prevent this" % (group, srctag['name']))
 
     session.groupListRemove(tag, group)
 
@@ -3159,13 +3162,15 @@ def handle_remove_group_pkg(goptions, session, args):
             continue
         pinfo = pkg_idx[pkg]
         if pinfo['blocked']:
-            print("Package %s is blocked in this group. You could use unblock-group-pkg to unblock it" % pkg)
+            print("Package %s is blocked in this group. "
+                  "You could use unblock-group-pkg to unblock it" % pkg)
             sane = False
             continue
         if pinfo['tag_id'] != taginfo['id']:
             # listing is inherited
             srctag = session.getTag(pinfo['tag_id'])
-            print("The entry for package %s is inherited from %s. You could use block-group-pkg to prevent this" % (pkg, srctag['name']))
+            print("The entry for package %s is inherited from %s. "
+                  "You could use block-group-pkg to prevent this" % (pkg, srctag['name']))
             sane = False
             continue
     if not sane:
@@ -3246,6 +3251,7 @@ def handle_unblock_group_req(goptions, session, args):
     activate_session(session, goptions)
     session.groupReqListUnblock(tag, group, req)
 
+
 def handle_remove_group_req(goptions, session, args):
     "[admin] Remove entries from a group's requirement listing"
     usage = "usage: %prog remove-group-req [options] <tag> <group> <req> [<req> ...]"
@@ -3277,13 +3283,15 @@ def handle_remove_group_req(goptions, session, args):
             continue
         rinfo = req_idx[req]
         if rinfo['blocked']:
-            print("Req %s is blocked in this group. You could use unblock-group-req to unblock it" % req)
+            print("Req %s is blocked in this group. "
+                  "You could use unblock-group-req to unblock it" % req)
             sane = False
             continue
         if rinfo['tag_id'] != taginfo['id']:
             # listing is inherited
             srctag = session.getTag(rinfo['tag_id'])
-            print("The entry for req %s is inherited from %s. You could use block-group-req to prevent this" % (req, srctag['name']))
+            print("The entry for req %s is inherited from %s. "
+                  "You could use block-group-req to prevent this" % (req, srctag['name']))
             sane = False
             continue
     if not sane:
