@@ -8282,7 +8282,7 @@ def add_rpm_sig(an_rpm, sighdr, sigkey=None):
         if not rawsig:
             rawsig = rawhdr.get(koji.RPM_SIGTAG_PGP)
         if not rawsig:
-            sigkey = rawhdr.get(koji.RPM_SIGTAG_DSA)
+            rawsig = rawhdr.get(koji.RPM_SIGTAG_DSA)
         if not rawsig:
             rawsig = rawhdr.get(koji.RPM_SIGTAG_RSA)
 
