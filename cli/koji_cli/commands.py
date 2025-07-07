@@ -7770,6 +7770,8 @@ def handle_dist_repo(options, session, args):
     parser.add_option("--volume", help="Generate repo on given volume")
     parser.add_option('--non-latest', dest='latest', default=True,
                       action='store_false', help='Include older builds, not just the latest')
+    parser.add_option("--latest-n", type='int', metavar="N",
+                      help="Only include the latest N builds")
     parser.add_option('--multilib', default=None, metavar="CONFIG",
                       help='Include multilib packages in the repository using the given '
                            'config file')
@@ -7800,6 +7802,8 @@ def handle_dist_repo(options, session, args):
         parser.error('Please specify one or more GPG key IDs (or --allow-missing-signatures)')
     if task_opts.allow_missing_signatures and task_opts.skip_missing_signatures:
         parser.error('allow_missing_signatures and skip_missing_signatures are mutually exclusive')
+    if not task_opts.latest and task_opts.latest_n:
+        parser.error("Only --non-latest or --latest-n=N may be specified. Not both.")
     activate_session(session, options)
     stuffdir = unique_path('cli-dist-repo')
     if task_opts.comps:
@@ -7874,7 +7878,6 @@ def handle_dist_repo(options, session, args):
         'event': task_opts.event,
         'volume': task_opts.volume,
         'inherit': not task_opts.noinherit,
-        'latest': task_opts.latest,
         'multilib': task_opts.multilib,
         'split_debuginfo': task_opts.split_debuginfo,
         'skip_missing_signatures': task_opts.skip_missing_signatures,
@@ -7883,6 +7886,10 @@ def handle_dist_repo(options, session, args):
         'zck_dict_dir': task_opts.zck_dict_dir,
         'write_signed_rpms': task_opts.write_signed_rpms,
     }
+    if task_opts.latest_n:
+        opts['latest'] = task_opts.latest_n
+    else:
+        opts['latest'] = task_opts.latest
     if task_opts.skip_stat is not None:
         opts['createrepo_skip_stat'] = task_opts.skip_stat
     task_id = session.distRepo(tag, keys, **opts)
