@@ -565,15 +565,34 @@ def ensuredir(directory):
             raise OSError("root directory missing? %s" % directory)
         if head:
             ensuredir(head)
-        # note: if head is blank, then we've reached the top of a relative path
+            parent = head
+        else:
+            # if head is blank, then we've reached the top of a relative path
+            parent = '.'
         try:
             os.mkdir(directory)
-        except OSError:
-            # do not thrown when dir already exists (could happen in a race)
+        except OSError as e:
+            if e.errno != errno.EEXIST:
+                raise
+            # Work around an nfs glitch. Reading the parent dir gets the os to
+            # notice the new dir in a race
+            # See https://pagure.io/koji/issue/4417
+            _listdir(parent)
+
             if not os.path.isdir(directory):
                 # something else must have gone wrong
                 raise
+
     return directory
+
+
+def _listdir(path):
+    # os.listdir, but returns None if dir does not exist
+    try:
+        return os.listdir(path)
+    except FileNotFoundError:
+        return None
+
 
 # END kojikamid dup #
 
