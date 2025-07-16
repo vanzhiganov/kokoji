@@ -114,27 +114,6 @@ You can try calling the new XMLRPC API with the Python client library:
     >>> session = koji.ClientSession("http://koji/example.org/kojihub")
     >>> session.mymethod(arg1, arg2, kwarg1='some value')
 
-Ensuring the user has the required permissions
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-If you want your new XMLRPC API to require specific permissions from the
-user, all you need to do is add the following to your method:
-
-::
-
-    from koji.context import context
-
-    def mymethod(arg1, arg2, kwarg1=None):
-        context.session.assertPerm("admin")
-
-        # Here is where you actually do something
-
-    mymethod.exported = True
-
-In the example above, Koji will ensure that the user is an
-administrator. You could of course create your own permission, and check
-for that.
-
 Running code automatically triggered on events
 ----------------------------------------------
 
