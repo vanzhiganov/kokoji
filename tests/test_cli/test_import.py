@@ -697,6 +697,7 @@ Options:
   --create-build        Auto-create builds as needed
   --src-epoch=SRC_EPOCH
                         When auto-creating builds, use this epoch
+  --sigkey=SIGKEY       Override the sigkey value
 """ % self.progname)
 
 
