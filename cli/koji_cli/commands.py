@@ -111,16 +111,36 @@ def handle_block_group(goptions, session, args):
     if not (session.hasPerm('admin') or session.hasPerm('tag')):
         parser.error("This action requires tag or admin privileges")
 
-    dsttag = session.getTag(tag)
-    if not dsttag:
+    taginfo = session.getTag(tag)
+    if not taginfo:
         error("No such tag: %s" % tag)
 
-    groups = dict([(p['name'], p['group_id']) for p in session.getTagGroups(tag, inherit=False)])
-    group_id = groups.get(group, None)
-    if group_id is None:
+    # sanity check
+    groups = session.getTagGroups(taginfo['id'], incl_pkgs=False, incl_reqs=False,
+                                  incl_blocked=True)
+    for ginfo in groups:
+        if ginfo['name'] == group:
+            break
+    else:
         error("Group %s doesn't exist within tag %s" % (group, tag))
+    if ginfo['blocked']:
+        error("Group %s is already blocked in this tag" % group)
+    # (we don't care if the entry is inherited for this)
 
     session.groupListBlock(tag, group)
+
+
+def handle_unblock_group(goptions, session, args):
+    "[admin] Unblock a group from tag"
+    usage = "usage: %prog unblock-group [options] <tag> <group>"
+    parser = OptionParser(usage=get_usage_str(usage))
+    (options, args) = parser.parse_args(args)
+    if len(args) != 2:
+        parser.error("You must specify a tag name and group name")
+    tag = args[0]
+    group = args[1]
+    activate_session(session, goptions)
+    session.groupListUnblock(tag, group)
 
 
 def handle_remove_group(goptions, session, args):
@@ -137,14 +157,25 @@ def handle_remove_group(goptions, session, args):
     if not (session.hasPerm('admin') or session.hasPerm('tag')):
         parser.error("This action requires tag or admin privileges")
 
-    dsttag = session.getTag(tag)
-    if not dsttag:
+    taginfo = session.getTag(tag)
+    if not taginfo:
         error("No such tag: %s" % tag)
 
-    groups = dict([(p['name'], p['group_id']) for p in session.getTagGroups(tag, inherit=False)])
-    group_id = groups.get(group, None)
-    if group_id is None:
+    # sanity checks
+    groups = session.getTagGroups(taginfo['id'], incl_pkgs=False, incl_reqs=False,
+                                  incl_blocked=True)
+    for ginfo in groups:
+        if ginfo['name'] == group:
+            break
+    else:
         error("Group %s doesn't exist within tag %s" % (group, tag))
+    if ginfo['blocked']:
+        error("Group %s is blocked in this tag. You could use unblock-group to unblock it" % group)
+    if ginfo['tag_id'] != taginfo['id']:
+        # listing is inherited
+        srctag = session.getTag(ginfo['tag_id'])
+        error("The entry for group %s is inherited from %s. "
+              "You could use block-group to prevent this" % (group, srctag['name']))
 
     session.groupListRemove(tag, group)
 
@@ -3100,6 +3131,55 @@ def handle_add_group_pkg(goptions, session, args):
         session.groupPackageListAdd(tag, group, pkg)
 
 
+def handle_remove_group_pkg(goptions, session, args):
+    "[admin] Remove packages from a group's package listing"
+    usage = "usage: %prog remove-group-pkg [options] <tag> <group> <pkg> [<pkg> ...]"
+    parser = OptionParser(usage=get_usage_str(usage))
+    (options, args) = parser.parse_args(args)
+    if len(args) < 3:
+        parser.error("You must specify a tag name, group name, and one or more package names")
+    tag = args[0]
+    group = args[1]
+    packages = args[2:]
+    activate_session(session, goptions)
+    taginfo = session.getTag(tag)
+    if taginfo is None:
+        error("No such tag: %s" % tag)
+
+    # sanity checks
+    groups = session.getTagGroups(taginfo['id'], incl_reqs=False, incl_blocked=True)
+    for ginfo in groups:
+        if ginfo['name'] == group:
+            break
+    else:
+        error("Group %s is not present in tag %s" % (group, tag))
+    pkg_idx = {p['package']: p for p in ginfo['packagelist']}
+    sane = True
+    for pkg in packages:
+        if pkg not in pkg_idx:
+            print("Package %s is not included in this group" % pkg)
+            sane = False
+            continue
+        pinfo = pkg_idx[pkg]
+        if pinfo['blocked']:
+            print("Package %s is blocked in this group. "
+                  "You could use unblock-group-pkg to unblock it" % pkg)
+            sane = False
+            continue
+        if pinfo['tag_id'] != taginfo['id']:
+            # listing is inherited
+            srctag = session.getTag(pinfo['tag_id'])
+            print("The entry for package %s is inherited from %s. "
+                  "You could use block-group-pkg to prevent this" % (pkg, srctag['name']))
+            sane = False
+            continue
+    if not sane:
+        error('Invalid parameters')
+
+    with session.multicall() as m:
+        [m.groupPackageListRemove(taginfo['id'], group, pkg) for pkg in packages]
+
+
 def handle_block_group_pkg(goptions, session, args):
     "[admin] Block a package from a group's package listing"
     usage = "usage: %prog block-group-pkg [options] <tag> <group> <pkg> [<pkg> ...]"
@@ -3170,6 +3250,55 @@ def handle_unblock_group_req(goptions, session, args):
     req = args[2]
     activate_session(session, goptions)
     session.groupReqListUnblock(tag, group, req)
+
+
+def handle_remove_group_req(goptions, session, args):
+    "[admin] Remove entries from a group's requirement listing"
+    usage = "usage: %prog remove-group-req [options] <tag> <group> <req> [<req> ...]"
+    parser = OptionParser(usage=get_usage_str(usage))
+    (options, args) = parser.parse_args(args)
+    if len(args) < 3:
+        parser.error("You must specify a tag name, group name, and one or more requirement names")
+    tag = args[0]
+    group = args[1]
+    requires = args[2:]
+    activate_session(session, goptions)
+    taginfo = session.getTag(tag)
+    if taginfo is None:
+        error("No such tag: %s" % tag)
+
+    # sanity checks
+    groups = session.getTagGroups(taginfo['id'], incl_pkgs=False, incl_blocked=True)
+    for ginfo in groups:
+        if ginfo['name'] == group:
+            break
+    else:
+        error("Group %s is not present in tag %s" % (group, tag))
+    req_idx = {r['name']: r for r in ginfo['grouplist']}
+    sane = True
+    for req in requires:
+        if req not in req_idx:
+            print("Req %s is not included in this group" % req)
+            sane = False
+            continue
+        rinfo = req_idx[req]
+        if rinfo['blocked']:
+            print("Req %s is blocked in this group. "
+                  "You could use unblock-group-req to unblock it" % req)
+            sane = False
+            continue
+        if rinfo['tag_id'] != taginfo['id']:
+            # listing is inherited
+            srctag = session.getTag(rinfo['tag_id'])
+            print("The entry for req %s is inherited from %s. "
+                  "You could use block-group-req to prevent this" % (req, srctag['name']))
+            sane = False
+            continue
+    if not sane:
+        error('Invalid parameters')
+
+    with session.multicall() as m:
+        [m.groupReqListRemove(taginfo['id'], group, req) for req in requires]
 
 
 def anon_handle_list_channels(goptions, session, args):

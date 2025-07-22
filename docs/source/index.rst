@@ -33,6 +33,7 @@ Contents
     repo_generation
     exporting_repositories
     tag_inheritance
+    managing_comps_data
     misc
     release_notes/release_notes
     migrations/migrations
