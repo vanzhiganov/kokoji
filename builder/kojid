@@ -6220,7 +6220,7 @@ class createDistRepoTask(BaseTaskHandler):
 
     archmap = {'s390x': 's390', 'ppc64': 'ppc', 'x86_64': 'i686'}
     compat = {"i386": ("athlon", "i686", "i586", "i486", "i386", "noarch"),
-              "x86_64": ("amd64", "ia32e", "x86_64", "x86_64_v2", "noarch"),
+              "x86_64": ("amd64", "ia32e", "x86_64", "noarch"),
               "x86_64_v2": ("amd64", "ia32e", "x86_64", "x86_64_v2", "noarch"),
               "ia64": ("ia64", "noarch"),
               "ppc": ("ppc", "noarch"),
