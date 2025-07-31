@@ -1800,8 +1800,7 @@ def handle_rename_sig(goptions, session, args):
         session.renameRPMSig(rpminfo, oldkey, newkey)
     except koji.GenericError as e:
         # the api error messages are sufficiently descriptive
-        msg = str(e)
-        error(msg)
+        error(str(e))
 
 
 def handle_remove_sig(goptions, session, args):
