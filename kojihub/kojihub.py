@@ -7573,7 +7573,7 @@ class CG_Importer(object):
         fn = fileinfo['hub.path']
         rpminfo = import_rpm(fn, buildinfo, brinfo.id, fileinfo=fileinfo)
         import_rpm_file(fn, buildinfo, rpminfo)
-        add_rpm_sig(rpminfo['id'], koji.rip_rpm_sighdr(fn))
+        add_rpm_sig(rpminfo['id'], koji.rip_rpm_sighdr(fn), sigkey=fileinfo.get('sigkey'))
 
     def import_log(self, buildinfo, fileinfo):
         if fileinfo.get('metadata_only', False):
@@ -8251,7 +8251,7 @@ def _generate_maven_metadata(mavendir):
                     sumobj.write(sum.hexdigest())
 
 
-def add_rpm_sig(an_rpm, sighdr):
+def add_rpm_sig(an_rpm, sighdr, sigkey=None):
     """Store a signature header for an rpm"""
     # calling function should perform permission checks, if applicable
     rinfo = get_rpm(an_rpm, strict=True)
@@ -8262,30 +8262,38 @@ def add_rpm_sig(an_rpm, sighdr):
     builddir = koji.pathinfo.build(binfo)
     if not os.path.isdir(builddir):
         raise koji.GenericError("No such directory: %s" % builddir)
+    if sigkey is not None:
+        verify_name_internal(sigkey)
+
+    # verify sigmd5 matches rpm and pick sigkey if needed
     rawhdr = koji.RawHeader(sighdr)
     sigmd5 = koji.hex_string(rawhdr.get(koji.RPM_SIGTAG_MD5))
-    if sigmd5 == rinfo['payloadhash']:
+    if sigmd5 != rinfo['payloadhash']:
         # note: payloadhash is a misnomer, that field is populated with sigmd5.
-        sigkey = rawhdr.get(koji.RPM_SIGTAG_GPG)
-        if not sigkey:
-            sigkey = rawhdr.get(koji.RPM_SIGTAG_PGP)
-        if not sigkey:
-            sigkey = rawhdr.get(koji.RPM_SIGTAG_DSA)
-        if not sigkey:
-            sigkey = rawhdr.get(koji.RPM_SIGTAG_RSA)
-    else:
         # Double check using rpm in case we have somehow misread
         rpm_path = "%s/%s" % (builddir, koji.pathinfo.rpm(rinfo))
-        sigmd5, sigkey = _scan_sighdr(sighdr, rpm_path)
+        sigmd5, rawsig = _scan_sighdr(sighdr, rpm_path)
         sigmd5 = koji.hex_string(sigmd5)
         if sigmd5 != rinfo['payloadhash']:
             nvra = "%(name)s-%(version)s-%(release)s.%(arch)s" % rinfo
             raise koji.GenericError("wrong md5 for %s: %s" % (nvra, sigmd5))
-    if not sigkey:
-        sigkey = ''
-        # we use the sigkey='' to represent unsigned in the db (so that uniqueness works)
-    else:
-        sigkey = koji.get_sigpacket_key_id(sigkey)
+    elif sigkey is None:
+        rawsig = rawhdr.get(koji.RPM_SIGTAG_GPG)
+        if not rawsig:
+            rawsig = rawhdr.get(koji.RPM_SIGTAG_PGP)
+        if not rawsig:
+            rawsig = rawhdr.get(koji.RPM_SIGTAG_DSA)
+        if not rawsig:
+            rawsig = rawhdr.get(koji.RPM_SIGTAG_RSA)
+
+    if sigkey is None:
+        if not rawsig:
+            sigkey = ''
+            # we use the sigkey='' to represent unsigned in the db (so that uniqueness works)
+        else:
+            sigkey = koji.get_sigpacket_key_id(rawsig)
+
+    # do the insert
     sighash = md5_constructor(sighdr).hexdigest()
     rpm_id = rinfo['id']
     koji.plugin.run_callbacks('preRPMSign', sigkey=sigkey, sighash=sighash, build=binfo, rpm=rinfo)
@@ -8296,6 +8304,7 @@ def add_rpm_sig(an_rpm, sighdr):
     except IntegrityError:
         nvra = "%(name)s-%(version)s-%(release)s.%(arch)s" % rinfo
         raise koji.GenericError("Signature already exists for package %s, key %s" % (nvra, sigkey))
+
     # - write to fs
     sigpath = "%s/%s" % (builddir, koji.pathinfo.sighdr(rinfo, sigkey))
     koji.ensuredir(os.path.dirname(sigpath))
@@ -8303,6 +8312,80 @@ def add_rpm_sig(an_rpm, sighdr):
         fo.write(sighdr)
     koji.plugin.run_callbacks('postRPMSign',
                               sigkey=sigkey, sighash=sighash, build=binfo, rpm=rinfo)
+
+
+def rename_rpm_sig(rpminfo, oldkey, newkey):
+    """Change the sigkey for an rpm signature"""
+
+    verify_name_internal(newkey)
+    rinfo = get_rpm(rpminfo, strict=True)
+    nvra = "%(name)s-%(version)s-%(release)s.%(arch)s" % rinfo
+    if rinfo['external_repo_id']:
+        raise koji.GenericError("Not an internal rpm: %s (from %s)"
+                                % (rpminfo, rinfo['external_repo_name']))
+
+    # Determine what signature we have
+    rows = query_rpm_sigs(rpm_id=rinfo['id'], sigkey=oldkey)
+    if not rows:
+        raise koji.GenericError(f'No {oldkey} signature for rpm {nvra}')
+
+    # Check if newkey exists already
+    rows = query_rpm_sigs(rpm_id=rinfo['id'], sigkey=newkey)
+    if rows:
+        raise koji.GenericError(f'A {newkey} signature already exists for rpm {nvra}')
+
+    # Update db
+    update = UpdateProcessor(
+        table='rpmsigs',
+        data={'sigkey': newkey},
+        clauses=["rpm_id=%(rpm_id)s", "sigkey=%(oldkey)s"],
+        values={'rpm_id': rinfo['id'], 'oldkey': oldkey},
+    )
+    update.execute()
+
+    # Get the base build dir for our paths
+    binfo = get_build(rinfo['build_id'], strict=True)
+    builddir = koji.pathinfo.build(binfo)
+
+    # Check header file
+    old_path = joinpath(builddir, koji.pathinfo.sighdr(rinfo, oldkey))
+    if not os.path.exists(old_path):
+        raise koji.GenericError(f'Missing signature header file: {old_path}')
+    new_path = joinpath(builddir, koji.pathinfo.sighdr(rinfo, newkey))
+    if os.path.exists(new_path):
+        # shouldn't happen, newkey isn't in db
+        raise koji.GenericError(f'Signature header file already exists: {new_path}')
+
+    # Check signed copies
+    new_signed_path = joinpath(builddir, koji.pathinfo.signed(rinfo, newkey))
+    if os.path.exists(new_signed_path):
+        # shouldn't happen, newkey isn't in db
+        raise koji.GenericError(f'Signed copy already exists: {new_signed_path}')
+
+    # rename the signed copy first if present, lowest risk
+    old_signed_path = joinpath(builddir, koji.pathinfo.signed(rinfo, oldkey))
+    if os.path.exists(old_signed_path):
+        # signed copies might not exist
+        try:
+            koji.ensuredir(os.path.dirname(new_signed_path))
+            os.rename(old_signed_path, new_signed_path)
+        except Exception:
+            # shouldn't happen and may need cleanup, so log copiously
+            logger.error(f"Failed to rename {old_signed_path}", exc_info=True)
+            raise koji.GenericError(f"Failed to rename {old_signed_path}")
+
+    # rename the header file next
+    try:
+        koji.ensuredir(os.path.dirname(new_path))
+        os.rename(old_path, new_path)
+    except Exception:
+        # shouldn't happen and may need cleanup, so log copiously
+        logger.error(f"Failed to rename {old_path}", exc_info=True)
+        raise koji.GenericError(f"Failed to rename {old_path}")
+
+    # Note: we do not delete any empty parent dirs
+
+    logger.warning("Renamed signature for rpm %s: %s to %s", nvra, oldkey, newkey)
 
 
 def delete_rpm_sig(rpminfo, sigkey=None, all_sigs=False):
@@ -8445,47 +8528,6 @@ def _scan_sighdr(sighdr, fn):
     if not sig:
         sig = koji.get_header_field(hdr, 'rsaheader')
     return koji.get_header_field(hdr, 'sigmd5'), sig
-
-
-def check_rpm_sig(an_rpm, sigkey, sighdr):
-    # verify that the provided signature header matches the key and rpm
-    rinfo = get_rpm(an_rpm, strict=True)
-    binfo = get_build(rinfo['build_id'])
-    builddir = koji.pathinfo.build(binfo)
-    rpm_path = "%s/%s" % (builddir, koji.pathinfo.rpm(rinfo))
-    if not os.path.exists(rpm_path):
-        raise koji.GenericError("No such path: %s" % rpm_path)
-    if not os.path.isfile(rpm_path):
-        raise koji.GenericError("Not a regular file: %s" % rpm_path)
-    fd, temp = tempfile.mkstemp()
-    os.close(fd)
-    try:
-        koji.splice_rpm_sighdr(sighdr, rpm_path, dst=temp)
-        ts = rpm.TransactionSet()
-        ts.setVSFlags(0)  # full verify
-        with open(temp, 'rb') as fo:
-            hdr = ts.hdrFromFdno(fo.fileno())
-    except Exception:
-        try:
-            os.unlink(temp)
-        except Exception:
-            pass
-        raise
-    raw_key = koji.get_header_field(hdr, 'siggpg')
-    if not raw_key:
-        raw_key = koji.get_header_field(hdr, 'sigpgp')
-    if not raw_key:
-        raw_key = koji.get_header_field(hdr, 'dsaheader')
-    if not raw_key:
-        raw_key = koji.get_header_field(hdr, 'rsaheader')
-    if not raw_key:
-        found_key = None
-    else:
-        found_key = koji.get_sigpacket_key_id(raw_key)
-    if sigkey.lower() != found_key:
-        raise koji.GenericError("Signature key mismatch: got %s, expected %s"
-                                % (found_key, sigkey))
-    os.unlink(temp)
 
 
 def query_rpm_sigs(rpm_id=None, sigkey=None, queryOpts=None):
@@ -11661,7 +11703,7 @@ class RootExports(object):
         reject_draft(build)
         new_image_build(build)
 
-    def importRPM(self, path, basename):
+    def importRPM(self, path, basename, sigkey=None):
         """Import an RPM into the database.
 
         The file must be uploaded first.
@@ -11673,7 +11715,7 @@ class RootExports(object):
             raise koji.GenericError("No such file: %s" % fn)
         rpminfo = import_rpm(fn)
         import_rpm_file(fn, rpminfo['build'], rpminfo)
-        add_rpm_sig(rpminfo['id'], koji.rip_rpm_sighdr(fn))
+        add_rpm_sig(rpminfo['id'], koji.rip_rpm_sighdr(fn), sigkey=sigkey)
         for tag in list_tags(build=rpminfo['build_id']):
             set_tag_update(tag['id'], 'IMPORT')
         return rpminfo
@@ -13258,19 +13300,38 @@ class RootExports(object):
         # XXX - still not sure if this is the right restriction
         return write_signed_rpm(an_rpm, sigkey, force)
 
-    def addRPMSig(self, an_rpm, data):
+    def addRPMSig(self, an_rpm, data, sigkey=None):
         """Store a signature header for an rpm
 
         data: the signature header encoded as base64
         """
         context.session.assertPerm('sign')
-        return add_rpm_sig(an_rpm, base64.b64decode(data))
+        return add_rpm_sig(an_rpm, base64.b64decode(data), sigkey=sigkey)
+
+    def renameRPMSig(self, rpminfo, oldkey, newkey):
+        """Rename rpm signature
+
+        This changes the 'sigkey' value for a stored rpm signature and renames
+        the files approriately.
+
+        This call requires ``admin`` permission (``sign`` is not sufficient).
+
+        :param dict/str/id rpm: map containing 'name', 'version', 'release', and 'arch'
+                                string N-V-R.A
+                                int ID
+        :param str oldkey: Old signature key
+        :param str newkey: New signature key
+        """
+        context.session.assertPerm('admin')
+        return rename_rpm_sig(rpminfo, oldkey, newkey)
 
     def deleteRPMSig(self, rpminfo, sigkey=None, all_sigs=False):
         """Delete rpm signature
 
         Only use this method in extreme situations, because it goes against
         Koji's design of immutable, auditable data.
+
+        In most cases, it is preferable to use renameRPMSig instead.
 
         This call requires ``admin`` permission (``sign`` is not sufficient).
 
