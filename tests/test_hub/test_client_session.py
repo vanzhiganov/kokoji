@@ -1,7 +1,10 @@
 import io
-import mock
+import shutil
+import tempfile
 import time
 import unittest
+
+from unittest import mock
 
 import koji
 from kojihub import kojixmlrpc, db
@@ -20,6 +23,7 @@ class FakeClient(koji.ClientSession):
 
     def __init__(self, baseurl, opts=None, sinfo=None, auth_method=None):
         super(FakeClient, self).__init__(baseurl, opts=opts, sinfo=sinfo, auth_method=auth_method)
+        self._test_hub_cfg = None
 
     def new_session(self):
         self.rsession = FakeReqSession(self)
@@ -56,6 +60,8 @@ class FakeReqSession:
         environ['REMOTE_ADDR'] = '127.0.0.1'
         environ['REQUEST_METHOD'] = 'POST'
         environ['CONTENT_TYPE'] = 'text/xml'
+        cfg = self.client_session._test_hub_cfg
+        environ['koji.hub.ConfigFile'] = cfg
 
         for k in headers:
             k2 = 'HTTP_' + k.upper().replace('-', '_')
@@ -94,9 +100,17 @@ QP = db.QueryProcessor
 class TestClientSession(unittest.TestCase):
 
     def setUp(self):
+        self.tempdir = tempfile.mkdtemp()
         self.context = mock.MagicMock()
         self.context.session.assertLogin = mock.MagicMock()
+
+        # set up fake session
         self.session = FakeClient('https://bad.server/')
+        cfg = '%s/hub.conf' % self.tempdir
+        with open(cfg, 'wt') as fp:
+            fp.write('[hub]\n#the end\n')
+        self.session._test_hub_cfg = cfg
+
         self.QueryProcessor = mock.patch('kojihub.auth.QueryProcessor',
                                          side_effect=self.getQuery).start()
         self._dml = mock.patch('kojihub.db._dml').start()
@@ -108,6 +122,7 @@ class TestClientSession(unittest.TestCase):
 
     def tearDown(self):
         mock.patch.stopall()
+        shutil.rmtree(self.tempdir)
 
     def getQuery(self, *args, **kwargs):
         query = QP(*args, **kwargs)
