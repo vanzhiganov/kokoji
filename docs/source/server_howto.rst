@@ -690,7 +690,7 @@ size before respawning).
     </IfModule>
     <IfModule event.c>
     ...
-    MaxRequestsPerChild  100
+    MaxConnectionsPerChild  100
     </IfModule>
 
 /etc/httpd/conf.d/kojihub.conf
