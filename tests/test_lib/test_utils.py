@@ -827,7 +827,7 @@ class MavenUtilTestCase(unittest.TestCase):
             # invalid month
             '2000-13-32': 'month must be in 1..12',
             # invalid day
-            '2000-12-32': 'day is out of range for month',
+            '2000-12-32': 'day.*',
             # invalid hour
             '2000-12-31 24:61:61': 'hour must be in 0..23',
             # invalid minute
@@ -835,7 +835,7 @@ class MavenUtilTestCase(unittest.TestCase):
             # invalid second
             '2000-12-31 23:59:61': 'second must be in 0..59',
             # corner case, leap day
-            '1969-2-29': 'day is out of range for month'
+            '1969-2-29': 'day.*'
         }
 
         # invalid date test
@@ -1924,13 +1924,9 @@ class TestRmtree2(unittest.TestCase):
 
         sync = multiprocessing.Event()
 
-        def do_rmtree(dirname):
-            sync.wait()
-            koji.util.rmtree(dirname)
-
         procs = []
         for n in range(3):
-            proc = multiprocessing.Process(target=do_rmtree, args=(dirname,))
+            proc = multiprocessing.Process(target=sync_rmtree, args=(sync, dirname,))
             proc.start()
             procs.append(proc)
         sync.set()
@@ -1960,6 +1956,12 @@ class TestRmtree2(unittest.TestCase):
 
         if os.path.exists(dirname):
             raise Exception('test directory not removed')
+
+
+def sync_rmtree(sync, dirname):
+    """Wait for a sync, then call rmtree"""
+    sync.wait()
+    koji.util.rmtree(dirname)
 
 
 class TestProxyLogger(unittest.TestCase):

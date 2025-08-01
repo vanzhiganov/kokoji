@@ -330,7 +330,8 @@ class TasksTestCase(unittest.TestCase):
         obj.session.host.taskWait.return_value = [[], [99, 100, 101]]
         time.side_effect = list(range(0, 4000, 60))
         if six.PY3:
-            sigtimedwait = patch('signal.sigtimedwait').start()
+            sigtimedwait = patch('signal.sigtimedwait')
+            sigtimedwait.start()
 
         try:
             obj.wait([99, 100, 101], timeout=3600)
@@ -366,7 +367,8 @@ class TasksTestCase(unittest.TestCase):
         obj.session.host.taskWait.side_effect = taskWait_returns
 
         if six.PY3:
-            sigtimedwait = patch('signal.sigtimedwait').start()
+            sigtimedwait = patch('signal.sigtimedwait')
+            sigtimedwait.start()
 
         obj.wait([99, 100, 101], timeout=3600)
 
