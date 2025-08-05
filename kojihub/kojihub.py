@@ -605,7 +605,8 @@ def make_task(method, arglist, **opts):
         parent: the id of the parent task (creates a subtask)
         label: (subtasks only) the label of the subtask
         owner: the user_id that should own the task
-        channel: the channel to place the task in
+        channel: requested channel override
+        default_channel: default channel
         arch: the arch for the task
         priority: the priority of the task
         assign: a host_id to assign the task to
@@ -659,6 +660,12 @@ def make_task(method, arglist, **opts):
     for key in 'arch', 'parent', 'label', 'owner':
         policy_data[key] = opts[key]
     policy_data['user_id'] = opts['owner']
+    default_channel = 'default'
+    if 'default_channel' in opts:
+        default_channel = opts['default_channel']
+        if 'channel' not in opts and context.opts.get('DefaultChannelCompat'):
+            # in the compat case, treat explicit default as an override
+            opts['channel'] = default_channel
     if 'channel' in opts:
         policy_data['req_channel'] = opts['channel']
         channel_info = get_channel(opts['channel'])
@@ -673,8 +680,8 @@ def make_task(method, arglist, **opts):
     ruleset = context.policy.get('channel')
     result = ruleset.apply(policy_data)
     if result is None:
-        logger.warning('Channel policy returned no result, using default')
-        opts['channel_id'] = get_channel_id('default', strict=True)
+        logger.debug('Channel policy returned no result, using default')
+        opts['channel_id'] = get_channel_id(default_channel, strict=True)
     else:
         try:
             parts = result.split()
@@ -696,6 +703,9 @@ def make_task(method, arglist, **opts):
                                  ruleset.last_rule())
                     raise koji.GenericError("invalid channel policy")
                 opts['channel_id'] = req_channel_id
+            elif parts[0] == "default":
+                # note this is different from "use default" if default_channel is passed
+                opts['channel_id'] = get_channel_id(default_channel, strict=True)
             else:
                 logger.error("Invalid result from channel policy: %s", ruleset.last_rule())
                 raise koji.GenericError("invalid channel policy")
@@ -10904,7 +10914,7 @@ class RootExports(object):
 
         return make_task('chainbuild', [srcs, target, opts], **taskOpts)
 
-    def mavenBuild(self, url, target, opts=None, priority=None, channel='maven'):
+    def mavenBuild(self, url, target, opts=None, priority=None, channel=None):
         """Create a Maven build task
 
         url: The url to checkout the source from.  May be a CVS, SVN, or GIT repository.
@@ -10912,7 +10922,7 @@ class RootExports(object):
         priority: the amount to increase (or decrease) the task priority, relative
                   to the default priority; higher values mean lower priority; only
                   admins have the right to specify a negative priority here
-        channel: the channel to allocate the task to (defaults to the "maven" channel)
+        channel: override the channel to allocate the task to
 
         Returns the task ID
         """
@@ -10922,7 +10932,7 @@ class RootExports(object):
         convert_value(url, cast=str, check_only=True)
         if not opts:
             opts = {}
-        taskOpts = {}
+        taskOpts = {'default_channel': 'maven'}
         if priority:
             if priority < 0:
                 if not context.session.hasPerm('admin'):
@@ -10933,7 +10943,7 @@ class RootExports(object):
 
         return make_task('maven', [url, target, opts], **taskOpts)
 
-    def wrapperRPM(self, build, url, target, priority=None, channel='maven', opts=None):
+    def wrapperRPM(self, build, url, target, priority=None, channel=None, opts=None):
         """Create a top-level wrapperRPM task
 
         build: The build to generate wrapper rpms for.  Must be in the COMPLETE state and have no
@@ -10945,7 +10955,7 @@ class RootExports(object):
         priority: the amount to increase (or decrease) the task priority, relative
                   to the default priority; higher values mean lower priority; only
                   admins have the right to specify a negative priority here
-        channel: the channel to allocate the task to (defaults to the "maven" channel)
+        channel: override the channel to allocate the task to
 
         returns the task ID
         """
@@ -10968,18 +10978,19 @@ class RootExports(object):
             logger.warning('The wrapperRPM call ignores repo_id options')
             del opts['repo_id']
 
-        taskOpts = {}
+        taskOpts = {'default_channel': 'maven'}
         if priority:
             if priority < 0:
                 if not context.session.hasPerm('admin'):
                     raise koji.ActionNotAllowed('only admins may create high-priority tasks')
             taskOpts['priority'] = koji.PRIO_DEFAULT + priority
-        convert_value(channel, cast=str, check_only=True)
-        taskOpts['channel'] = channel
+        if channel is not None:
+            convert_value(channel, cast=str, check_only=True)
+            taskOpts['channel'] = channel
 
         return make_task('wrapperRPM', [url, build_target, build, None, opts], **taskOpts)
 
-    def chainMaven(self, builds, target, opts=None, priority=None, channel='maven'):
+    def chainMaven(self, builds, target, opts=None, priority=None, channel=None):
         """Create a Maven chain-build task
 
         builds: a list of maps defining the parameters for the sequence of builds
@@ -10987,7 +10998,7 @@ class RootExports(object):
         priority: the amount to increase (or decrease) the task priority, relative
                   to the default priority; higher values mean lower priority; only
                   admins have the right to specify a negative priority here
-        channel: the channel to allocate the task to (defaults to the "maven" channel)
+        channel: override the channel to allocate the task to
 
         Returns the task ID
         """
@@ -10995,7 +11006,7 @@ class RootExports(object):
         if not context.opts.get('EnableMaven'):
             raise koji.GenericError("Maven support not enabled")
         convert_value(builds, cast=dict, check_only=True)
-        taskOpts = {}
+        taskOpts = {'default_channel': 'maven'}
         if priority:
             if priority < 0:
                 if not context.session.hasPerm('admin'):
@@ -11006,7 +11017,7 @@ class RootExports(object):
 
         return make_task('chainmaven', [builds, target, opts], **taskOpts)
 
-    def winBuild(self, vm, url, target, opts=None, priority=None, channel='vm'):
+    def winBuild(self, vm, url, target, opts=None, priority=None, channel=None):
         """
         Create a Windows build task
 
@@ -11017,7 +11028,7 @@ class RootExports(object):
         priority: the amount to increase (or decrease) the task priority, relative
                   to the default priority; higher values mean lower priority; only
                   admins have the right to specify a negative priority here
-        channel: the channel to allocate the task to (defaults to the "vm" channel)
+        channel: override the channel to allocate the task to
 
         Returns the task ID
         """
@@ -11032,7 +11043,7 @@ class RootExports(object):
         assert_policy('vm', policy_data)
         if not opts:
             opts = {}
-        taskOpts = {}
+        taskOpts = {'default_channel': 'vm'}
         if priority:
             if priority < 0:
                 if not context.session.hasPerm('admin'):
@@ -11057,7 +11068,7 @@ class RootExports(object):
 
         context.session.assertPerm(img_type)
 
-        taskOpts = {'channel': img_type}
+        taskOpts = {'default_channel': img_type}
         if img_type == 'livemedia':
             taskOpts['arch'] = 'noarch'
         else:
@@ -11079,7 +11090,7 @@ class RootExports(object):
         Create an image using two other images and an indirection template
         """
         context.session.assertPerm('image')
-        taskOpts = {'channel': 'image'}
+        taskOpts = {'default_channel': 'image'}
         if priority:
             if priority < 0:
                 if not context.session.hasPerm('admin'):
@@ -11104,7 +11115,7 @@ class RootExports(object):
         for i in [name, inst_tree, version]:
             convert_value(i, cast=str, check_only=True)
         context.session.assertPerm('image')
-        taskOpts = {'channel': 'image'}
+        taskOpts = {'default_channel': 'image'}
         if priority:
             if priority < 0:
                 if not context.session.hasPerm('admin'):
@@ -13742,7 +13753,7 @@ class RootExports(object):
                 logger.debug("Cancelling distRepo task %d" % task_id)
                 Task(task_id).cancel(recurse=True)
         return make_task('distRepo', [tag, repo_id, keys, task_opts],
-                         priority=15, channel='createrepo')
+                         priority=15, default_channel='createrepo')
 
     def newRepo(self, tag, event=None, src=False, debuginfo=False, separate_src=False):
         """Create a newRepo task. returns task id"""
@@ -13770,7 +13781,7 @@ class RootExports(object):
         if debuginfo:
             opts['debuginfo'] = True
         args = koji.encode_args(tag, **opts)
-        return make_task('newRepo', args, priority=15, channel='createrepo')
+        return make_task('newRepo', args, priority=15, default_channel='createrepo')
 
     def repoExpire(self, repo_id):
         """mark repo expired"""

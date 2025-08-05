@@ -5719,7 +5719,7 @@
                 },
                 {
                     "name": "channel",
-                    "default": "'maven'"
+                    "default": "None"
                 }
             ],
             "varargs": null,
@@ -9363,7 +9363,7 @@
                 },
                 {
                     "name": "channel",
-                    "default": "'maven'"
+                    "default": "None"
                 }
             ],
             "varargs": null,
@@ -10312,7 +10312,7 @@
                 },
                 {
                     "name": "channel",
-                    "default": "'vm'"
+                    "default": "None"
                 }
             ],
             "varargs": null,
@@ -10342,7 +10342,7 @@
                 },
                 {
                     "name": "channel",
-                    "default": "'maven'"
+                    "default": "None"
                 },
                 {
                     "name": "opts",

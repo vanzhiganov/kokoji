@@ -472,6 +472,8 @@ config_map = [
     ['EnableMaven', 'boolean', False],
     ['EnableWin', 'boolean', False],
 
+    ['DefaultChannelCompat', 'boolean', True],
+
     ['RLIMIT_AS', 'string', None],
     ['RLIMIT_CORE', 'string', None],
     ['RLIMIT_CPU', 'string', None],
@@ -630,7 +632,7 @@ _default_policies = {
     'channel': '''
             has req_channel :: req
             is_child_task :: parent
-            all :: use default
+            all :: default
             ''',
     'vm': '''
             has_perm admin win-admin :: allow
