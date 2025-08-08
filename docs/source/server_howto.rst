@@ -835,6 +835,25 @@ allow Apache access to NFS::
 
     root@localhost$ setsebool -P httpd_use_nfs=1
 
+Firewall Configuration
+^^^^^^^^^^^^^^^^^^^^^^
+
+For typical deployments where the Koji web interface and hub may be accessed
+from remote hosts, you may configure your firewall to allow incoming
+connections on ports 80 (HTTP) and 443 (HTTPS).
+
+The following commands can be used to open ports to the public firewall zone
+and make the changes permanent so they persist after a reboot::
+
+    root@localhost$ firewall-cmd --permanent --zone=public --add-service=http
+    root@localhost$ firewall-cmd --permanent --zone=public --add-port=80/tcp
+
+    root@localhost$ firewall-cmd --permanent --zone=public --add-service=https
+    root@localhost$ firewall-cmd --permanent --zone=public --add-port=443/tcp
+
+    # Reload rules
+    root@localhost$ firewall-cmd --reload
+
 Check Your Configuration
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
