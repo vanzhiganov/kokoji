@@ -8273,7 +8273,7 @@ def add_rpm_sig(an_rpm, sighdr, sigkey=None):
     if not os.path.isdir(builddir):
         raise koji.GenericError("No such directory: %s" % builddir)
     if sigkey is not None:
-        verify_name_internal(sigkey)
+        validate_sigkey_value(sigkey)
 
     # verify sigmd5 matches rpm and pick sigkey if needed
     rawhdr = koji.RawHeader(sighdr)
@@ -8324,10 +8324,18 @@ def add_rpm_sig(an_rpm, sighdr, sigkey=None):
                               sigkey=sigkey, sighash=sighash, build=binfo, rpm=rinfo)
 
 
+def validate_sigkey_value(sigkey):
+    convert_value(sigkey, cast=str, check_only=True)
+    if '/' in sigkey or sigkey.startswith('.'):
+        # not allowed because the value is used in a path
+        raise koji.GenericError("Invalid sigkey value")
+    verify_name_internal(sigkey)
+
+
 def rename_rpm_sig(rpminfo, oldkey, newkey):
     """Change the sigkey for an rpm signature"""
 
-    verify_name_internal(newkey)
+    validate_sigkey_value(newkey)
     rinfo = get_rpm(rpminfo, strict=True)
     nvra = "%(name)s-%(version)s-%(release)s.%(arch)s" % rinfo
     if rinfo['external_repo_id']:
