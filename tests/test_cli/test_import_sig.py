@@ -315,6 +315,7 @@ Options:
   -h, --help       show this help message and exit
   --with-unsigned  Also import unsigned sig headers
   --test           Test mode -- don't actually import
+  --sigkey=SIGKEY  Specify signature key
 """ % self.progname)
 
 

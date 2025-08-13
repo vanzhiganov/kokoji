@@ -1364,6 +1364,7 @@ def handle_import(goptions, session, args):
     parser.add_option("--test", action="store_true", help="Don't actually import")
     parser.add_option("--create-build", action="store_true", help="Auto-create builds as needed")
     parser.add_option("--src-epoch", help="When auto-creating builds, use this epoch")
+    parser.add_option("--sigkey", help="Override the sigkey value")
     (options, args) = parser.parse_args(args)
     if len(args) < 1:
         parser.error("At least one package must be specified")
@@ -1430,8 +1431,11 @@ def handle_import(goptions, session, args):
             sys.stdout.flush()
         sys.stdout.write("importing %s... " % path)
         sys.stdout.flush()
+        kwargs = {}
+        if options.sigkey:
+            kwargs['sigkey'] = options.sigkey
         try:
-            session.importRPM(serverdir, os.path.basename(path))
+            session.importRPM(serverdir, os.path.basename(path), **kwargs)
         except koji.GenericError as e:
             print("\nError importing: %s" % str(e).splitlines()[-1])
             sys.stdout.flush()
@@ -1714,6 +1718,7 @@ def handle_import_sig(goptions, session, args):
                       help="Also import unsigned sig headers")
     parser.add_option("--write", action="store_true", help=SUPPRESS_HELP)
     parser.add_option("--test", action="store_true", help="Test mode -- don't actually import")
+    parser.add_option("--sigkey", action="store", default=None, help="Specify signature key")
     (options, args) = parser.parse_args(args)
     if len(args) < 1:
         parser.error("At least one package must be specified")
@@ -1766,12 +1771,36 @@ def handle_import_sig(goptions, session, args):
                 warn("  The system already has a signature for this rpm with key %s" % sigkey)
                 warn("  The two signature headers are not the same")
                 continue
+        kwargs = {}
+        if options.sigkey:
+            kwargs['sigkey'] = options.sigkey
         print("Importing signature [key %s] from %s..." % (sigkey, path))
         if not options.test:
-            session.addRPMSig(rinfo['id'], base64encode(sighdr))
+            session.addRPMSig(rinfo['id'], base64encode(sighdr), **kwargs)
         print("Writing signed copy")
         if not options.test:
             session.writeSignedRPM(rinfo['id'], sigkey)
+
+
+def handle_rename_sig(goptions, session, args):
+    "[admin] Adjust the sigkey value for an rpm signature"
+    usage = "usage: %prog rename-sig [options] <rpm-id/n-v-r.a/rpminfo> <oldkey> <newkey>"
+    parser = OptionParser(usage=get_usage_str(usage))
+    (options, args) = parser.parse_args(args)
+    if len(args) != 3:
+        parser.error("This command takes exactly three arguments")
+
+    rpminfo = args[0]
+    oldkey = args[1]
+    newkey = args[2]
+
+    activate_session(session, goptions)
+
+    try:
+        session.renameRPMSig(rpminfo, oldkey, newkey)
+    except koji.GenericError as e:
+        # the api error messages are sufficiently descriptive
+        error(str(e))
 
 
 def handle_remove_sig(goptions, session, args):
