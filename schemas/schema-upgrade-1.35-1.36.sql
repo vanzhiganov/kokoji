@@ -8,4 +8,11 @@ INSERT INTO archivetypes (name, description, extensions) VALUES ('erofs-compress
 INSERT INTO archivetypes (name, description, extensions) VALUES ('squashfs', 'SquashFS image', 'squashfs') ON CONFLICT DO NOTHING;
 INSERT INTO archivetypes (name, description, extensions) VALUES ('squashfs-compressed', 'Compressed SquashFS image', 'squashfs.gz squashfs.xz') ON CONFLICT DO NOTHING;
 
+-- https://pagure.io/koji/issue/3963
+CREATE INDEX IF NOT EXISTS standard_buildroot_host_id on standard_buildroot(host_id);
+CREATE INDEX IF NOT EXISTS standard_buildroot_repo_id on standard_buildroot(repo_id);
+CREATE INDEX IF NOT EXISTS standard_buildroot_task_id on standard_buildroot(task_id);
+CREATE INDEX IF NOT EXISTS standard_buildroot_create_event on standard_buildroot(create_event);
+CREATE INDEX IF NOT EXISTS standard_buildroot_retire_event on standard_buildroot(retire_event);
+
 COMMIT;
