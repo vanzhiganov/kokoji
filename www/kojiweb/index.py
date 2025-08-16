@@ -1632,6 +1632,10 @@ def rpminfo(environ, rpmID, fileOrder='name', fileStart=None, buildrootOrder='-i
     values['build'] = build
     values['builtInRoot'] = builtInRoot
     values['buildroots'] = buildroots
+    for key in ('sigmd5', 'sha1header', 'sha256header', 'sha3_256header'):
+        if rpm.get(key):
+            values['got_digest'] = True
+            break
 
     kojiweb.util.paginateMethod(server, values, 'listRPMFiles', args=[rpm['id']],
                                 start=fileStart, dataName='files', prefix='file', order=fileOrder)

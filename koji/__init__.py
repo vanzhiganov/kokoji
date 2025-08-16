@@ -106,6 +106,9 @@ RPM_TAG_HEADERSIGNATURES = 62
 RPM_TAG_FILEDIGESTALGO = 5011
 RPM_SIGTAG_DSA = 267
 RPM_SIGTAG_RSA = 268
+RPM_SIGTAG_SHA1 = 269
+RPM_SIGTAG_SHA256 = 273
+RPM_SIGTAG_SHA3_256 = 279
 RPM_SIGTAG_PGP = 1002
 RPM_SIGTAG_MD5 = 1004
 RPM_SIGTAG_GPG = 1005
@@ -881,7 +884,16 @@ class RawHeader(object):
         else:
             return value.decode(errors='surrogateescape')
 
+    def __contains__(self, key):
+        return key in self.index
+
+    def keys(self):
+        return self.index.keys()
+
     def __getitem__(self, key):
+        if key not in self.index:
+            # mimic rpm header object behavior
+            return None
         tag, dtype, offset, count = self.index[key]
         assert tag == key
         return self._getitem(dtype, offset, count)
@@ -1184,6 +1196,72 @@ def get_rpm_header(f, ts=None):
     return hdr
 
 
+def get_rpm_ident(hdr):
+    """Extract a unique identifier from rpm header"""
+    digests = get_rpm_digests(hdr)
+    return make_rpm_ident(digests)
+
+
+def get_rpm_ident_fields(hdr):
+    """Extract rpm header fields used for identification"""
+    # these base fields should always exist
+    fields = ('name', 'version', 'release', 'epoch', 'arch', 'buildtime')
+    data = get_header_fields(hdr, fields)
+    # digest fields may vary
+    digests = get_rpm_digests(hdr)
+    data.update(digests)
+    # and our preferred ident value
+    data['payloadhash'] = make_rpm_ident(digests)
+    return data
+
+
+def make_rpm_ident(digests):
+    """Extract a unique identifier from rpm digest data"""
+
+    # for backwards compatibility, use plain sigmd5 if present
+    if 'sigmd5' in digests:
+        return digests['sigmd5']
+
+    # otherwise, use the best of the newer options with a label
+    options = (
+        # label, key
+        ('sha3-256', 'sha3_256header'),
+        ('sha256', 'sha256header'),
+        ('sha1', 'sha1header'),
+    )
+    for label, key in options:
+        if key in digests:
+            return '%s::%s' % (label, digests[key])
+
+    raise KeyError('No digests found: %r' % digests)
+
+
+def get_rpm_digests(hdr):
+    """Extract digest fields from an rpm header"""
+    digests = {}
+    tags = ('sha3_256header', 'sha256header', 'sha1header', 'sigmd5')
+    for tag in tags:
+        try:
+            val = hdr[tag]
+        except (KeyError, ValueError):
+            # rpm throws this if it doesn't know the header name
+            continue
+        if val is None:
+            # not present in header
+            continue
+        if tag == 'sigmd5':
+            # rpm returns this one as binary
+            val = hex_string(val)
+            # (the rest are already strings)
+        key = tag.lower()
+        digests[key] = val
+
+    if not digests:
+        raise KeyError('No known header digests found')
+
+    return digests
+
+
 def _decode_item(item):
     """Decode rpm header byte strings to str in py3"""
     if six.PY2:
@@ -1249,6 +1327,9 @@ def _get_header_field(hdr, name):
             hdr_key = 1051
         elif name == "NOPATCH":
             hdr_key = 1052
+        elif name == "SHA3_256HEADER":
+            # added in v6
+            hdr_key = RPM_SIGTAG_SHA3_256
         else:
             raise GenericError("No such rpm header field: %s" % name)
     return hdr[hdr_key]
@@ -1274,7 +1355,7 @@ def get_header_fields(X, fields=None, src_arch=False):
             raise GenericError("rpm's python bindings are not installed")
 
         # resolve the names of all the keys we found in the header
-        fields = [rpm.tagnames[k] for k in hdr.keys()]
+        fields = [rpm.tagnames[k] for k in hdr.keys() if k in rpm.tagnames]
 
     for f in fields:
         ret[f] = get_header_field(hdr, f, src_arch=src_arch)

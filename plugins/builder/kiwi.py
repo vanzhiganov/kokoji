@@ -267,17 +267,13 @@ class KiwiCreateImageTask(BaseBuildTask):
         """
         found = False
         hdrlist = {}
-        fields = ['name', 'version', 'release', 'epoch', 'arch',
-                  'buildtime', 'sigmd5']
         for root, dirs, files in os.walk(cachepath):
             for f in files:
                 if fnmatch(f, '*.rpm'):
                     pkgfile = os.path.join(root, f)
-                    hdr = koji.get_header_fields(pkgfile, fields)
-                    hdr['size'] = os.path.getsize(pkgfile)
-                    hdr['payloadhash'] = koji.hex_string(hdr['sigmd5'])
-                    del hdr['sigmd5']
-                    hdrlist[os.path.basename(pkgfile)] = hdr
+                    hdr = koji.get_rpm_header(pkgfile)
+                    data = koji.get_rpm_ident_fields(hdr)
+                    hdrlist[os.path.basename(pkgfile)] = data
                     found = True
         if not found:
             raise koji.LiveCDError('No repos found in yum cache!')

@@ -31,11 +31,14 @@ class TestReadTaggedRPMS(unittest.TestCase):
         self.columns = ['rpminfo.name', 'rpminfo.version', 'rpminfo.release', 'rpminfo.arch',
                         'rpminfo.id', 'rpminfo.epoch', 'rpminfo.draft', 'rpminfo.payloadhash',
                         'rpminfo.size', 'rpminfo.buildtime', 'rpminfo.buildroot_id',
-                        'rpminfo.build_id', 'rpminfo.metadata_only']
+                        'rpminfo.build_id', 'rpminfo.metadata_only',
+                        'rpminfo.sigmd5', 'rpminfo.sha1header',
+                        'rpminfo.sha256header', 'rpminfo.sha3_256header']
         self.joins = ['tag_listing ON rpminfo.build_id = tag_listing.build_id']
         self.aliases = ['name', 'version', 'release', 'arch', 'id', 'epoch', 'draft',
                         'payloadhash', 'size', 'buildtime', 'buildroot_id', 'build_id',
-                        'metadata_only']
+                        'metadata_only',
+                        'sigmd5', 'sha1header', 'sha256header', 'sha3_256header']
         self.clauses = ['(tag_listing.active = TRUE)',
                         'tag_id=%(tagid)s']
         self.tables = ['rpminfo']
@@ -119,3 +122,6 @@ class TestReadTaggedRPMS(unittest.TestCase):
         self.assertEqual(set(query.aliases), set(self.aliases))
         self.assertEqual(set(query.clauses), set(clauses))
         self.assertEqual(query.values, {})
+
+
+# the end

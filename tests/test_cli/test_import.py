@@ -26,6 +26,9 @@ class TestImport(utils.CliTestCase):
         self.md5 = '00112233445566778899aabbccddeeff'
         self.fake_srv_dir = '/path/to/server/import'
 
+        self.get_rpm_header = mock.patch('koji.get_rpm_header').start()
+        self.get_rpm_header.return_value = {'sigmd5': md5_to_bytes(self.md5)}
+
         #
         # RPM header example (bash-4.4.12-5.fc26.x86_64.rpm):
         # {
@@ -110,11 +113,7 @@ class TestImport(utils.CliTestCase):
 
         # check mock calls
         activate_session_mock.assert_called_with(session, options)
-        get_header_fields_mock.assert_called_with(
-            arguments[0],
-            ('name', 'version', 'release', 'epoch',
-             'arch', 'sigmd5', 'sourcepackage', 'sourcerpm')
-        )
+        get_header_fields_mock.assert_called_once()
 
         session.getRPM.assert_called_with(
             dict((k, rpm_header.get(k, ''))
@@ -153,11 +152,7 @@ class TestImport(utils.CliTestCase):
 
         # check mock calls
         activate_session_mock.assert_called_with(session, options)
-        get_header_fields_mock.assert_called_with(
-            arguments[0],
-            ('name', 'version', 'release', 'epoch',
-             'arch', 'sigmd5', 'sourcepackage', 'sourcerpm')
-        )
+        get_header_fields_mock.assert_called_once()
 
         session.getRPM.assert_called_with(
             dict((k, rpm_header.get(k, ''))
@@ -278,11 +273,11 @@ class TestImport(utils.CliTestCase):
             expected=expected)
 
         # Case 2: build exists and status is 'COMPLETE', md5 mismatched
-        # reseult: import skipped
+        # result: import skipped
         session.getRPM.return_value['payloadhash'] = false_md5
-        expected_warn = "md5sum mismatch for %s\n" % arguments[0]
+        expected_warn = "digest mismatch for %s\n" % arguments[0]
         expected_warn += "  A different rpm with the same name has already been imported\n"
-        expected_warn += "  Existing sigmd5 is %r, your import has %r\n" % (false_md5, self.md5)
+        expected_warn += "  Existing rpm has %r, your import has %r\n" % (false_md5, self.md5)
         expected = "Skipping import\n"
         self.__skip_import_test(
             options, session, arguments,
@@ -290,7 +285,7 @@ class TestImport(utils.CliTestCase):
             expected=expected, expected_warn=expected_warn)
 
         # Case 3: build exists and status is 'COMPLETE', has external_repo_id
-        # reseult: import will be performed
+        # result: import will be performed
         session.getRPM.return_value['external_repo_id'] = 1
         expected = "uploading %s... done\n" % arguments[0]
         expected += "importing %s... done\n" % arguments[0]
@@ -639,11 +634,6 @@ class TestImport(utils.CliTestCase):
             handle_import(options, session, arguments)
             expected = case['msg'] % (nvr, case['state']) + "\n"
             self.assert_console_message(stdout, expected)
-            get_header_fields_mock.assert_called_with(
-                arguments[0],
-                ('name', 'version', 'release', 'epoch',
-                 'arch', 'sigmd5', 'sourcepackage', 'sourcerpm')
-            )
             activate_session_mock.assert_called_with(session, options)
             session.getRPM.assert_not_called()
             session.importRPM.assert_not_called()

@@ -766,10 +766,10 @@ class VMExecTask(BaseTaskHandler):
                     for chunk in response.iter_content(chunk_size=65536):
                         f.write(chunk)
             if type == 'rpm':
-                # rpm, check sigmd5. It is enough, as if content is broken,
+                # check digest if we can. It is enough, as if content is broken,
                 # rpm will fail later
                 hdr = koji.get_rpm_header(localpath)
-                payloadhash = koji.hex_string(koji.get_header_field(hdr, 'sigmd5'))
+                payloadhash = koji.get_rpm_ident(hdr)
                 if fileinfo['payloadhash'] != payloadhash:
                     raise koji.BuildError(
                         "Downloaded rpm %s doesn't match checksum (expected: %s, got %s)" %
@@ -777,6 +777,8 @@ class VMExecTask(BaseTaskHandler):
                          fileinfo['payloadhash'],
                          payloadhash))
                 if not koji.util.check_sigmd5(localpath):
+                    # note that check will trivially pass if there is no sigmd5 header present
+                    # TODO handle other digests
                     raise koji.BuildError("Downloaded rpm %s doesn't match sigmd5" %
                                           os.path.basename(fileinfo['localpath']))
             else:
