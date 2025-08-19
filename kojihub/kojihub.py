@@ -8332,6 +8332,10 @@ def validate_sigkey_value(sigkey):
     if '/' in sigkey or sigkey.startswith('.'):
         # not allowed because the value is used in a path
         raise koji.GenericError("Invalid sigkey value")
+    if sigkey != sigkey.lower():
+        # we require lowercase because koji has historically forced lowercase for this value
+        # e.g. in query_rpm_sigs
+        raise koji.GenericError("Invalid sigkey value. Must be lowercase")
     verify_name_internal(sigkey)
 
 

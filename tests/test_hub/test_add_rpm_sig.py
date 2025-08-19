@@ -154,6 +154,7 @@ class TestAddRPMSig(unittest.TestCase):
             'badchar!',
             '.hidden',
             'sub/dir',
+            'hasUPPERcase',
         ]
         for sigkey in badkeys:
             with self.assertRaises(koji.GenericError):
