@@ -8326,6 +8326,9 @@ def add_rpm_sig(an_rpm, sighdr, sigkey=None):
 
 def validate_sigkey_value(sigkey):
     convert_value(sigkey, cast=str, check_only=True)
+    if sigkey == '':
+        # special case for the unsigned sig header
+        return
     if '/' in sigkey or sigkey.startswith('.'):
         # not allowed because the value is used in a path
         raise koji.GenericError("Invalid sigkey value")
