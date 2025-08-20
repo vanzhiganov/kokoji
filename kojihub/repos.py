@@ -492,7 +492,6 @@ def do_auto_requests():
     reqs = {}
     dups = {}
     default_lag = context.opts['RepoAutoLag']
-    window = context.opts['RepoLagWindow']
     for tag_id in auto_tags:
         # choose min_event similar to default_min_event, but different lag
         # TODO unify code?
@@ -503,16 +502,7 @@ def do_auto_requests():
             logger.error('No last event for tag %i', tag_id)
             continue
         lag = lags.get(tag_id, default_lag)
-        base_ts = time.time() - lag
-        base_ts = (base_ts // window) * window
-        base_ev = context.handlers.get('getLastEvent')(before=base_ts, strict=False)
-        if base_ev:
-            base = base_ev['id']
-        else:
-            # this will only happen with a brand new instance
-            base = kojihub.tag_first_change_event(tag_id)
-            logger.debug(f'No event older than {base_ts}, using first tag event {base}')
-        check = request_repo(tag_id, min_event=min(base, last), priority=5)
+        check = request_repo(tag_id, priority=5, lag=lag)
         # lower priority so they don't block on-demand
         if check['duplicate']:
             dups[tag_id] = check
@@ -704,7 +694,7 @@ def convert_repo_opts(opts, strict=False):
     return new_opts
 
 
-def request_repo(tag, min_event=None, at_event=None, opts=None, priority=None, force=False):
+def request_repo(tag, min_event=None, at_event=None, opts=None, priority=None, force=False, lag=None):
     """Request a repo for a tag
 
     :param int|str taginfo: tag id or name
@@ -712,6 +702,7 @@ def request_repo(tag, min_event=None, at_event=None, opts=None, priority=None, f
     :param int at_event: specific event for the repo (optional)
     :param dict opts: custom repo options (optional)
     :param bool force: force request creation, even if a matching repo exists
+    :param int lag: set min_event using a lag value (in seconds)
 
     The special value min_event="last" uses the most recent event for the tag
     Otherwise min_event should be an integer
@@ -726,6 +717,9 @@ def request_repo(tag, min_event=None, at_event=None, opts=None, priority=None, f
     opts = convert_repo_opts(opts, strict=True)
     if opts.get('maven') and not context.opts.get('EnableMaven'):
         raise koji.GenericError('Maven support not enabled')
+    if lag is not None:
+        if min_event is not None or at_event is not None:
+            raise koji.ParameterError('The lag option cannot be used with event options')
     if at_event is not None:
         if min_event is not None:
             raise koji.ParameterError('The min_event and at_event options conflict')
@@ -737,7 +731,7 @@ def request_repo(tag, min_event=None, at_event=None, opts=None, priority=None, f
         min_event = kojihub.tag_last_change_event(taginfo['id'])
         logger.debug('Using last event %s for repo request', min_event)
     elif min_event is None:
-        min_event = default_min_event(taginfo)
+        min_event = default_min_event(taginfo, lag=lag)
         logger.debug('Using event %s for repo request', min_event)
     else:
         min_event = kojihub.convert_value(min_event, cast=int)
@@ -799,7 +793,9 @@ def request_repo(tag, min_event=None, at_event=None, opts=None, priority=None, f
         'priority': priority,
         'tag_id': taginfo['id'],
         'at_event': at_event,
-        'min_event': min_event,
+        'min_event': kojihub.tag_last_change_event(taginfo['id']),
+        # TODO - avoid getting last event twice
+        # OR just use getLastEvent?
         'opts': json.dumps(opts),
     }
     insert = InsertProcessor('repo_queue', data=data)
@@ -812,21 +808,18 @@ def request_repo(tag, min_event=None, at_event=None, opts=None, priority=None, f
     return ret
 
 
-def default_min_event(taginfo):
+def default_min_event(taginfo, lag=None):
     """Get the default min_event for repo requests"""
+    if lag is not None:
+        lag = taginfo['extra'].get('repo.lag')
+        if lag is not None and not isinstance(lag, int):
+            logger.warning('Invalid repo.lag setting for tag %s: %r', taginfo['name'], lag)
+            lag = None
+        if lag is None:
+            lag = context.opts['RepoLag']
     last = kojihub.tag_last_change_event(taginfo['id'])
     # last event cannot be None for a valid tag
-    lag = taginfo['extra'].get('repo.lag')
-    if lag is not None and not isinstance(lag, int):
-        logger.warning('Invalid repo.lag setting for tag %s: %r', taginfo['name'], lag)
-        lag = None
-    if lag is None:
-        lag = context.opts['RepoLag']
-    window = context.opts['RepoLagWindow']
     base_ts = time.time() - lag
-    # We round base_ts to nearest window so that duplicate requests will get same event if they
-    # are close in time.
-    base_ts = (base_ts // window) * window
     base_ev = context.handlers.get('getLastEvent')(before=base_ts, strict=False)
     if base_ev:
         base = base_ev['id']
