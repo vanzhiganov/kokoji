@@ -1379,7 +1379,7 @@ class TaskManager(object):
                 return False
             # otherwise...
             raise
-        if handler.Foreground:
+        if handler.Foreground or getattr(self.options, "single"):
             self.logger.info("running task in foreground")
             handler.setManager(self)
             self.runTask(handler)
