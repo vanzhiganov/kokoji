@@ -694,7 +694,8 @@ def convert_repo_opts(opts, strict=False):
     return new_opts
 
 
-def request_repo(tag, min_event=None, at_event=None, opts=None, priority=None, force=False, lag=None):
+def request_repo(tag, min_event=None, at_event=None, opts=None, priority=None, force=False,
+                 lag=None):
     """Request a repo for a tag
 
     :param int|str taginfo: tag id or name
