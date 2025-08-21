@@ -16,7 +16,6 @@ IP = repos.InsertProcessor
 UP = repos.UpdateProcessor
 TASK = kojihub.Task
 
-import pytest
 class MyError(Exception):
     pass
 
@@ -804,27 +803,6 @@ class TestAutoRequests(BaseTest):
         self.request_repo.assert_not_called()
         self.tag_last_change_event.assert_called_once()
 
-    @pytest.mark.skip
-    def test_no_last_event(self):
-        # corner case that can happen with very new instances
-        autokeys = [
-            {'tag_id': 99, 'key': 'repo.auto', 'value': 'true'},
-        ]
-        self.getLastEvent.return_value = None
-        self.query_execute.return_value = autokeys
-        self.tag_last_change_event.return_value = 1000
-        self.tag_first_change_event.return_value = 990
-        self.request_repo.return_value = {'repo': None, 'request': 'REQ', 'duplicate': False}
-
-        repos.do_auto_requests()
-
-        lag = self.context.opts['RepoAutoLag']
-        self.request_repo.assert_called_once_with(99, priority=5, lag=lag)
-        self.tag_last_change_event.assert_called_once()
-        self.tag_first_change_event.assert_called_once()
-
-        repos.do_auto_requests()
-
 
 class TestGetRepo(BaseTest):
 
@@ -1119,6 +1097,18 @@ class TestRequestRepo(BaseTest):
 
         with self.assertRaises(koji.ParameterError):
             repos.request_repo('TAGID', min_event=100, at_event=101)
+
+        self.InsertProcessor.assert_not_called()
+        self.get_repo.assert_not_called()
+
+    def test_lag_conflict(self):
+        self.get_tag.return_value = {'id': 100, 'name': 'TAG', 'extra': {}}
+
+        with self.assertRaises(koji.ParameterError):
+            repos.request_repo('TAGID', min_event=100, lag=10)
+
+        with self.assertRaises(koji.ParameterError):
+            repos.request_repo('TAGID', at_event=100, lag=10)
 
         self.InsertProcessor.assert_not_called()
         self.get_repo.assert_not_called()
