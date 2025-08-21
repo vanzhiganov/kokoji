@@ -9,7 +9,7 @@ import kojihub
 
 import pytest
 
-class TestEnsureVolumeBacklink(unittest.TestCase):
+class TestEnsureDraftBacklink(unittest.TestCase):
 
     def setUp(self):
         self.tempdir = tempfile.mkdtemp()
@@ -53,22 +53,11 @@ class TestEnsureVolumeBacklink(unittest.TestCase):
                 'name': '%s' % info,
                 }
 
-    def test_volume_symlink_no_action(self):
-        # the call should do nothing if the volume is DEFAULT
-        binfo = self.buildinfo.copy()
-        binfo['volume_name'] = 'DEFAULT'
-        files1 = list(find_files(self.topdir))
-
-        kojihub.ensure_volume_backlink(binfo)
-
-        files2 = list(find_files(self.topdir))
-        self.assertEqual(files1, files2)
-
-    def test_volume_symlink_create(self):
+    def test_draft_symlink_create(self):
         # verify that backlink is created correctly
         basedir = self.pathinfo.build(self.buildinfo)  # OTHER volume
 
-        kojihub.ensure_volume_backlink(self.buildinfo)
+        kojihub.ensure_draft_backlink(self.buildinfo)
 
         files = list(find_files(self.volmount))
         expected = [
@@ -83,20 +72,20 @@ class TestEnsureVolumeBacklink(unittest.TestCase):
                    '%(name)s/%(version)s/%(release)s' % self.buildinfo)
         self.assertEqual(os.readlink(basedir), relpath)
 
-    def test_volume_symlink_exists(self):
+    def test_draft_symlink_exists(self):
         # if an incorrect link is present, it should be replaced
         basedir = self.pathinfo.build(self.buildinfo)  # OTHER volume
         oldpath = 'some/other/link'
         os.makedirs(os.path.dirname(basedir))
         os.symlink(oldpath, basedir)
 
-        kojihub.ensure_volume_backlink(self.buildinfo)
+        kojihub.ensure_draft_backlink(self.buildinfo)
 
         relpath = ('../../../toplink/packages/'
                    '%(name)s/%(version)s/%(release)s' % self.buildinfo)
         self.assertEqual(os.readlink(basedir), relpath)
 
-    def test_volume_symlink_exists_same(self):
+    def test_draft_symlink_exists_same(self):
         # if link is already correct, it should be left alone
         basedir = self.pathinfo.build(self.buildinfo)  # OTHER volume
         relpath = ('../../../toplink/packages/'
@@ -105,7 +94,7 @@ class TestEnsureVolumeBacklink(unittest.TestCase):
         os.symlink(relpath, basedir)
 
         with mock.patch('os.unlink') as unlink:
-            kojihub.ensure_volume_backlink(self.buildinfo)
+            kojihub.ensure_draft_backlink(self.buildinfo)
             unlink.assert_not_called()
 
         files = list(find_files(self.volmount))
@@ -118,29 +107,47 @@ class TestEnsureVolumeBacklink(unittest.TestCase):
                 ]
         self.assertEqual(files, expected)
 
-    def test_volume_symlink_exists_error(self):
+    def test_draft_symlink_exists_error(self):
         # if the path exists and is not a link, we should error
         basedir = self.pathinfo.build(self.buildinfo)  # OTHER volume
         os.makedirs(basedir)
         files1 = list(find_files(self.tempdir))
 
         with self.assertRaises(koji.GenericError):
-            kojihub.ensure_volume_backlink(self.buildinfo)
+            kojihub.ensure_draft_backlink(self.buildinfo)
 
         files2 = list(find_files(self.tempdir))
         self.assertEqual(files1, files2)
 
-    def test_volume_symlink_exists_error(self):
+    def test_draft_symlink_exists_error(self):
         # if the volume dir is bad, we should error
         basedir = self.pathinfo.build(self.buildinfo)  # OTHER volume
 
         os.unlink(self.volmount + '/toplink')
         with self.assertRaises(koji.GenericError):
-            kojihub.ensure_volume_backlink(self.buildinfo)
+            kojihub.ensure_draft_backlink(self.buildinfo)
 
         os.rmdir(self.volmount)
         with self.assertRaises(koji.GenericError):
-            kojihub.ensure_volume_backlink(self.buildinfo)
+            kojihub.ensure_draft_backlink(self.buildinfo)
+
+    def test_draft_symlink_default(self):
+        # the call should handle the default volume case
+        binfo = self.buildinfo.copy()
+        binfo['volume_name'] = 'DEFAULT'
+
+        kojihub.ensure_draft_backlink(binfo)
+
+        files = list(find_files(self.topdir))
+        expected = [
+                'packages',
+                'vol',
+                'packages/some-image',
+                'packages/some-image/1.2.3.4',
+                'packages/some-image/1.2.3.4/3',
+                'vol/OTHER',
+                ]
+        self.assertEqual(files, expected)
 
 
 def find_files(dirpath):
@@ -148,3 +155,6 @@ def find_files(dirpath):
     for path, dirs, files in os.walk(dirpath):
         for fn in sorted(dirs + files):
             yield os.path.relpath(os.path.join(path, fn), dirpath)
+
+
+# the end

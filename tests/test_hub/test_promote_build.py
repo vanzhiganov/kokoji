@@ -35,7 +35,7 @@ class TestPromoteBuild(unittest.TestCase):
                                               return_value=None).start()
         self.safer_move = mock.patch('kojihub.kojihub.safer_move').start()
         self.ensure_volume_symlink = mock.patch('kojihub.kojihub.ensure_volume_symlink').start()
-        self.ensure_volume_backlink = mock.patch('kojihub.kojihub.ensure_volume_backlink').start()
+        self.ensure_draft_backlink = mock.patch('kojihub.kojihub.ensure_draft_backlink').start()
         self.lookup_name = mock.patch('kojihub.kojihub.lookup_name',
                                       return_value={'id': 1, 'name': 'DEFAULT'}).start()
         self.os_symlink = mock.patch('os.symlink').start()
