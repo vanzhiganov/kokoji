@@ -7,7 +7,6 @@ import unittest
 import koji
 import kojihub
 
-import pytest
 
 class TestEnsureDraftBacklink(unittest.TestCase):
 
@@ -29,17 +28,17 @@ class TestEnsureDraftBacklink(unittest.TestCase):
 
         # mock.patch('kojihub.kojihub.lookup_name', new=self.my_lookup_name).start()
         self.buildinfo = {
-                'id': 137,
-                'task_id': 'TASK_ID',
-                'name': 'some-image',
-                'version': '1.2.3.4',
-                'release': '3',
-                'epoch': None,
-                'source': None,
-                'state': koji.BUILD_STATES['BUILDING'],
-                # 'volume_id': 1,
-                'volume_name': 'OTHER',
-                }
+            'id': 137,
+            'task_id': 'TASK_ID',
+            'name': 'some-image',
+            'version': '1.2.3.4',
+            'release': '3',
+            'epoch': None,
+            'source': None,
+            'state': koji.BUILD_STATES['BUILDING'],
+            # 'volume_id': 1,
+            'volume_name': 'OTHER',
+        }
 
     def tearDown(self):
         mock.patch.stopall()
@@ -49,9 +48,9 @@ class TestEnsureDraftBacklink(unittest.TestCase):
         if table != 'volume':
             raise Exception("Cannot fake call")
         return {
-                'id': 'VOLUMEID:%s' % info,
-                'name': '%s' % info,
-                }
+            'id': 'VOLUMEID:%s' % info,
+            'name': '%s' % info,
+        }
 
     def test_draft_symlink_create(self):
         # verify that backlink is created correctly
@@ -61,12 +60,12 @@ class TestEnsureDraftBacklink(unittest.TestCase):
 
         files = list(find_files(self.volmount))
         expected = [
-                'packages',
-                'toplink',
-                'packages/some-image',
-                'packages/some-image/1.2.3.4',
-                'packages/some-image/1.2.3.4/3',
-                ]
+            'packages',
+            'toplink',
+            'packages/some-image',
+            'packages/some-image/1.2.3.4',
+            'packages/some-image/1.2.3.4/3',
+        ]
         self.assertEqual(files, expected)
         relpath = ('../../../toplink/packages/'
                    '%(name)s/%(version)s/%(release)s' % self.buildinfo)
@@ -99,12 +98,12 @@ class TestEnsureDraftBacklink(unittest.TestCase):
 
         files = list(find_files(self.volmount))
         expected = [
-                'packages',
-                'toplink',
-                'packages/some-image',
-                'packages/some-image/1.2.3.4',
-                'packages/some-image/1.2.3.4/3',
-                ]
+            'packages',
+            'toplink',
+            'packages/some-image',
+            'packages/some-image/1.2.3.4',
+            'packages/some-image/1.2.3.4/3',
+        ]
         self.assertEqual(files, expected)
 
     def test_draft_symlink_exists_error(self):
@@ -119,10 +118,8 @@ class TestEnsureDraftBacklink(unittest.TestCase):
         files2 = list(find_files(self.tempdir))
         self.assertEqual(files1, files2)
 
-    def test_draft_symlink_exists_error(self):
+    def test_draft_symlink_exists_error2(self):
         # if the volume dir is bad, we should error
-        basedir = self.pathinfo.build(self.buildinfo)  # OTHER volume
-
         os.unlink(self.volmount + '/toplink')
         with self.assertRaises(koji.GenericError):
             kojihub.ensure_draft_backlink(self.buildinfo)
@@ -140,13 +137,13 @@ class TestEnsureDraftBacklink(unittest.TestCase):
 
         files = list(find_files(self.topdir))
         expected = [
-                'packages',
-                'vol',
-                'packages/some-image',
-                'packages/some-image/1.2.3.4',
-                'packages/some-image/1.2.3.4/3',
-                'vol/OTHER',
-                ]
+            'packages',
+            'vol',
+            'packages/some-image',
+            'packages/some-image/1.2.3.4',
+            'packages/some-image/1.2.3.4/3',
+            'vol/OTHER',
+        ]
         self.assertEqual(files, expected)
 
 
