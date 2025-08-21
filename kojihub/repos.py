@@ -811,7 +811,7 @@ def request_repo(tag, min_event=None, at_event=None, opts=None, priority=None, f
 
 def default_min_event(taginfo, lag=None):
     """Get the default min_event for repo requests"""
-    if lag is not None:
+    if lag is None:
         lag = taginfo['extra'].get('repo.lag')
         if lag is not None and not isinstance(lag, int):
             logger.warning('Invalid repo.lag setting for tag %s: %r', taginfo['name'], lag)
