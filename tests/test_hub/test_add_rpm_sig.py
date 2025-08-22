@@ -146,15 +146,23 @@ class TestAddRPMSig(unittest.TestCase):
     def test_add_rpm_sig_bad_sigkey(self):
         """bad sigkey failure case"""
         sighdr = 'SIG HEADER 99'
-        self.isdir.side_effect = [True]
-        self.get_rpm.side_effect = [{'build_id': 100, 'external_repo_id': None}]
+        self.isdir.return_value = True
+        self.get_rpm.return_value = {'build_id': 100, 'external_repo_id': None}
 
-        with self.assertRaises(koji.GenericError):
-            kojihub.add_rpm_sig(1, sighdr, sigkey='foo/bar !')
+        badkeys = [
+            'white space',
+            'badchar!',
+            '.hidden',
+            'sub/dir',
+            'hasUPPERcase',
+        ]
+        for sigkey in badkeys:
+            with self.assertRaises(koji.GenericError):
+                kojihub.add_rpm_sig(1, sighdr, sigkey=sigkey)
 
         self.assertEqual(len(self.inserts), 0)
         self.open.assert_not_called()
-        self.isdir.assert_called_once()
+        self.isdir.assert_called()
 
 
 class TestScanHeaderOnly(unittest.TestCase):
