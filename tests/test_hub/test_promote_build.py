@@ -35,7 +35,7 @@ class TestPromoteBuild(unittest.TestCase):
                                               return_value=None).start()
         self.safer_move = mock.patch('kojihub.kojihub.safer_move').start()
         self.ensure_volume_symlink = mock.patch('kojihub.kojihub.ensure_volume_symlink').start()
-        self.ensure_volume_backlink = mock.patch('kojihub.kojihub.ensure_volume_backlink').start()
+        self.ensure_draft_backlink = mock.patch('kojihub.kojihub.ensure_draft_backlink').start()
         self.lookup_name = mock.patch('kojihub.kojihub.lookup_name',
                                       return_value={'id': 1, 'name': 'DEFAULT'}).start()
         self.os_symlink = mock.patch('os.symlink').start()
@@ -256,6 +256,34 @@ class TestPromoteBuildFiles(unittest.TestCase):
             None,
             self.new_build
         ]
+        orig_bdir = self.pathinfo.build(self.draft_build)
+        koji.ensuredir(orig_bdir)
+        sentinel = 'HELLO 873\n'
+        with open(orig_bdir + '/sentinel.txt', 'wt') as fp:
+            fp.write(sentinel)
+
+        # promote
+        ret = self.exports.promoteBuild('a-draft-build')
+
+        self.assertEqual(ret, self.new_build)
+        # orig_bdir should be a symlink
+        assert os.path.islink(orig_bdir)
+        # should be accessible via original path
+        with open(orig_bdir + '/sentinel.txt', 'rt') as fp:
+            assert fp.read() == sentinel
+
+    def test_promote_build_default_volume_link(self):
+        # promote a draft build on the default volume
+        self.draft_build['volume_id'] = 0
+        self.draft_build['volume_name'] = 'DEFAULT'
+        self.new_build['volume_name'] = 'DEFAULT'
+        self.get_build.side_effect = [
+            self.draft_build,   # the build to promote
+            None,               # checking to see if promoted build already exists
+            self.new_build      # updated build info after promotion
+        ]
+
+        # add test content to build dir
         orig_bdir = self.pathinfo.build(self.draft_build)
         koji.ensuredir(orig_bdir)
         sentinel = 'HELLO 873\n'
