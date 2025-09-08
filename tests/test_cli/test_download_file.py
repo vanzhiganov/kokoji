@@ -15,14 +15,6 @@ import unittest
 from koji_cli.lib import download_file, _download_progress
 
 
-def mock_open():
-    """Return the right patch decorator for open"""
-    if six.PY2:
-        return mock.patch('__builtin__.open')
-    else:
-        return mock.patch('builtins.open')
-
-
 class TestDownloadFile(unittest.TestCase):
     # Show long diffs in error output...
     maxDiff = None
@@ -61,10 +53,8 @@ class TestDownloadFile(unittest.TestCase):
 
     @mock.patch('os.utime')
     @mock.patch('os.unlink')
-    @mock_open()
-    def test_handle_download_file(self, m_open, os_unlink, os_utime):
+    def test_handle_download_file(self, os_unlink, os_utime):
         self.reset_mock()
-        m_open.return_value.tell.return_value = 0
         rsp_head = self.head.return_value
         rsp_head.status_code = 200
         rsp_head.headers = {'Content-Length': '5'}
@@ -74,7 +64,7 @@ class TestDownloadFile(unittest.TestCase):
             '5',        # content-length
             'Thu, 02 Mar 2023 11:21:12 GMT',  # last-modified
         ]
-        response.iter_content.return_value = ['abcde']
+        response.iter_content.return_value = [six.b('abcde')]
 
         rv = download_file("http://url", self.filename)
 
@@ -88,16 +78,14 @@ class TestDownloadFile(unittest.TestCase):
         self.assertIsNone(rv)
 
     @mock.patch('os.unlink')
-    @mock_open()
-    def test_handle_download_file_undefined_length(self, m_open, os_unlink):
+    def test_handle_download_file_undefined_length(self, os_unlink):
         self.reset_mock()
-        m_open.return_value.tell.return_value = 0
         rsp_head = self.head.return_value
         rsp_head.status_code = 200
         rsp_head.headers = {'Content-Length': str(65536 * 2)}
         response = mock.MagicMock()
         response.headers.get.return_value = None  # content-length
-        response.iter_content.return_value = ['a' * 65536, 'b' * 65536]
+        response.iter_content.return_value = [six.b('a' * 65536), six.b('b' * 65536)]
         self.get_mock.return_value = response
 
         rv = download_file("http://url", self.filename)
@@ -108,7 +96,6 @@ class TestDownloadFile(unittest.TestCase):
         self.assertMultiLineEqual(actual, expected)
 
         self.get_mock.assert_called_once()
-        m_open.assert_called_once()
         response.headers.get.assert_called_once()
         response.iter_content.assert_called_once()
         self.assertIsNone(rv)
