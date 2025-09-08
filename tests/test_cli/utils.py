@@ -197,6 +197,7 @@ class CliTestCase(unittest.TestCase):
         # optarse uses gettext directly and it is driven by LANGUAGE
         # we need english to get comparable strings
         os.environ['LANGUAGE'] = 'C'
+        os.environ['COLUMNS'] = '80'
         self.assert_system_exit(
             callableObj,
             mock.MagicMock(),
