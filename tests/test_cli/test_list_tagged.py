@@ -1,4 +1,6 @@
 import os
+import shutil
+import tempfile
 import time
 
 try:
@@ -7,6 +9,7 @@ except ImportError:
     import mock
 import six
 
+from koji import PathInfo
 from koji_cli.commands import anon_handle_list_tagged
 from . import utils
 
@@ -14,6 +17,9 @@ from . import utils
 class TestCliListTagged(utils.CliTestCase):
 
     def setUp(self):
+        self.tempdir = tempfile.mkdtemp()
+        self.pathinfo = PathInfo(self.tempdir)
+        mock.patch('koji.pathinfo', new=self.pathinfo).start()
         self.maxDiff = None
         self.original_timezone = os.environ.get('TZ')
         os.environ['TZ'] = 'US/Eastern'
@@ -30,56 +36,51 @@ class TestCliListTagged(utils.CliTestCase):
         self.event_id = 1000
         self.type = 'maven'
         self.session.getTag.return_value = {'id': 1}
-        self.session.listTaggedRPMS.return_value = [[{'id': 100,
-                                                      'build_id': 1,
-                                                      'name': 'rpmA',
-                                                      'version': '0.0.1',
-                                                      'release': '1.el6',
-                                                      'arch': 'noarch',
-                                                      'sigkey': 'sigkey',
-                                                      'extra': 'extra-value'},
-                                                     {'id': 101,
-                                                      'build_id': 1,
-                                                      'name': 'rpmA',
-                                                      'version': '0.0.1',
-                                                      'release': '1.el6',
-                                                      'arch': 'x86_64',
-                                                      'sigkey': 'sigkey',
-                                                      'extra': None},
-                                                     {'id': 102,
-                                                      'build_id': 2,
-                                                      'name': 'rpmA',
-                                                      'version': '0.0.1',
-                                                      'release': '2.el6',
-                                                      'arch': 'x86_64',
-                                                      'sigkey': 'sigkey',
-                                                      'draft': True,
-                                                      'extra': None}
-                                                     ], [{'id': 1,
-                                                          'name': 'packagename',
-                                                          'version': 'version',
-                                                          'release': '1.el6',
-                                                          'nvr': 'n-v-r',
-                                                          'tag_name': 'tag',
-                                                          'owner_name': 'owner',
-                                                          'extra': 'extra-value-2'},
-                                                         {'id': 2,
-                                                          'name': 'packagename',
-                                                          'version': 'version',
-                                                          'release': '2.el6,draft_2',
-                                                          'nvr': 'n-v-r',
-                                                          'draft': True,
-                                                          'tag_name': 'tag',
-                                                          'owner_name': 'owner',
-                                                          'extra': 'extra-value-2'}]]
-        self.session.listTagged.return_value = [{'id': 1,
-                                                 'name': 'packagename',
-                                                 'version': 'version',
-                                                 'release': '1.el6',
-                                                 'nvr': 'n-v-r',
-                                                 'tag_name': 'tag',
-                                                 'owner_name': 'owner',
-                                                 'extra': 'extra-value-2'}]
+        self.rpms = [{'id': 100,
+                      'build_id': 1,
+                      'name': 'rpmA',
+                      'version': '0.0.1',
+                      'release': '1.el6',
+                      'arch': 'noarch',
+                      'sigkey': 'sigkey',
+                      'extra': 'extra-value'},
+                     {'id': 101,
+                      'build_id': 1,
+                      'name': 'rpmA',
+                      'version': '0.0.1',
+                      'release': '1.el6',
+                      'arch': 'x86_64',
+                      'sigkey': 'sigkey',
+                      'extra': None},
+                     {'id': 102,
+                      'build_id': 2,
+                      'name': 'rpmA',
+                      'version': '0.0.1',
+                      'release': '2.el6',
+                      'arch': 'x86_64',
+                      'sigkey': 'sigkey',
+                      'draft': True,
+                      'extra': None}
+                     ]
+        self.builds = [{'id': 1,
+                        'name': 'packagename',
+                        'version': 'version',
+                        'release': '1.el6',
+                        'nvr': 'n-v-r',
+                        'tag_name': 'tag',
+                        'owner_name': 'owner',
+                        'extra': 'extra-value-2'},
+                       {'id': 2,
+                        'name': 'packagename',
+                        'version': 'version',
+                        'release': '2.el6,draft_2',
+                        'nvr': 'n-v-r',
+                        'draft': True,
+                        'tag_name': 'tag',
+                        'owner_name': 'owner',
+                        'extra': 'extra-value-2'}]
+        self.session.listTaggedRPMS.return_value = [self.rpms, self.builds]
+        self.session.listTagged.return_value = [self.builds[0]]  # XXX
         self.ensure_connection_mock = mock.patch('koji_cli.commands.ensure_connection').start()
 
     def tearDown(self):
@@ -89,6 +90,7 @@ class TestCliListTagged(utils.CliTestCase):
             os.environ['TZ'] = self.original_timezone
         time.tzset()
         mock.patch.stopall()
+        shutil.rmtree(self.tempdir)
 
     @mock.patch('sys.stdout', new_callable=six.StringIO)
     @mock.patch('koji.util.eventFromOpts', return_value={'id': 1000,
@@ -147,11 +149,9 @@ sigkey rpmA-0.0.1-2.el6.x86_64 (,draft_2)
         self.session.listTagged.assert_not_called()
         self.assert_console_message(stdout, expected)
 
-    @mock.patch('os.path.isdir', return_value=True)
-    @mock.patch('os.path.exists', return_value=True)
     @mock.patch('sys.stdout', new_callable=six.StringIO)
     @mock.patch('koji.util.eventFromOpts', return_value=None)
-    def test_list_tagged_rpms_paths(self, event_from_opts_mock, stdout, os_path_exists, isdir):
+    def test_list_tagged_rpms_paths(self, event_from_opts_mock, stdout):
         expected = """/mnt/koji/packages/packagename/version/1.el6/noarch/rpmA-0.0.1-1.el6.noarch.rpm
 /mnt/koji/packages/packagename/version/1.el6/x86_64/rpmA-0.0.1-1.el6.x86_64.rpm
 /mnt/koji/packages/packagename/version/2.el6,draft_2/x86_64/rpmA-0.0.1-2.el6.x86_64.rpm
@@ -166,15 +166,14 @@ sigkey rpmA-0.0.1-2.el6.x86_64 (,draft_2)
             self.tag, package=self.pkg, inherit=None, latest=3, arch=['x86_64'])
         self.session.listTagged.assert_not_called()
 
-    @mock.patch('os.path.exists')
     @mock.patch('sys.stdout', new_callable=six.StringIO)
     @mock.patch('koji.util.eventFromOpts', return_value=None)
-    def test_list_tagged_sigs_paths(self, event_from_opts_mock, stdout, os_path_exists):
+    def test_list_tagged_sigs_paths(self, event_from_opts_mock, stdout):
         expected = ""
         args = [self.tag, self.pkg, '--latest-n=3', '--rpms', '--sigs',
                 '--arch=x86_64', '--paths']
+        # TODO - write fake signed copies to tempdir
 
-        os_path_exists.side_effect = [True, False, False]
         anon_handle_list_tagged(self.options, self.session, args)
         self.assert_console_message(stdout, expected)
         self.ensure_connection_mock.assert_called_once_with(self.session, self.options)
