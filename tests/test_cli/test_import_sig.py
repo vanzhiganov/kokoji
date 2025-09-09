@@ -286,6 +286,42 @@ class TestImportSIG(utils.CliTestCase):
         self.session.addRPMSig.assert_not_called()
         self.session.writeSignedRPM.assert_not_called()
 
+    @mock.patch('sys.stdout', new_callable=six.StringIO)
+    def test_handle_import_sig_sigkey_specified(self, stdout):
+        """Test sigkey computation from header-only signed rpm in handle_import_sig function"""
+        data_path = os.path.abspath("tests/test_hub/data/rpms")
+        sigkey = 'OVERRIDE'
+        rpms = [os.path.join(data_path, 'header-signed.rpm')]
+        arguments = ['--sigkey', sigkey] + rpms
+
+        expected = ''
+
+        for pkg in rpms:
+            expected += "Importing signature [key %s] from %s..." % (sigkey, pkg) + "\n"
+            expected += "Writing signed copy" + "\n"
+
+        rpminfo = {
+            'sourcepackage': 0,
+            'name': 'testpkg',
+            'version': '1.0.0',
+            'release': '1',
+            'arch': 'x86_64',
+            'external_repo_id': 0,
+            'id': 1,
+        }
+        self.session.getRPM.side_effect = [rpminfo]
+        self.session.queryRPMSigs.side_effect = None
+        self.session.queryRPMSigs.return_value = []
+
+        # Run
+        handle_import_sig(self.options, self.session, arguments)
+
+        self.assert_console_message(stdout, expected)
+        self.session.addRPMSig.assert_called_once()
+        kw1 = self.session.addRPMSig.call_args_list[0][1]
+        self.assertEqual(kw1, {'sigkey': sigkey})
+        self.session.writeSignedRPM.assert_called_once_with(rpminfo['id'], sigkey)
+
     def test_handle_import_sig_argument_test(self):
         """Test handle_import_sig function without arguments"""
         # Case 1. empty argument
