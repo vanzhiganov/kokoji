@@ -1732,20 +1732,24 @@ def handle_import_sig(goptions, session, args):
                                              'sourcepackage'))
         if data['sourcepackage']:
             data['arch'] = 'src'
-        sigkey = data['siggpg']
-        if not sigkey:
-            sigkey = data['sigpgp']
-        if not sigkey:
-            sigkey = data['dsaheader']
-        if not sigkey:
-            sigkey = data['rsaheader']
-        if not sigkey:
-            sigkey = ""
-            if not options.with_unsigned:
-                print("Skipping unsigned package: %s" % path)
-                continue
+        if options.sigkey is not None:
+            sigkey = options.sigkey
         else:
-            sigkey = koji.get_sigpacket_key_id(sigkey)
+            # calculate from header values
+            sigkey = data['siggpg']
+            if not sigkey:
+                sigkey = data['sigpgp']
+            if not sigkey:
+                sigkey = data['dsaheader']
+            if not sigkey:
+                sigkey = data['rsaheader']
+            if not sigkey:
+                sigkey = ""
+                if not options.with_unsigned:
+                    print("Skipping unsigned package: %s" % path)
+                    continue
+            else:
+                sigkey = koji.get_sigpacket_key_id(sigkey)
         del data['siggpg']
         del data['sigpgp']
         del data['dsaheader']
@@ -1774,6 +1778,7 @@ def handle_import_sig(goptions, session, args):
         kwargs = {}
         if options.sigkey:
             kwargs['sigkey'] = options.sigkey
+            # if sigkey is not specified, the hub will calculate from the header, similar to above
         print("Importing signature [key %s] from %s..." % (sigkey, path))
         if not options.test:
             session.addRPMSig(rinfo['id'], base64encode(sighdr), **kwargs)
