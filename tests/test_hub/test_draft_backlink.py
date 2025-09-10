@@ -149,7 +149,9 @@ class TestEnsureDraftBacklink(unittest.TestCase):
 
 def find_files(dirpath):
     '''Find all files under dir, report relative paths'''
-    for path, dirs, files in os.walk(dirpath):
+    for path, dirs, files in os.walk(dirpath, topdown=True):
+        # sort dirs in place for consistent traversal
+        dirs.sort()
         for fn in sorted(dirs + files):
             yield os.path.relpath(os.path.join(path, fn), dirpath)
 
