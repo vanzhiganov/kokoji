@@ -1101,6 +1101,39 @@ class TestRequestRepo(BaseTest):
         self.InsertProcessor.assert_not_called()
         self.get_repo.assert_not_called()
 
+    def test_lag_invalid(self):
+        self.get_tag.return_value = {'id': 100, 'name': 'TAG', 'extra': {}}
+
+        with self.assertRaises(koji.ParameterError):
+            repos.request_repo('TAGID', lag=-1)
+
+        with self.assertRaises(koji.ParameterError):
+            repos.request_repo('TAGID', lag='invalid value')
+
+        self.InsertProcessor.assert_not_called()
+        self.get_repo.assert_not_called()
+
+    def test_lag_opt(self):
+        self.get_tag.return_value = {'id': 100, 'name': 'TAG', 'extra': {}}
+        self.getLastEvent.return_value = {'id': 101010}
+        last = 100001
+        self.tag_last_change_event.return_value = last
+        self.get_repo.return_value = None
+        self.RepoQueueQuery.return_value.execute.return_value = []
+
+        repos.request_repo('TAGID', lag=0)
+
+        # check all the calls made with the value
+        self.get_repo.assert_called_once()
+        ev = self.get_repo.call_args.kwargs['min_event']
+        self.assertEqual(ev, last)
+        clauses = self.RepoQueueQuery.call_args_list[0].args[0]
+        self.assertIn(['min_event', '>=', last], clauses)
+        self.InsertProcessor.assert_called_once()
+        data = self.InsertProcessor.call_args.kwargs['data']
+        self.assertEqual(data['min_event'], last)
+
+
     def test_lag_conflict(self):
         self.get_tag.return_value = {'id': 100, 'name': 'TAG', 'extra': {}}
 
