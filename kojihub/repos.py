@@ -493,17 +493,20 @@ def do_auto_requests():
     dups = {}
     default_lag = context.opts['RepoAutoLag']
     for tag_id in auto_tags:
-        # choose min_event similar to default_min_event, but different lag
-        # TODO unify code?
+        # make sure we have a sane tag before we make a request
         last = kojihub.tag_last_change_event(tag_id)
         if last is None:
             # shouldn't happen
             # last event cannot be None for a valid tag, but we only queried tag_extra
             logger.error('No last event for tag %i', tag_id)
             continue
+
+        # make the request
         lag = lags.get(tag_id, default_lag)
         check = request_repo(tag_id, priority=5, lag=lag)
         # lower priority so they don't block on-demand
+
+        # stats for debugging
         if check['duplicate']:
             dups[tag_id] = check
         elif check['request']:
@@ -721,6 +724,9 @@ def request_repo(tag, min_event=None, at_event=None, opts=None, priority=None, f
     if lag is not None:
         if min_event is not None or at_event is not None:
             raise koji.ParameterError('The lag option cannot be used with event options')
+        lag = kojihub.convert_value(lag, cast=float)
+        if lag < 0:
+            raise koji.ParameterError('The lag option cannot be negative')
     if at_event is not None:
         if min_event is not None:
             raise koji.ParameterError('The min_event and at_event options conflict')
@@ -788,15 +794,18 @@ def request_repo(tag, min_event=None, at_event=None, opts=None, priority=None, f
 
     # otherwise we make one
     req_id = nextval('repo_queue_id_seq')
+    if min_event is not None:
+        # for a fresh request, always use the last change event
+        min_event = kojihub.tag_last_change_event(taginfo['id'])
+        # TODO - avoid getting last event twice
+        # OR just use getLastEvent?
     data = {
         'id': req_id,
         'owner': context.session.user_id,
         'priority': priority,
         'tag_id': taginfo['id'],
         'at_event': at_event,
-        'min_event': kojihub.tag_last_change_event(taginfo['id']),
-        # TODO - avoid getting last event twice
-        # OR just use getLastEvent?
+        'min_event': min_event,
         'opts': json.dumps(opts),
     }
     insert = InsertProcessor('repo_queue', data=data)
