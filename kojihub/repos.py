@@ -798,7 +798,6 @@ def request_repo(tag, min_event=None, at_event=None, opts=None, priority=None, f
         # for a fresh request, always use the last change event
         min_event = kojihub.tag_last_change_event(taginfo['id'])
         # TODO - avoid getting last event twice
-        # OR just use getLastEvent?
     data = {
         'id': req_id,
         'owner': context.session.user_id,
