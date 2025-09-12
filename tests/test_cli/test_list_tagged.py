@@ -74,13 +74,13 @@ class TestCliListTagged(utils.CliTestCase):
                         'name': 'packagename',
                         'version': 'version',
                         'release': '2.el6,draft_2',
-                        'nvr': 'n-v-r',
+                        'nvr': 'n-v-r,draft_2',
                         'draft': True,
                         'tag_name': 'tag',
                         'owner_name': 'owner',
                         'extra': 'extra-value-2'}]
         self.session.listTaggedRPMS.return_value = [self.rpms, self.builds]
-        self.session.listTagged.return_value = [self.builds[0]]  # XXX
+        self.session.listTagged.return_value = self.builds
         self.ensure_connection_mock = mock.patch('koji_cli.commands.ensure_connection').start()
 
     def tearDown(self):
@@ -103,6 +103,7 @@ n-v-r                                     tag                   owner
 """
         args = [self.tag, self.pkg, '--no-draft', '--latest', '--inherit',
                 '--event', str(self.event_id)]
+        self.session.listTagged.return_value = [self.builds[0]]  # no draft build
 
         anon_handle_list_tagged(self.options, self.session, args)
         self.ensure_connection_mock.assert_called_once_with(self.session, self.options)
@@ -118,9 +119,10 @@ n-v-r                                     tag                   owner
     def test_list_tagged_builds_paths(self, event_from_opts_mock, stdout):
         expected = """Build                                     Tag                   Built by
 ----------------------------------------  --------------------  ----------------
-/mnt/koji/packages/packagename/version/1.el6  tag                   owner
+/mnt/koji/packages/packagename/version/2.el6,draft_2  tag                   owner
 """
         args = [self.tag, self.pkg, '--latest', '--inherit', '--paths', '--draft-only']
+        self.session.listTagged.return_value = [self.builds[1]]  # just the draft build
 
         anon_handle_list_tagged(self.options, self.session, args)
         self.assert_console_message(stdout, expected)
