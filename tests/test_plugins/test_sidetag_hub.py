@@ -29,6 +29,8 @@ class TestCreateSideTagHub(unittest.TestCase):
             'id': 23,
             'name': 'username',
         }
+        mock.patch('sidetag_hub.ALLOWED_SUFFIXES', new=['suffix', 'another']).start()
+        mock.patch('sidetag_hub.NAME_TEMPLATE', new='{basetag}-sidetagTEST-{tag_id}').start()
 
     def tearDown(self):
         mock.patch.stopall()
@@ -42,7 +44,7 @@ class TestCreateSideTagHub(unittest.TestCase):
 
     def test_createsidetag_basic(self):
         self.query_executeOne.return_value = {'user_tags': 0}
-        sidetag_name = 'base_tag-side-12346'
+        sidetag_name = 'base_tag-sidetagTEST-12346'
         self.context.session.assertLogin = mock.MagicMock()
         self.context.session.user_id = 23
         self.get_user.return_value = self.user
@@ -72,17 +74,16 @@ class TestCreateSideTagHub(unittest.TestCase):
 
     def test_createsidetag_template_valid_and_debuginfo(self):
         self.query_executeOne.return_value = {'user_tags': 0}
-        sidetag_name = 'base_tag-sidetag-12346-suffix'
+        sidetag_name = 'base_tag-sidetagTEST-12346-suffix'
         self.context.session.assertLogin = mock.MagicMock()
         self.context.session.user_id = 23
         self.get_user.return_value = self.user
         self.get_tag.return_value = self.basetag
         self.nextval.return_value = 12345
         self._create_tag.return_value = 12346
-        sidetag_hub.ALLOWED_SUFFIXES = ['suffix', 'another']
-        sidetag_hub.NAME_TEMPLATE = '{basetag}-sidetag-{tag_id}'
 
         ret = sidetag_hub.createSideTag('base_tag', debuginfo=True, suffix='suffix')
+
         self.assertEqual(ret, {'name': sidetag_name, 'id': 12346, 'task_id': None, 'request': None})
 
     def test_createsidetag_template_forbidden_suffix(self):
@@ -104,8 +105,6 @@ class TestCreateSideTagHub(unittest.TestCase):
         self.context.session.user_id = 23
         self.get_user.return_value = self.user
         self.get_tag.return_value = self.basetag
-        sidetag_hub.ALLOWED_SUFFIXES = ['suffix', 'another']
-        sidetag_hub.NAME_TEMPLATE = '{basetag}-sidetag-{tag_id}'
 
         with self.assertRaises(koji.GenericError) as ex:
             sidetag_hub.createSideTag('base_tag', suffix='suffix')

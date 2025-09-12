@@ -29,9 +29,12 @@ class TestKiwiBuildTask(unittest.TestCase):
         self.options.allowed_scms = 'allowed_scms'
         self.options.allowed_scms_use_config = False
         self.options.allowed_scms_use_policy = True
-        kiwi.SCM = mock.MagicMock(side_effect=self.SCM)
-        koji.ensuredir = mock.MagicMock()
+        mock.patch.object(kiwi, 'SCM', side_effect=self.SCM).start()
+        mock.patch('koji.ensuredir').start()
         self.task = kiwi.KiwiBuildTask(123, 'kiwiBuild', {}, self.session, self.options)
+
+    def tearDown(self):
+        mock.patch.stopall()
 
     def test_get_nrvp_invalid_xml(self):
         # missing file
