@@ -441,8 +441,7 @@ config_map = [
     ['ProxyPrincipals', 'string', ''],
     ['HostPrincipalFormat', 'string', None],
     ['AllowedKrbRealms', 'string', '*'],
-    # TODO:  this option should be turned True in 1.34
-    ['DisableURLSessions', 'boolean', False],
+    ['DisableURLSessions', 'boolean', True],
 
     ['DNUsernameComponent', 'string', 'CN'],
     ['ProxyDNs', 'string', ''],
