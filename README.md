@@ -50,8 +50,9 @@ Related Software
 ----------------
 
 * [Mock](https://fedoraproject.org/wiki/Projects/Mock): The tool Koji uses to generate buildroots
-* [Yum](http://yum.baseurl.org/)
-* [Pungi](https://pagure.io/pungi): Use Pungi to "compose" Koji builds into highly customizable Yum repositories.
+* [Yum](http://yum.baseurl.org/) - RPM package manager
+* [DNF](https://github.com/rpm-software-management/dnf) / [DNF5](https://github.com/rpm-software-management/dnf5) - Next-gen RPM package manager
+* [Pungi](https://pagure.io/pungi): Use Pungi to "compose" Koji builds into highly customizable Yum/DNF repositories.
 * [Koji Tools](https://pagure.io/koji-tools): Various utilities for Koji
 * [Kojiji](https://github.com/release-engineering/kojiji): Koji Java Interface
 * [txkoji](https://github.com/ktdreyer/txkoji): Async interface to Koji, using Twisted
