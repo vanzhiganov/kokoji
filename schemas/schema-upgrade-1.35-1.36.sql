@@ -7,6 +7,7 @@ INSERT INTO archivetypes (name, description, extensions) VALUES ('erofs', 'erofs
 INSERT INTO archivetypes (name, description, extensions) VALUES ('erofs-compressed', 'Compressed erofs image', 'erofs.gz erofs.xz') ON CONFLICT DO NOTHING;
 INSERT INTO archivetypes (name, description, extensions) VALUES ('squashfs', 'SquashFS image', 'squashfs') ON CONFLICT DO NOTHING;
 INSERT INTO archivetypes (name, description, extensions) VALUES ('squashfs-compressed', 'Compressed SquashFS image', 'squashfs.gz squashfs.xz') ON CONFLICT DO NOTHING;
+INSERT INTO archivetypes (name, description, extensions) VALUES ('wsl', 'Compressed tarball for Windows Subsystem for Linux', 'wsl') ON CONFLICT DO NOTHING;
 
 -- https://pagure.io/koji/issue/3963
 CREATE INDEX IF NOT EXISTS standard_buildroot_host_id on standard_buildroot(host_id);
