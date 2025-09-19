@@ -582,7 +582,7 @@ class BaseTaskHandler(object):
                                    tag['name'],
                                    ', '.join(sorted(tag_arches))))
 
-    def getRepo(self, tag, builds=None, wait=False):
+    def getRepo(self, tag, builds=None, wait=False, label='waitrepo'):
         """
         Get a repo that satisfies the given conditions. If there is no matching
         repo available, wait for one (via a waitrepo subtask).
@@ -590,6 +590,7 @@ class BaseTaskHandler(object):
         :param int|str tag: the tag for the requested repo
         :param list builds: require that the repo contain these builds
         :param bool wait: (misnamed) get a repo that is current as of our start time
+        :param str|none label: if subtask created, use this label
         """
 
         if wait:
@@ -610,7 +611,8 @@ class BaseTaskHandler(object):
         # otherwise, we create a subtask to continue waiting for us
         # this makes the process more visible to the user
         args = watcher.task_args()
-        task_id = self.session.host.subtask(method='waitrepo', arglist=args, parent=self.id)
+        task_id = self.session.host.subtask(method='waitrepo', arglist=args, parent=self.id,
+                                            label=label)
         repo_info = self.wait(task_id)[task_id]
         return repo_info
 
