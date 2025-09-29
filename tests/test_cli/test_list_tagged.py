@@ -18,8 +18,10 @@ class TestCliListTagged(utils.CliTestCase):
 
     def setUp(self):
         self.tempdir = tempfile.mkdtemp()
+        os.mkdir(self.tempdir + '/packages')
         self.pathinfo = PathInfo(self.tempdir)
         mock.patch('koji.pathinfo', new=self.pathinfo).start()
+        mock.patch('koji.BASEDIR', new=self.tempdir).start()
         self.maxDiff = None
         self.original_timezone = os.environ.get('TZ')
         os.environ['TZ'] = 'US/Eastern'
