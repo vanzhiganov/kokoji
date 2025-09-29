@@ -121,8 +121,8 @@ n-v-r                                     tag                   owner
     def test_list_tagged_builds_paths(self, event_from_opts_mock, stdout):
         expected = """Build                                     Tag                   Built by
 ----------------------------------------  --------------------  ----------------
-/mnt/koji/packages/packagename/version/2.el6,draft_2  tag                   owner
-"""
+%s/packages/packagename/version/2.el6,draft_2  tag                   owner
+""" % self.tempdir
         args = [self.tag, self.pkg, '--latest', '--inherit', '--paths', '--draft-only']
         self.session.listTagged.return_value = [self.builds[1]]  # just the draft build
 
@@ -156,10 +156,12 @@ sigkey rpmA-0.0.1-2.el6.x86_64 (,draft_2)
     @mock.patch('sys.stdout', new_callable=six.StringIO)
     @mock.patch('koji.util.eventFromOpts', return_value=None)
     def test_list_tagged_rpms_paths(self, event_from_opts_mock, stdout):
-        expected = """/mnt/koji/packages/packagename/version/1.el6/noarch/rpmA-0.0.1-1.el6.noarch.rpm
-/mnt/koji/packages/packagename/version/1.el6/x86_64/rpmA-0.0.1-1.el6.x86_64.rpm
-/mnt/koji/packages/packagename/version/2.el6,draft_2/x86_64/rpmA-0.0.1-2.el6.x86_64.rpm
-"""
+        expected = ''.join(["%s/%s\n" % (self.tempdir, p) for p in
+                        ["packages/packagename/version/1.el6/noarch/rpmA-0.0.1-1.el6.noarch.rpm",
+                         "packages/packagename/version/1.el6/x86_64/rpmA-0.0.1-1.el6.x86_64.rpm",
+                         "packages/packagename/version/2.el6,draft_2/x86_64/rpmA-0.0.1-2.el6.x86_64.rpm",
+                        ]
+                    ])
         args = [self.tag, self.pkg, '--latest-n=3', '--rpms', '--arch=x86_64', '--paths']
 
         anon_handle_list_tagged(self.options, self.session, args)
@@ -217,8 +219,8 @@ n-v-r                                     tag                   group           
     def test_list_tagged_type_paths(self, event_from_opts_mock, stdout):
         expected = """Build                                     Tag                   Group Id              Artifact Id           Built by
 ----------------------------------------  --------------------  --------------------  --------------------  ----------------
-/mnt/koji/packages/packagename/version/1.el6/maven  tag                   group                 artifact              owner
-"""
+%s/packages/packagename/version/1.el6/maven  tag                   group                 artifact              owner
+""" % self.tempdir
         args = [self.tag, self.pkg, '--latest-n=3', '--type', self.type, '--paths']
         self.session.listTagged.return_value = [{'id': 1,
                                                  'name': 'packagename',
