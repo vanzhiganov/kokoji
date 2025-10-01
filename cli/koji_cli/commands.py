@@ -1865,32 +1865,54 @@ def handle_write_signed_rpm(goptions, session, args):
     elif options.buildid:
         rpms = session.listRPMs(int(options.buildid))
     else:
-        nvrs = []
-        rpms = []
+        # for historical reasons, we accept either rpms or builds on command line
+        rpm_args = []
+        build_args = []
 
-        with session.multicall() as m:
-            result = [m.getRPM(nvra, strict=False) for nvra in args]
-        for rpm, nvra in zip(result, args):
-            rpm = rpm.result
-            if rpm:
-                rpms.append(rpm)
+        # first filter out invalid nvras, as getRPM will error on them
+        for arg in args:
+            if arg.isdigit():
+                # we also accept rpm ids
+                rpm_args.append(int(arg))
             else:
-                nvrs.append(nvra)
+                try:
+                    koji.parse_NVRA(arg)
+                    rpm_args.append(arg)
+                    # note that this is not perfect, many NVRs will succeed here
+                except koji.GenericError:
+                    build_args.append(arg)
 
-        # for historical reasons, we also accept nvrs
+        # look up rpms on hub
+        rpms = []
         with session.multicall() as m:
-            result = [m.getBuild(nvr, strict=True) for nvr in nvrs]
-        builds = []
-        for nvr, build in zip(nvrs, result):
-            try:
-                builds.append(build.result['id'])
-            except koji.GenericError:
-                raise koji.GenericError("No such rpm or build: %s" % nvr)
+            calls = [m.getRPM(r, strict=False) for r in rpm_args]
+        for call in calls:
+            rpminfo = call.result
+            if rpminfo:
+                rpms.append(rpminfo)
+            else:
+                # fetch the unmatched arg from call args
+                build_args.append(call.args[0])
 
+        # look up builds on hub
+        builds = []
+        with session.multicall() as m:
+            calls = [m.getBuild(nvr, strict=True) for nvr in build_args]
+        for call in calls:
+            try:
+                builds.append(call.result['id'])
+            except koji.GenericError:
+                # fetch the unmatched arg from call args
+                raise koji.GenericError("No such rpm or build: %s" % call.args[0])
+
+        # look up rpms for builds
         with session.multicall() as m:
             rpm_lists = [m.listRPMs(buildID=build_id) for build_id in builds]
         for rpm_list in rpm_lists:
             rpms.extend(rpm_list.result)
+
+    if not rpms:
+        warn('No rpms found')
 
     with session.multicall(strict=True) as m:
         for i, rpminfo in enumerate(rpms):
