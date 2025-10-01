@@ -470,6 +470,7 @@ config_map = [
     ['MissingPolicyOk', 'boolean', True],
     ['EnableMaven', 'boolean', False],
     ['EnableWin', 'boolean', False],
+    ['AllowDraftComponents', 'boolean', False],
 
     ['DefaultChannelCompat', 'boolean', True],
 

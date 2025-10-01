@@ -81,6 +81,7 @@ class TestCompleteImageBuild(unittest.TestCase):
         mock.patch.object(kojihub.UpdateProcessor, 'execute',
                           new=make_update_grabber(self)).start()
         mock.patch('kojihub.kojihub.nextval', new=self.my_nextval).start()
+        self.context = mock.patch('kojihub.kojihub.context').start()
         self.sequences = {}
 
     def tearDown(self):
