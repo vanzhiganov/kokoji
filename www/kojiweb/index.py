@@ -1573,8 +1573,11 @@ def rpminfo(environ, rpmID, fileOrder='name', fileStart=None, buildrootOrder='-i
         for dep_type in dep_names:
             values[dep_names[dep_type]] = [d for d in deps if d['type'] == dep_type]
             values[dep_names[dep_type]].sort(key=_sortbyname)
-        result = server.getRPMHeaders(rpm['id'], headers=RPM_HEADERS)
-        for header in RPM_HEADERS:
+        headers = RPM_HEADERS
+        if rpm['arch'] == 'src':
+            headers = headers + ['source']  # new list
+        result = server.getRPMHeaders(rpm['id'], headers=headers)
+        for header in headers:
             values[header] = koji.fixEncoding(result.get(header))
     buildroots = kojiweb.util.paginateMethod(server, values, 'listBuildroots',
                                              kw={'rpmID': rpm['id']},

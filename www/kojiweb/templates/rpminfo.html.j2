@@ -97,6 +97,20 @@
     </tr>
     #endif
     #if rpm.external_repo_id == 0
+    #if source
+    <tr>
+      <th>Source files</th>
+      <td class="container">
+        <table class="nested">
+          #for sourcefile in source
+          <tr>
+            <td>{{ sourcefile }}</td>
+          </tr>
+          #endfor
+        </table>
+      </td>
+    </tr>
+    #endif
     <tr>
       <th>Provides</th>
       <td class="container">
