@@ -1400,7 +1400,7 @@ def buildinfo(environ, buildID):
 
 
 def builds(environ, userID=None, tagID=None, packageID=None, state=None, order='-build_id',
-           start=None, prefix=None, inherited='1', latest='1', type=None):
+           start=None, prefix=None, inherited='1', latest='1', type=None, cg=None, draft='all'):
     values = _initValues(environ, 'Builds', 'builds')
     server = _getServer(environ)
 
@@ -1454,6 +1454,25 @@ def builds(environ, userID=None, tagID=None, packageID=None, state=None, order='
     values['type'] = type
     values['btypes'] = btypes
 
+    cgs = server.listCGs()
+    # (listCGs returns a dict with names as indices)
+    if cg in cgs:
+        pass
+    else:
+        cg = None
+    values['cg'] = cg
+    values['cgs'] = sorted(cgs)  # just the names
+
+    draft = draft.lower()
+    if draft in ('false', 'no', '0'):
+        draft = False
+    elif draft in ('true', 'yes', '1'):
+        draft = True
+    else:
+        # show both if invalid or not given
+        draft = None
+    values['draft'] = draft
+
     if tag:
         inherited = int(inherited)
         values['inherited'] = inherited
@@ -1477,7 +1496,7 @@ def builds(environ, userID=None, tagID=None, packageID=None, state=None, order='
         kojiweb.util.paginateMethod(server, values, 'listBuilds',
                                     kw={'userID': (user and user['id'] or None),
                                         'packageID': (package and package['id'] or None),
-                                        'type': type,
+                                        'type': type, 'cgID': cg, 'draft': draft,
                                         'state': state, 'prefix': prefix},
                                     start=start, dataName='builds', prefix='build', order=order)
 
