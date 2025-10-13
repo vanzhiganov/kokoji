@@ -27,6 +27,11 @@
       <th>Draft</th><td>False</td>
     #endif
     </tr>
+    #if build.draft and promoted_build
+    <tr>
+      <th>Link to NVR build</th><td><a href="buildinfo?buildID={{ promoted_build.id }}">{{ koji.buildLabel(promoted_build) }}</a></td>
+    </tr>
+    #endif
     #if build.get('source')
     <tr>
       <th>Source</th><td>{{ build.source }}</td>
