@@ -12984,6 +12984,11 @@ class RootExports(object):
         # verify existence of tag and/or convert name to id
         tag = get_tag_id(tag, strict=True)
         context.session.assertPerm('tag')
+        if isinstance(data, dict):
+            data = [data]
+        for d in data:
+            if not isinstance(d['parent_id'], int):
+                d['parent_id'] = get_tag_id(d['parent_id'], strict=True)
         return writeInheritanceData(tag, data, clear=clear)
 
     def getFullInheritance(self, tag, event=None, reverse=False, **kwargs):
