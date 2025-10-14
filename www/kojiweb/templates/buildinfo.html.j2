@@ -29,7 +29,7 @@
     </tr>
     #if build.draft and promoted_build
     <tr>
-      <th>Link to NVR build</th><td><a href="buildinfo?buildID={{ promoted_build.id }}">{{ koji.buildLabel(promoted_build) }}</a></td>
+      <th>Draft superseded by:</th><td><a href="buildinfo?buildID={{ promoted_build.id }}">{{ koji.buildLabel(promoted_build) }}</a></td>
     </tr>
     #endif
     #if build.get('source')

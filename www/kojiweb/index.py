@@ -1279,10 +1279,13 @@ def buildinfo(environ, buildID):
                 'version': build['version'],
                 'release': target_release
             }
-            promoted_build = server.getBuild(target_build_query, strict=False)
+            result = server.getBuild(target_build_query, strict=False)
+            # Verify that the returned build is indeed a non-draft build
+            if result and not result.get('draft'):
+                promoted_build = result
         except Exception:
-            # If parsing fails or query fails, just set promoted_build to None
-            promoted_build = None
+            # If parsing fails or query fails, promoted_build remains None
+            pass
     values['promoted_build'] = promoted_build
 
     tags = server.listTags(build['id'])
