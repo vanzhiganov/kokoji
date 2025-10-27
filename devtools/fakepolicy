@@ -247,8 +247,7 @@ def main():
         traceback.print_exc()
         pdb.post_mortem(tb)
 
-    print('RESULT:')
-    pprint.pprint(result)
+    print(f'RESULT: {result}')
 
 
 def manual_params(args, session):
