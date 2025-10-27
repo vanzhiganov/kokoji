@@ -198,15 +198,15 @@ def main():
     # 3. plugins
     plugins = kojixmlrpc.load_plugins(opts)
 
-    # 4. load policy
-    policy = kojixmlrpc.get_policy(opts, plugins)
+    # 4. load policies
+    policy_index = kojixmlrpc.get_policy(opts, plugins)
     ## end server_setup ##
 
     # set up context as if for a call handler
     context._threadclear()
     context.commit_pending = False
     context.opts = opts
-    context.policy = policy
+    context.policy = policy_index
     cnx = mock.MagicMock()
     cnx.cursor.side_effect = Exception('db access disabled')
     cnx.set_session.side_effect = Exception('db access disabled')
