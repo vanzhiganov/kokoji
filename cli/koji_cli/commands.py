@@ -186,8 +186,9 @@ def handle_assign_task(goptions, session, args):
     parser = OptionParser(usage=get_usage_str(usage))
     parser.add_option('-f', '--force', action='store_true', default=False,
                       help='force to assign a non-free task')
+    parser.add_option('--override', action='store_true', default=False,
+                      help='prevent the scheduler from reassigning later')
     (options, args) = parser.parse_args(args)
-
     if len(args) != 2:
         parser.error('please specify a task id and a hostname')
     else:
@@ -202,15 +203,16 @@ def handle_assign_task(goptions, session, args):
     if hostinfo is None:
         raise koji.GenericError("No such host: %s" % hostname)
 
-    force = False
-    if options.force:
-        force = True
-
     activate_session(session, goptions)
     if not session.hasPerm('admin'):
         parser.error("This action requires admin privileges")
 
-    ret = session.assignTask(task_id, hostname, force)
+    kwargs = {}
+    if options.override:
+        # override option added in 1.34
+        kwargs['override'] = options.override
+    ret = session.assignTask(task_id, hostname, options.force, **kwargs)
+
     if ret:
         print('assigned task %d to host %s' % (task_id, hostname))
     else:

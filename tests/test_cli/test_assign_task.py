@@ -26,29 +26,39 @@ class TestAssignTask(utils.CliTestCase):
 
 %s: error: {message}
 """ % (self.progname, self.progname)
+        self.hostname = "host"
+        self.task_id = "1"
 
     def tearDown(self):
         mock.patch.stopall()
 
-    @mock.patch('sys.stdout', new_callable=six.StringIO)
-    def test_handle_assign_task(self, stdout):
-        hostname = "host"
-        task_id = "1"
-        arguments = [task_id, hostname]
+    def test_handle_assign_task_no_such_task(self):
+        arguments = [self.task_id, self.hostname]
 
         self.session.getTaskInfo.return_value = None
         with six.assertRaisesRegex(self, koji.GenericError,
-                                   "No such task: %s" % task_id):
+                                   "No such task: %s" % self.task_id):
             handle_assign_task(self.options, self.session, arguments)
+        self.session.getTaskInfo.assert_called_with(int(self.task_id), request=False)
+        self.session.getHost.assert_not_called()
+        self.session.hasPerm.assert_not_called()
+        self.session.assignTask.assert_not_called()
 
+    def test_handle_assign_task_no_such_host(self):
+        arguments = [self.task_id, self.hostname]
         self.session.getTaskInfo.return_value = "task_info"
         self.session.getHost.return_value = None
         with six.assertRaisesRegex(self, koji.GenericError,
-                                   "No such host: %s" % hostname):
+                                   "No such host: %s" % self.hostname):
             handle_assign_task(self.options, self.session, arguments)
+        self.session.getTaskInfo.assert_called_with(int(self.task_id), request=False)
+        self.session.getHost.assert_called_with(self.hostname)
+        self.session.hasPerm.assert_not_called()
+        self.session.assignTask.assert_not_called()
 
-        arguments.append("--force")
-        self.session.getHost.return_value = hostname
+    def test_handle_assign_task_without_perm(self):
+        arguments = [self.task_id, self.hostname]
+        self.session.getHost.return_value = self.hostname
         self.session.hasPerm.return_value = False
         self.assert_system_exit(
             handle_assign_task,
@@ -57,33 +67,57 @@ class TestAssignTask(utils.CliTestCase):
             stderr=self.format_error_message("This action requires admin privileges"),
             exit_code=2
         )
+        self.session.getTaskInfo.assert_called_with(int(self.task_id), request=False)
+        self.session.getHost.assert_called_with(self.hostname)
+        self.session.hasPerm.assert_called_with('admin')
+        self.session.assignTask.assert_not_called()
 
-        # Clean stdout buffer
-        stdout.truncate(0)
-        stdout.seek(0)
-
+    @mock.patch('sys.stdout', new_callable=six.StringIO)
+    def test_handle_assign_task_with_force_with_perm(self, stdout):
+        arguments = [self.task_id, self.hostname]
+        arguments.append("--force")
         self.session.hasPerm.return_value = True
         self.session.assignTask.return_value = True
         handle_assign_task(self.options, self.session, arguments)
         actual = stdout.getvalue()
-        expected = 'assigned task %s to host %s\n' % \
-                   (task_id, hostname)
+        expected = 'assigned task %s to host %s\n' % (self.task_id, self.hostname)
         self.assertMultiLineEqual(actual, expected)
+        self.session.getTaskInfo.assert_called_with(int(self.task_id), request=False)
+        self.session.getHost.assert_called_with(self.hostname)
+        self.session.hasPerm.assert_called_with('admin')
+        self.session.assignTask.assert_called_with(int(self.task_id), self.hostname, True)
 
-        # Clean stdout buffer
-        stdout.truncate(0)
-        stdout.seek(0)
-
+    @mock.patch('sys.stdout', new_callable=six.StringIO)
+    def test_handle_assign_task_failed_assign(self, stdout):
+        arguments = [self.task_id, self.hostname]
+        self.session.hasPerm.return_value = True
         self.session.assignTask.return_value = False
         handle_assign_task(self.options, self.session, arguments)
         actual = stdout.getvalue()
-        expected = 'failed to assign task %s to host %s\n' % \
-                   (task_id, hostname)
+        expected = 'failed to assign task %s to host %s\n' % (self.task_id, self.hostname)
         self.assertMultiLineEqual(actual, expected)
-
-        # Finally, assert that things were called as we expected.
         self.activate_session_mock.assert_called_with(self.session, self.options)
-        self.session.assignTask.assert_called_with(int(task_id), hostname, True)
+        self.session.getTaskInfo.assert_called_with(int(self.task_id), request=False)
+        self.session.getHost.assert_called_with(self.hostname)
+        self.session.hasPerm.assert_called_with('admin')
+        self.session.assignTask.assert_called_with(int(self.task_id), self.hostname, False)
+
+    @mock.patch('sys.stdout', new_callable=six.StringIO)
+    def test_handle_assign_task_override(self, stdout):
+        arguments = [self.task_id, self.hostname]
+        arguments.append("--override")
+        self.session.hasPerm.return_value = True
+        self.session.assignTask.return_value = True
+        handle_assign_task(self.options, self.session, arguments)
+        actual = stdout.getvalue()
+        expected = 'assigned task %s to host %s\n' % (self.task_id, self.hostname)
+        self.assertMultiLineEqual(actual, expected)
+        self.activate_session_mock.assert_called_with(self.session, self.options)
+        self.session.getTaskInfo.assert_called_with(int(self.task_id), request=False)
+        self.session.getHost.assert_called_with(self.hostname)
+        self.session.hasPerm.assert_called_with('admin')
+        self.session.assignTask.assert_called_with(
+            int(self.task_id), self.hostname, False, override=True)
 
     def test_handle_assign_task_no_args(self):
         arguments = []
@@ -111,6 +145,7 @@ class TestAssignTask(utils.CliTestCase):
 Options:
   -h, --help   show this help message and exit
   -f, --force  force to assign a non-free task
+  --override   prevent the scheduler from reassigning later
 """ % self.progname)
 
 
