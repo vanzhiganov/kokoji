@@ -50,6 +50,13 @@
 %endif
 %endif
 
+%if 0%{?fedora} || 0%{?rhel} >= 9
+# pyproject macros are supported for all supported Fedoras and RHEL >= 9
+%define pyproject_support 1
+%else
+%define pyproject_support 0
+%endif
+
 # Lastly enforce the bcond parameters
 %if %{without python2}
 %define py2_support 0
@@ -143,12 +150,16 @@ desc
 %if 0%{py3_support}
 %package -n python%{python3_pkgversion}-%{name}
 Summary: Build system tools python library
+%if ! 0%{pyproject_support}
 %{?python_provide:%python_provide python%{python3_pkgversion}-%{name}}
+%endif
 BuildRequires: python%{python3_pkgversion}-devel
+%if ! 0%{pyproject_support}
 BuildRequires: python3-pip
 BuildRequires: python3-wheel
 BuildRequires: python3-setuptools
 BuildRequires: python3-six
+%endif
 %if 0%{?fedora} || 0%{?rhel} >= 8
 Requires: python%{python3_pkgversion}-rpm
 %else
@@ -355,7 +366,9 @@ koji-web is a web UI to the Koji system.
 Summary: Koji Web UI
 Group: Applications/Internet
 License: LGPL-2.1-only
+%if ! 0%{pyproject_support}
 %{?python_provide:%python_provide python%{python3_pkgversion}-%{name}-web}
+%endif
 Requires: httpd
 Requires: python%{python3_pkgversion}-mod_wsgi
 Requires: mod_auth_gssapi
@@ -374,13 +387,22 @@ koji-web is a web UI to the Koji system.
 # to the wheel we will produce.
 sed -e '/util\/koji/g' -e '/koji_cli_plugins/g' -i setup.py
 
+%if 0%{pyproject_support}
+%generate_buildrequires
+%pyproject_buildrequires
+%endif
+
 %build
 %if 0%{wheel_support}
 %if 0%{py2_support}
 %py2_build_wheel
 %endif
 %if 0%{py3_support}
+%if 0%{pyproject_support}
+%pyproject_wheel
+%else
 %py3_build_wheel
+%endif
 %endif
 %endif
 
@@ -421,7 +443,11 @@ done
 
 # python3 build
 %if 0%{py3_support}
+%if 0%{pyproject_support}
+%pyproject_install
+%else
 %py3_install_wheel %{name}-%{version}-py3-none-any.whl
+%endif
 mkdir -p %{buildroot}/etc/koji.conf.d
 cp cli/koji.conf %{buildroot}/etc/koji.conf
 %endif
