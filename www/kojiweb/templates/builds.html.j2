@@ -1,5 +1,5 @@
 
-#set _PASSTHROUGH = ['userID', 'tagID', 'packageID', 'order', 'prefix', 'state', 'inherited', 'latest', 'type']
+#set _PASSTHROUGH = ['userID', 'tagID', 'packageID', 'order', 'prefix', 'state', 'inherited', 'latest', 'type', 'cg', 'draft']
 
 #include "header.html.j2"
 # from "macros.html.j2" import rowToggle
@@ -10,6 +10,11 @@ Latest
 #elif state != None
 {{ util.stateName(state)|capitalize }}
 #endif
+#if draft is false
+Nondraft
+#elif draft is true
+Draft
+#endif
 #if type
 {{ type|capitalize }}
 #endif
@@ -19,6 +24,9 @@ of <a href="packageinfo?packageID={{ package.id }}">{{ package.name }}</a>
 #endif
 #if user
 by <a href="userinfo?userID={{ user.id }}">{{ user.name }}</a>
+#endif
+#if cg
+from {{ cg }}</a>
 #endif
 #if prefix
 starting with &quot;{{ prefix }}&quot;
@@ -65,6 +73,30 @@ in tag <a href="taginfo?tagID={{ tag.id }}">{{ tag.name }}</a>
           #endfor
         </select>
         </td></tr>
+        #if not tag
+        <tr>
+        <td>
+        <strong>Draft</strong>:
+        </td>
+        <td>
+        <select name="type" class="filterlist" onchange="javascript: window.location='builds?draft=' + this.value + '{{ util.passthrough_except('draft') }}';">
+          <option value="all" {{ 'selected' if draft is none else '' }}>all</option>
+          <option value="1" {{ 'selected' if draft is true else '' }}>yes</option>
+          <option value="0" {{ 'selected' if draft is false else '' }}>no</option>
+        </select>
+        </td>
+        <td>
+        <strong>Content Generator</strong>:
+        </td><td>
+        <select name="inherited" class="filterlist" onchange="javascript: window.location = 'builds?cg=' + this.value + '{{ util.passthrough_except('cg') }}';">
+          <option value="" {{ 'selected' if cg is none else '' }}>all</option>
+          #for cgname in cgs
+          <option value="{{ cgname }}" {{ 'selected' if cg == cgname else '' }}>{{ cgname }}</option>
+          #endfor
+        </select>
+        </td>
+        </tr>
+        #endif
         <tr>
         <td>
         <strong>Type</strong>:

@@ -30,15 +30,15 @@ class TestPages(unittest.TestCase):
         cls.cfile2 = os.path.dirname(__file__) + f'/data/pages_calls_updates.json'
         cls.recording = False
         cls.updating = False
-        cls.rsession = RecordingClientSession('http://localhost/kojihub', {})
+        cls.rsession = RecordingClientSession('https://localhost/kojihub', {})
 
     @classmethod
     def tearDownClass(cls):
         if cls.recording:
             # save recorded calls
-            cls.rsession.dump(cls.cfile)
+            cls.rsession.dump(cls.cfile, munge=True)
         elif cls.updating:
-            cls.rsession.dump(cls.cfile2)
+            cls.rsession.dump(cls.cfile2, munge=True)
 
     def setUp(self):
         self.environ = {
@@ -103,6 +103,9 @@ class TestPages(unittest.TestCase):
         ['builds', 'prefix=d&order=-build_id'],
         ['builds', 'state=4&prefix=d&order=-build_id'],
         ['builds', 'type=image&prefix=d&order=-build_id'],
+        ['builds', 'cg=manual-import'],
+        ['builds', 'draft=0'],
+        ['builds', 'draft=true'],
         ['tasks', ''],
         ['tasks', 'state=all&view=tree&order=-id&method=all'],
         ['tasks', 'state=failed&view=tree&order=-id&method=all'],

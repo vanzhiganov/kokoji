@@ -60,7 +60,7 @@ class FakeClientSession(BaseFakeClientSession):
         """
 
         for call in data:
-            key = self._munge([call['method'], call['args'], call['kwargs']])
+            key = _munge([call['method'], call['args'], call['kwargs']])
             self._calldata.setdefault(key, []).append(call)
 
     def load(self, filename):
@@ -73,7 +73,7 @@ class FakeClientSession(BaseFakeClientSession):
         if self.multicall:
             return super(FakeClientSession, self)._callMethod(name, args,
                             kwargs, retry)
-        key = self._munge([name, args, kwargs])
+        key = _munge([name, args, kwargs])
         # we may have a series of calls for each key
         calls = self._calldata.get(key)
         ofs = self._offsets.get(key, 0)
@@ -104,17 +104,19 @@ class FakeClientSession(BaseFakeClientSession):
         # otherwise use the recording session
         return rsession._callMethod(name, args, kwargs)
 
-    def _munge(self, data):
-        def callback(value):
-            if isinstance(value, list):
-                return tuple(value)
-            elif isinstance(value, dict):
-                keys = sorted(value.keys())
-                return tuple([(k, value[k]) for k in keys])
-            else:
-                return value
-        walker = koji.util.DataWalker(data, callback)
-        return walker.walk()
+
+def _munge(data):
+    """Used to make valid keys for indexing"""
+    def callback(value):
+        if isinstance(value, list):
+            return tuple(value)
+        elif isinstance(value, dict):
+            keys = sorted(value.keys())
+            return tuple([(k, value[k]) for k in keys])
+        else:
+            return value
+    walker = koji.util.DataWalker(data, callback)
+    return walker.walk()
 
 
 class RecordingClientSession(BaseFakeClientSession):
@@ -126,10 +128,17 @@ class RecordingClientSession(BaseFakeClientSession):
     def get_calls(self):
         return self._calldata
 
-    def dump(self, filename):
+    def dump(self, filename, munge=False):
+        if munge:
+            idx = {}
+            for call in self._calldata:
+                key = _munge([call['method'], call['args'], call['kwargs']])
+                idx.setdefault(key, call)
+            data = list(idx.values())
+        else:
+            data = self._calldata
         with open(filename, 'wt') as fp:
-            # json.dump(self._calldata, fp, indent=4, sort_keys=True)
-            json.dump(self._calldata, fp, indent=4, sort_keys=True, default=encode_data)
+            json.dump(data, fp, indent=4, sort_keys=True, default=encode_data)
         self._calldata = []
 
     def _callMethod(self, name, args, kwargs=None, retry=True):
