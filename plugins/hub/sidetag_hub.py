@@ -56,7 +56,10 @@ class SidetagTest(koji.policy.MatchTest):
     name = 'is_sidetag'
 
     def run(self, data):
-        tag = get_tag(data['tag'])
+        tag = data.get('tag')
+        if not tag:
+            return False
+        tag = get_tag(tag)
         return is_sidetag(tag)
 
 
