@@ -709,3 +709,101 @@ class TestSideTagUntagHub(unittest.TestCase):
         self.get_tag.assert_called_once_with(self.tag_input['id'], strict=False)
         self.is_sidetag.assert_called_once_with(self.tag_info)
         self._remove_sidetag.assert_not_called()
+
+
+class TestTestHandlers(unittest.TestCase):
+
+    def setUp(self):
+        self.context = mock.patch('sidetag_hub.context').start()
+        self.context.session.hasPerm.return_value = False  # no admin by defaul
+        self.get_tag = mock.patch('sidetag_hub.get_tag').start()
+        self.basetag = {
+            'id': 32,
+            'name': 'base_tag',
+            'arches': ['x86_64', 'i686'],
+            'extra': {'sidetag': True, 'sidetag_user_id': 23},
+        }
+        self.get_tag.return_value = self.basetag
+        self.policy_get_user = mock.patch('sidetag_hub.policy_get_user').start()
+        self.user = {
+            'id': 23,
+            'name': 'username',
+        }
+        self.policy_get_user.return_value = self.user
+
+    def tearDown(self):
+        mock.patch.stopall()
+
+    def test_is_sidetag(self):
+        obj = sidetag_hub.SidetagTest('is_sidetag')
+        self.assertTrue(obj.run({'tag': 'base_tag'}))
+
+        self.get_tag.assert_called_once()
+
+    def test_is_not_sidetag(self):
+        obj = sidetag_hub.SidetagTest('is_sidetag')
+        self.basetag['extra'] = {}
+        self.get_tag.return_value = self.basetag
+        self.assertFalse(obj.run({'tag': 'base_tag'}))
+
+        self.get_tag.assert_called_once()
+
+    def test_is_sidetag_no_tag(self):
+        obj = sidetag_hub.SidetagTest('is_sidetag')
+        self.assertFalse(obj.run({}))
+
+    def test_is_sidetag_owner(self):
+        obj = sidetag_hub.SidetagOwnerTest('is_sidetag_owner')
+        # defaults in setUp should yield true
+        self.assertTrue(obj.run({'tag': 'base_tag'}))
+
+        self.get_tag.assert_called_once()
+        self.policy_get_user.assert_called_once()
+
+    def test_is_sidetag_owner_badargs1(self):
+        obj = sidetag_hub.SidetagOwnerTest('is_sidetag_owner INVALID ARGS')
+        # defaults in setUp should yield true
+        with self.assertRaises(koji.GenericError):
+            obj.run({'tag': 'base_tag'})
+
+        self.get_tag.assert_not_called()
+
+    def test_is_sidetag_owner_badargs2(self):
+        obj = sidetag_hub.SidetagOwnerTest('is_sidetag_owner INVALID_ARGS')
+        # defaults in setUp should yield true
+        with self.assertRaises(koji.GenericError):
+            obj.run({'tag': 'base_tag'})
+
+        self.get_tag.assert_not_called()
+
+    def test_is_not_sidetag_owner(self):
+        obj = sidetag_hub.SidetagOwnerTest('is_sidetag_owner')
+        self.user['id'] = 42
+        self.assertFalse(obj.run({'tag': 'base_tag'}))
+
+        self.get_tag.assert_called_once()
+        self.policy_get_user.assert_called_once()
+
+    def test_is_sidetag_owner_notag(self):
+        obj = sidetag_hub.SidetagOwnerTest('is_sidetag_owner')
+        self.assertFalse(obj.run({}))
+
+        self.get_tag.assert_not_called()
+
+    def test_is_sidetag_owner_nofromtag(self):
+        obj = sidetag_hub.SidetagOwnerTest('is_sidetag_owner both')
+        self.assertFalse(obj.run({'tag': 'base_tag'}))
+
+    def test_is_sidetag_owner_both(self):
+        obj = sidetag_hub.SidetagOwnerTest('is_sidetag_owner both')
+        othertag = self.basetag.copy()
+        othertag.update(id=42, name='other_tag')
+        self.get_tag.side_effect = [self.basetag, othertag]
+        self.assertTrue(obj.run({'tag': 'base_tag', 'fromtag': 'other_tag'}))
+
+        # get tag should be called for both tags
+        self.assertEqual(len(self.get_tag.call_args), 2)
+        self.policy_get_user.assert_called_once()
+
+
+# the end
