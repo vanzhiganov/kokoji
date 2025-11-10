@@ -378,12 +378,13 @@ class SimpleRuleSet(object):
 
     def _apply(self, rules, data, top=False):
         for tests, negate, action in rules:
+            self.logger.debug("Rule: %s", rule_str(tests, negate, action))
             if top:
                 self.lastrule = []
             value = False
             for test in tests:
                 check = test.run(data)
-                self.logger.debug("%s -> %s", test, check)
+                self.logger.debug("  %s -> %s", test, check)
                 if not check:
                     break
             else:
@@ -394,7 +395,7 @@ class SimpleRuleSet(object):
             if value:
                 self.lastrule.append([tests, negate])
                 if isinstance(action, list):
-                    self.logger.debug("matched: entering subrule")
+                    self.logger.debug("  matched: entering subrule")
                     # action is a list of subrules
                     ret = self._apply(action, data)
                     if ret is not None:
@@ -402,7 +403,7 @@ class SimpleRuleSet(object):
                     # if ret is None, then none of the subrules matched,
                     # so we keep going
                 else:
-                    self.logger.debug("matched: action=%s", action)
+                    self.logger.debug("  rule matched: %s", action)
                     return action
         return None
 
@@ -430,6 +431,19 @@ class SimpleRuleSet(object):
         else:
             ret += self.lastaction
         return ret
+
+
+def rule_str(tests, negate, action):
+    line = '&&'.join([str(t) for t in tests])
+    if negate:
+        line += '!! '
+    else:
+        line += ':: '
+    if isinstance(action, list):
+        line += '{ ...'
+    else:
+        line += action
+    return line
 
 
 def findSimpleTests(namespace):

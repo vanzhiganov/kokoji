@@ -1,0 +1,483 @@
+#!/usr/bin/python3
+
+from __future__ import absolute_import, print_function
+
+import ast
+import argparse
+import os
+import os.path
+import pprint
+import sys
+
+from pprint import pformat
+from unittest import mock
+
+sys.path.insert(0, os.getcwd())
+import koji
+from kojihub import auth, kojixmlrpc, kojihub, db
+from koji.context import context
+from koji.util import dslice, extract_build_task
+import koji.xmlrpcplus
+
+
+"""
+This is a tool for developers to test out policy code.
+
+It works by mocking hub code to make calls to a remote hub rather than using
+direct db access as hub code normally does. This allows simulating a policy
+on the client side, but using the data on the remote hub.
+
+This code is based partially on fakehub
+"""
+
+
+# Fake session for simulating different auth
+class FakeSession(auth.Session):
+
+    def __init__(self, user=None, exclusive=False, session=None):
+        if user:
+            user = session.getUser(user, strict=True)
+            self.logged_in = True
+            self.user_id = user['id']
+            self.authtype = koji.AUTHTYPES['GSSAPI']
+            self.user_data = user
+        else:
+            self.logged_in = False
+            self.user_id = None
+            self.user_data = {}
+        self.exclusive = exclusive
+        self.id = 1
+        self.hostip = '127.0.0.1'
+        self.master = None
+        self.callnum = 1
+        self.message = 'THIS IS A FAKE SESSION'
+        self.session_data = {'msg': 'this is a fake session'}
+        self._perms = None
+        self._groups = None
+        self._host_id = ''
+
+
+def nice_literal(value):
+    try:
+        return ast.literal_eval(value)
+    except (ValueError, SyntaxError):
+        return value
+
+
+def get_args():
+    parser = argparse.ArgumentParser(description='Simulate hub policy tests')
+    parser.add_argument('--pdb', action='store_true',
+                        help='drop into pdb on error')
+    parser.add_argument('-p', '--profile', default='koji', help='pick a profile')
+    parser.add_argument('--user', '-u', help='execute as user')
+    parser.add_argument('--exclusive', '-x', action='store_true',
+                        help='emulate an exclusive session')
+    parser.add_argument('-o', '--config-option', help='override config option',
+                        action='append', metavar='NAME=VALUE')
+    parser.add_argument('--config', '-c', help='config file')
+    parser.add_argument('--configdir', '-d', help='config dir')
+    parser.add_argument('--policyfile', '-f', help='policy file')
+    parser.add_argument('--eval', dest='mode', action='store_const', const='eval', default='eval')
+    parser.add_argument('--assert', dest='mode', action='store_const', const='assert')
+    parser.add_argument('--check', dest='mode', action='store_const', const='check')
+    subparsers = parser.add_subparsers(required=True, dest='command',
+                                       help='Available subcommands')
+
+    ## subcommands ##
+    subp = subparsers.add_parser('manual', help='manually specify policy and data')
+    subp.add_argument('policy', help='select policy')
+    subp.add_argument('data', help='provide policy data')
+    subp.set_defaults(func=manual_params)
+
+    subp = subparsers.add_parser('make-task', help='simulate policies for make_task')
+    subp.add_argument('--policy', help='select policy', default='channel')
+    subp.add_argument('--req-channel', help='simulate a requested channel', metavar='CHANNEL')
+    subp.add_argument('task', help='select task')
+    subp.set_defaults(func=make_task_params)
+
+    subp = subparsers.add_parser('promote-build',
+                                 help='simulate draft_promotion policy for promote_build')
+    subp.add_argument('build', help='select build')
+    subp.set_defaults(func=promote_build_params)
+
+    subp = subparsers.add_parser('apply-volume', help='simulate volume policy for apply_volume')
+    subp.add_argument('build', help='select build')
+    subp.set_defaults(func=apply_volume_params)
+
+    subp = subparsers.add_parser('tag-build', help='simulate policy for tagging a build')
+    subp.add_argument('tag', help='select tag')
+    subp.add_argument('build', help='select build')
+    subp.add_argument('--fromtag', help='select from tag (i.e. move)')
+    subp.set_defaults(func=tag_build_params)
+
+    subp = subparsers.add_parser('move-build', help='simulate policy for moving a build')
+    subp.add_argument('fromtag', help='select from tag')
+    subp.add_argument('tag', help='select destination tag')
+    subp.add_argument('build', help='select build')
+    subp.set_defaults(func=tag_build_params)  # this handler does double duty
+
+    subp = subparsers.add_parser('untag-build', help='simulate policy for untagging a build')
+    subp.add_argument('tag', help='select tag')
+    subp.add_argument('build', help='select build')
+    subp.set_defaults(func=untag_build_params)
+
+    subp = subparsers.add_parser('add-pkg', help='simulate policy for adding a package')
+    subp.add_argument('tag', help='select tag')
+    subp.add_argument('package', help='select package')
+    subp.add_argument('--action', help='select action', default='add')
+    subp.add_argument('--force', help='select force setting', action='store_true', default=False)
+    subp.set_defaults(func=add_pkg_params)
+    ## end subcommands ##
+
+    args = parser.parse_args()
+
+    if args.config_option:
+        overrides = {}
+        for s in args.config_option:
+            k, v = s.split('=', 1)
+            v = nice_literal(v)
+            overrides[k] = v
+        args.config_option = overrides
+    else:
+        args.config_option = {}
+
+    return args
+
+
+def set_config(args, environ):
+    lconfig = "%s/devtools/fakehub.conf" % os.getcwd()
+    lconfigd = "%s/devtools/fakehub.conf.d" % os.getcwd()
+    if os.path.exists(lconfig) or os.path.exists(lconfigd):
+        environ['koji.hub.ConfigFile'] = lconfig
+        environ['koji.hub.ConfigDir'] = lconfigd
+
+
+def update_policy(pfile, opts):
+    """Load policy (only) from a config file, updating existing"""
+    policy = opts.setdefault('policy', {})
+    config = koji.read_config_files([(pfile, True)], raw=True)
+    if not config.has_section('policy'):
+        raise Exception('No policy found in %s' % pfile)
+    updates = dict(config.items('policy'))
+    policy.update(updates)
+
+
+def skip_commit(cnx):
+    print('Skipping commit')
+
+
+def main():
+    global koji  # we replace it with a profile module
+    args = get_args()
+    db.DBWrapper.commit = skip_commit
+
+    # set up session for querying remote
+    koji = koji.get_profile_module(args.profile)
+    session_opts = koji.grab_session_options(koji.config)
+    session = koji.ClientSession(koji.config.server, session_opts)
+    # no auth - we're only reading
+
+    ## Simulate key parts of server_setup ##
+    # 1. load config
+    environ = {}
+    set_config(args, environ)  # XXX?
+    if args.configdir:
+        environ['koji.hub.ConfigDir'] = args.configdir
+    if args.config:
+        environ['koji.hub.ConfigFile'] = args.config
+    opts = kojixmlrpc.load_config(environ)
+    opts.update(args.config_option)
+    if args.policyfile:
+        update_policy(args.policyfile, opts)
+
+    # 2. logging
+    kojixmlrpc.setup_logging1()
+    kojixmlrpc.setup_logging2(opts)
+    # TODO
+
+    # 3. plugins
+    plugins = kojixmlrpc.load_plugins(opts)
+
+    # 4. load policies
+    policy_index = kojixmlrpc.get_policy(opts, plugins)
+    ## end server_setup ##
+
+    # set up context as if for a call handler
+    context._threadclear()
+    context.commit_pending = False
+    context.opts = opts
+    context.policy = policy_index
+    cnx = mock.MagicMock()
+    cnx.cursor.side_effect = Exception('db access disabled')
+    cnx.set_session.side_effect = Exception('db access disabled')
+    context.cnx = cnx
+
+    if args.user:
+        context.session = FakeSession(args.user, args.exclusive, session)
+    else:
+        context.session = FakeSession()
+
+    # mock key points for data access by policy code
+    do_mocks(session, plugins)
+
+    policy, policy_data = args.func(args, session)
+    # ^ parts of this rely on the mocks
+
+    # run the policy
+    print(f'Testing policy {policy} with data:\n{pformat(policy_data)}')
+    handler = None
+    params = (policy, policy_data)
+    kwargs = {}
+    if args.mode == 'eval':
+        handler = kojihub.eval_policy
+    elif args.mode == 'assert':
+        handler = kojihub.assert_policy
+    elif args.mode == 'check':
+        handler = kojihub.check_policy
+    else:
+        raise Exception('Invalid mode: %s' % args.mode)
+    try:
+        result = handler(*params, **kwargs)
+    except Exception:
+        if not args.pdb:
+            raise
+        import pdb
+        import traceback
+        etype, e, tb = sys.exc_info()
+        traceback.print_exc()
+        pdb.post_mortem(tb)
+
+    print(f'RESULT: {result}')
+
+
+def manual_params(args, session):
+    data = nice_literal(args.data)
+    return args.policy, data
+
+
+def make_task_params(args, session):
+    # simulate make_task policy data
+    if args.policy not in ('channel', 'priority'):
+        print('The make_task subcommand is meant for use with the channel or priority policies')
+    task_id = args.task
+    tinfo = session.getTaskInfo(task_id, strict=True)
+    taskargs = session.getTaskRequest(task_id)
+    data = dslice(tinfo, ['method', 'arch', 'parent', 'label', 'owner'])
+    data['user_id'] = tinfo['owner']
+    if args.req_channel:
+        data['req_channel'] = args.req_channel
+    data.update(kojihub.policy_data_from_task_args(tinfo['method'], taskargs))
+    # ^ this relies on the mocks to work
+    return args.policy, data
+
+
+def promote_build_params(args, session):
+    # simulate promote_build policy data
+    policy = 'draft_promotion'
+    bld = args.build
+    if bld.isdigit:
+        bld = int(bld)
+    binfo = session.getBuild(bld, strict=True)
+    if binfo['draft']:
+        target_release = koji.parse_target_release(binfo['release'])
+    else:
+        target_release = binfo['release']
+    data = {
+        'build': binfo['id'],
+        'target_release': target_release
+    }
+    return policy, data
+
+
+def apply_volume_params(args, session):
+    # simulate apply_volume_policy policy data
+    policy = 'volume'
+    bld = args.build
+    if bld.isdigit():
+        bld = int(bld)
+    binfo = session.getBuild(bld, strict=True)
+    data = {'build': binfo}
+    # the hub's apply_volume_policy() adds in task data if present
+    task_id = extract_build_task(binfo)
+    if task_id:
+        tinfo = session.getTaskInfo(task_id)
+        args = session.getTaskRequest(task_id)
+        data.update(kojihub.policy_data_from_task_args(tinfo['method'], args))
+    return policy, data
+
+
+def tag_build_params(args, session):
+    # simulate policy for tagging a build
+    policy = 'tag'
+    operation = 'tag'
+
+    tag = args.tag
+    if tag.isdigit():
+        tag = int(tag)
+    tinfo = session.getTag(tag, strict=True)
+
+    bld = args.build
+    if bld.isdigit():
+        bld = int(bld)
+    binfo = session.getBuild(bld, strict=True)
+
+    fromtag = args.fromtag
+    if fromtag:
+        if fromtag.isdigit():
+            fromtag = int(fromtag)
+        fromtag = session.getTag(fromtag, strict=True)['id']
+        operation = 'move'
+
+    # kojihub is a bit inconsistent about the data passed (e.g. id vs name vs dict)
+    # we mimic the main tagBuild handler
+    data = {'tag': tinfo['id'], 'build': binfo['id'], 'fromtag': fromtag, 'operation': operation}
+
+    return policy, data
+
+
+def untag_build_params(args, session):
+    # simulate policy for untagging a build
+    policy = 'tag'
+
+    tag = args.tag
+    if tag.isdigit():
+        tag = int(tag)
+    tinfo = session.getTag(tag, strict=True)
+
+    bld = args.build
+    if bld.isdigit():
+        bld = int(bld)
+    binfo = session.getBuild(bld, strict=True)
+
+    data = {'tag': None, 'build': binfo['id'], 'fromtag': tinfo['id'], 'operation': 'untag'}
+
+    return policy, data
+
+
+def add_pkg_params(args, session):
+    # simulate policy for adding a package list entry
+    policy = 'package_list'
+
+    tag = args.tag
+    if tag.isdigit():
+        tag = int(tag)
+    tinfo = session.getTag(tag, strict=True)
+
+    package = args.package
+    force = args.force
+    action = args.action
+
+    # kojihub is a bit inconsistent about the package field format
+    # we opt for the string passed in, as happens with the add-pkg command
+    data = {'tag': tinfo['id'], 'action': action, 'package': package, 'force': force}
+
+    return policy, data
+
+
+def do_mocks(session, plugins):
+    # a number of internal functions are directly exported
+    simple_exports = [
+        # [name, export_name]
+        ['get_user', 'getUser'],
+        ['get_build', 'getBuild'],
+        ['list_rpms', 'listRPMs'],
+        ['list_archives', 'listArchives'],
+        ['get_buildroot', 'getBuildroot'],
+        ['get_tag', 'getTag'],
+        ['list_tags', 'listTags'],
+        ['get_build_target', 'getBuildTarget'],
+        ['get_build_type', 'getBuildType'],
+        ['readFullInheritance', 'getFullInheritance'],  # ??
+        ['lookup_package', 'getPackage'],
+    ]
+
+    # generator function for wrappers
+    def wrap(export):
+        def wrapper(*a, **kw):
+            return session._callMethod(export, a, kw)
+        return wrapper
+
+    def patchall(name, func):
+        """Apply patch in kojihub and any plugins"""
+        mock.patch('kojihub.kojihub.%s' % name, new=func).start()
+        # also patch in any plugins that import
+        for pname in plugins.plugins:
+            pmod = plugins.plugins[pname]
+            if hasattr(pmod, name):
+                # e.g. the plugin has done from kojihub import foo
+                mock.patch.object(pmod, name, new=func).start()
+
+    # mock the simple exports
+    for name, export in simple_exports:
+        func = wrap(export)
+        patchall(name, func)
+
+    def get_user_perms(user_id, with_groups=True, inheritance_data=False):
+        if inheritance_data:
+            raise NotImplementedError('inheritance_data')
+        return session.getUserPerms(user_id, with_groups)
+    patchall('get_user_perms', get_user_perms)
+
+    def get_user_groups(user_id):
+        # internal returns a dictionary group_id:name
+        # export returns a list of id/name dicts
+        groups = session.getUserGroups(user_id)
+        return {g['id']: g['name'] for g in groups}
+    patchall('get_user_groups', get_user_groups)
+
+    def lookup_name(table, info, strict=False, create=False):
+        # NOT exported, but we can fake some cases
+        if create:
+            raise NotImplementedError('lookup_name with create')
+        if table == 'volume':
+            return session.getVolume(info, strict)
+        elif table == 'content_generator':
+            cgs = session.listCGs()
+            # cgs is a dictionary indexed by cg name
+            for cg in cgs:
+                cginfo = cgs[cg]
+                if info in (cg, cginfo['id']):
+                    return {'id': cginfo['id'], 'name': cg}
+        elif table == 'package':
+            return session.getPackage(info, strict)
+        elif table == 'tag':
+            taginfo = session.getTag(info, strict, event="auto")
+            return dslice(taginfo, ['id', 'name'])
+        elif table == 'build_target':
+            tgt = session.getBuildTarget(info, event=None, strict=False)
+            if tgt:
+                return dslice(tgt, ['id', 'name'])
+                return tgt
+            # the above will not find deleted targets, fall back to history query
+            hist = session.queryHistory(tables=['build_target_config'], build_target=info,
+                                        queryOpts={'limit': 1, 'order': '-create_event'})
+            hist = hist['build_target_config']
+            if not hist:
+                if strict:
+                    raise koji.GenericError('No such target: %s' % info)
+                else:
+                    return None
+            else:
+                # pull out the name and id
+                return {'id': hist[0]['build_target_id'], 'name': hist[0]['build_target.name']}
+        else:
+            raise NotImplementedError(f'lookup_name for {table}')
+    patchall('lookup_name', lookup_name)
+
+    # handle task.getInfo
+    class FakeTask:
+
+        def __init__(self, id):
+            self.id = int(id)
+
+        def getInfo(self, strict=True, request=False):
+            return session.getTaskInfo(self.id, request, strict)
+
+    patchall('Task', FakeTask)
+
+
+if __name__ == '__main__':
+    main()
+
+
+# the end
