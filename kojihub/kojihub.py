@@ -4878,7 +4878,8 @@ def get_next_build(build_info):
         savepoint = Savepoint('get_next_build_pre_insert')
         try:
             return new_build(build_info)
-        except (IntegrityError, koji.GenericError):
+        except (IntegrityError, koji.GenericError) as e:
+            logger.warning(f'Incrementing next build release due to: {e}')
             savepoint.rollback()
             build_info['release'] = get_next_release(build_info, try_no)
     # otherwise
