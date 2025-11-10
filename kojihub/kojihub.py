@@ -6523,10 +6523,15 @@ def new_build(data, strict=False):
 def recycle_build(old, data):
     """Check to see if a build can by recycled and if so, update it"""
 
-    st_desc = koji.BUILD_STATES[old['state']]
+    # re-query with a rowlock
+    query = QueryProcessor(tables=['build'], columns=['state', 'task_id'],
+                           clauses=['id = %(id)s'], values=old,
+                           opts={'rowlock': True})
+    check = query.executeOne()
+    st_desc = koji.BUILD_STATES[check['state']]
     if st_desc == 'BUILDING':
         # check to see if this is the controlling task
-        if data['state'] == old['state'] and data.get('task_id', '') == old['task_id']:
+        if data['state'] == check['state'] and data.get('task_id', '') == check['task_id']:
             # the controlling task must have restarted (and called initBuild again)
             return
         raise koji.GenericError("Build already in progress (task %(task_id)d)"
