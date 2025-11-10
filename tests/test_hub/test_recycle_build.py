@@ -2,7 +2,7 @@ from unittest import mock
 import unittest
 
 import koji
-import kojihub
+from kojihub import kojihub
 
 QP = kojihub.QueryProcessor
 UP = kojihub.UpdateProcessor
@@ -30,6 +30,12 @@ class TestRecycleBuild(unittest.TestCase):
         self.get_build = mock.patch('kojihub.kojihub.get_build').start()
         self.list_volumes = mock.patch('kojihub.kojihub.list_volumes').start()
         self.list_volumes.return_value = [{'id': 0, 'name': 'DEFAULT'}]
+        self._recycle_lock = mock.patch('kojihub.kojihub._recycle_lock').start()
+
+        # base data
+        self.new = self.new_base.copy()
+        self.old = self.old_base.copy()
+        self._recycle_lock.return_value = self.old
 
     def tearDown(self):
         mock.patch.stopall()
@@ -53,7 +59,8 @@ class TestRecycleBuild(unittest.TestCase):
         return delete
 
     # Basic old and new build infos
-    old = {'id': 2,
+    old_base = {
+           'id': 2,
            'state': 3,
            'task_id': None,
            'epoch': None,
@@ -68,7 +75,8 @@ class TestRecycleBuild(unittest.TestCase):
            'cg_id': None,
            'volume_id': 0,
            'volume_name': 'DEFAULT'}
-    new = {'state': 3,
+    new_base = {
+           'state': 3,
            'name': 'GConf2',
            'version': '3.2.6',
            'release': '15.fc23',
@@ -83,13 +91,11 @@ class TestRecycleBuild(unittest.TestCase):
            'volume_id': 0}
 
     def test_build_already_in_progress(self):
-        new = self.new.copy()
-        old = self.old.copy()
-        old['state'] = new['state'] = koji.BUILD_STATES['BUILDING']
-        old['task_id'] = 137
+        self.old['state'] = self.new['state'] = koji.BUILD_STATES['BUILDING']
+        self.old['task_id'] = 137
         with self.assertRaises(koji.GenericError) as ex:
-            kojihub.recycle_build(old, new)
-        self.assertEqual(f"Build already in progress (task {old['task_id']})", str(ex.exception))
+            kojihub.recycle_build(self.old, self.new)
+        self.assertEqual(f"Build already in progress (task {self.old['task_id']})", str(ex.exception))
         self.assertEqual(len(self.queries), 0)
         self.assertEqual(len(self.updates), 0)
         self.assertEqual(len(self.deletes), 0)
@@ -98,11 +104,9 @@ class TestRecycleBuild(unittest.TestCase):
         self.run_callbacks.assert_not_called()
 
     def test_build_already_in_progress_same_task_id(self):
-        new = self.new.copy()
-        old = self.old.copy()
-        old['state'] = new['state'] = koji.BUILD_STATES['BUILDING']
-        old['task_id'] = new['task_id'] = 137
-        result = kojihub.recycle_build(old, new)
+        self.old['state'] = self.new['state'] = koji.BUILD_STATES['BUILDING']
+        self.old['task_id'] = self.new['task_id'] = 137
+        result = kojihub.recycle_build(self.old, self.new)
         self.assertEqual(result, None)
         self.assertEqual(len(self.queries), 0)
         self.assertEqual(len(self.updates), 0)
@@ -112,11 +116,10 @@ class TestRecycleBuild(unittest.TestCase):
         self.run_callbacks.assert_not_called()
 
     def test_not_in_failed_or_canceled_state(self):
-        old = self.old.copy()
-        old['state'] = koji.BUILD_STATES['COMPLETE']
+        self.old['state'] = koji.BUILD_STATES['COMPLETE']
         with self.assertRaises(koji.GenericError) as ex:
-            kojihub.recycle_build(old, self.new)
-        self.assertEqual(f"Build already exists (id={old['id']}, state=COMPLETE): {self.new}",
+            kojihub.recycle_build(self.old, self.new)
+        self.assertEqual(f"Build already exists (id={self.old['id']}, state=COMPLETE): {self.new}",
                          str(ex.exception))
         self.assertEqual(len(self.queries), 0)
         self.assertEqual(len(self.updates), 0)
@@ -126,11 +129,10 @@ class TestRecycleBuild(unittest.TestCase):
         self.run_callbacks.assert_not_called()
 
     def test_tag_activity_already_exists(self):
-        old = self.old.copy()
-        old['task_id'] = 137
+        self.old['task_id'] = 137
         self.query_execute.return_value = [{'tag_id': 123}]
         with self.assertRaises(koji.GenericError) as ex:
-            kojihub.recycle_build(old, self.new)
+            kojihub.recycle_build(self.old, self.new)
         self.assertEqual("Build already exists. Unable to recycle, has tag history",
                          str(ex.exception))
         self.assertEqual(len(self.queries), 1)
@@ -141,18 +143,17 @@ class TestRecycleBuild(unittest.TestCase):
         self.assertEqual(query.tables, ['tag_listing'])
         self.assertEqual(query.joins, None)
         self.assertEqual(query.clauses, ['build_id = %(id)s'])
-        self.assertEqual(query.values, old)
+        self.assertEqual(query.values, self.old)
         self.assertEqual(query.columns, ['tag_id'])
 
         self.get_build.assert_not_called()
         self.run_callbacks.assert_not_called()
 
     def test_rpm_activity_already_exists(self):
-        old = self.old.copy()
-        old['task_id'] = 137
+        self.old['task_id'] = 137
         self.query_execute.side_effect = [[], [{'id': 1}]]
         with self.assertRaises(koji.GenericError) as ex:
-            kojihub.recycle_build(old, self.new)
+            kojihub.recycle_build(self.old, self.new)
         self.assertEqual("Build already exists. Unable to recycle, has rpm data",
                          str(ex.exception))
 
@@ -164,25 +165,24 @@ class TestRecycleBuild(unittest.TestCase):
         self.assertEqual(query.tables, ['tag_listing'])
         self.assertEqual(query.joins, None)
         self.assertEqual(query.clauses, ['build_id = %(id)s'])
-        self.assertEqual(query.values, old)
+        self.assertEqual(query.values, self.old)
         self.assertEqual(query.columns, ['tag_id'])
 
         query = self.queries[1]
         self.assertEqual(query.tables, ['rpminfo'])
         self.assertEqual(query.joins, None)
         self.assertEqual(query.clauses, ['build_id = %(id)s'])
-        self.assertEqual(query.values, old)
+        self.assertEqual(query.values, self.old)
         self.assertEqual(query.columns, ['id'])
 
         self.get_build.assert_not_called()
         self.run_callbacks.assert_not_called()
 
     def test_archive_activity_already_exists(self):
-        old = self.old.copy()
-        old['task_id'] = 137
+        self.old['task_id'] = 137
         self.query_execute.side_effect = [[], [], [{'id': 11}]]
         with self.assertRaises(koji.GenericError) as ex:
-            kojihub.recycle_build(old, self.new)
+            kojihub.recycle_build(self.old, self.new)
         self.assertEqual("Build already exists. Unable to recycle, has archive data",
                          str(ex.exception))
 
@@ -194,35 +194,33 @@ class TestRecycleBuild(unittest.TestCase):
         self.assertEqual(query.tables, ['tag_listing'])
         self.assertEqual(query.joins, None)
         self.assertEqual(query.clauses, ['build_id = %(id)s'])
-        self.assertEqual(query.values, old)
+        self.assertEqual(query.values, self.old)
         self.assertEqual(query.columns, ['tag_id'])
 
         query = self.queries[1]
         self.assertEqual(query.tables, ['rpminfo'])
         self.assertEqual(query.joins, None)
         self.assertEqual(query.clauses, ['build_id = %(id)s'])
-        self.assertEqual(query.values, old)
+        self.assertEqual(query.values, self.old)
         self.assertEqual(query.columns, ['id'])
 
         query = self.queries[2]
         self.assertEqual(query.tables, ['archiveinfo'])
         self.assertEqual(query.joins, None)
         self.assertEqual(query.clauses, ['build_id = %(id)s'])
-        self.assertEqual(query.values, old)
+        self.assertEqual(query.values, self.old)
         self.assertEqual(query.columns, ['id'])
 
         self.get_build.assert_not_called()
         self.run_callbacks.assert_not_called()
 
     def test_valid(self):
-        old = self.old.copy()
-        new = self.new.copy()
-        old['task_id'] = new['task_id'] = 137
+        self.old['task_id'] = self.new['task_id'] = 137
         self.query_execute.side_effect = [[], [], []]
         self.get_build.return_value = {'build_id': 2, 'name': 'GConf2', 'version': '3.2.6',
                                        'release': '15.fc23'}
 
-        kojihub.recycle_build(old, new)
+        kojihub.recycle_build(self.old, self.new)
 
         self.assertEqual(len(self.queries), 3)
         self.assertEqual(len(self.updates), 1)
@@ -232,53 +230,53 @@ class TestRecycleBuild(unittest.TestCase):
         self.assertEqual(query.tables, ['tag_listing'])
         self.assertEqual(query.joins, None)
         self.assertEqual(query.clauses, ['build_id = %(id)s'])
-        self.assertEqual(query.values, old)
+        self.assertEqual(query.values, self.old)
         self.assertEqual(query.columns, ['tag_id'])
 
         query = self.queries[1]
         self.assertEqual(query.tables, ['rpminfo'])
         self.assertEqual(query.joins, None)
         self.assertEqual(query.clauses, ['build_id = %(id)s'])
-        self.assertEqual(query.values, old)
+        self.assertEqual(query.values, self.old)
         self.assertEqual(query.columns, ['id'])
 
         query = self.queries[2]
         self.assertEqual(query.tables, ['archiveinfo'])
         self.assertEqual(query.joins, None)
         self.assertEqual(query.clauses, ['build_id = %(id)s'])
-        self.assertEqual(query.values, old)
+        self.assertEqual(query.values, self.old)
         self.assertEqual(query.columns, ['id'])
 
         delete = self.deletes[0]
         self.assertEqual(delete.table, 'maven_builds')
         self.assertEqual(delete.clauses, ['build_id = %(id)i'])
-        self.assertEqual(delete.values, old)
+        self.assertEqual(delete.values, self.old)
 
         delete = self.deletes[1]
         self.assertEqual(delete.table, 'win_builds')
         self.assertEqual(delete.clauses, ['build_id = %(id)i'])
-        self.assertEqual(delete.values, old)
+        self.assertEqual(delete.values, self.old)
 
         delete = self.deletes[2]
         self.assertEqual(delete.table, 'image_builds')
         self.assertEqual(delete.clauses, ['build_id = %(id)i'])
-        self.assertEqual(delete.values, old)
+        self.assertEqual(delete.values, self.old)
 
         delete = self.deletes[3]
         self.assertEqual(delete.table, 'build_types')
         self.assertEqual(delete.clauses, ['build_id = %(id)i'])
-        self.assertEqual(delete.values, old)
+        self.assertEqual(delete.values, self.old)
 
         update = self.updates[0]
         self.assertEqual(update.table, 'build')
-        self.assertEqual(update.values, new)
+        self.assertEqual(update.values, self.new)
         for key in ['state', 'task_id', 'owner', 'start_time',
                     'completion_time', 'epoch']:
-            assert update.data[key] == new[key]
+            assert update.data[key] == self.new[key]
         self.assertEqual(update.rawdata, {'create_event': 'get_event()'})
         self.assertEqual(update.clauses, ['id=%(id)s'])
 
-        self.get_build.assert_called_once_with(new['id'], strict=True)
+        self.get_build.assert_called_once_with(self.new['id'], strict=True)
         self.assertEqual(self.run_callbacks.call_count, 2)
 
         # our default data does not include stray files
@@ -286,30 +284,42 @@ class TestRecycleBuild(unittest.TestCase):
         self.unlink.assert_not_called()
 
     def test_stray_link(self):
-        old = self.old.copy()
-        new = self.new.copy()
-        old['task_id'] = new['task_id'] = 137
+        self.old['task_id'] = self.new['task_id'] = 137
         self.query_execute.side_effect = [[], [], []]
         self.get_build.return_value = {'build_id': 2, 'name': 'GConf2', 'version': '3.2.6',
                                        'release': '15.fc23'}
 
         self.islink.return_value = True
-        kojihub.recycle_build(old, new)
+        kojihub.recycle_build(self.old, self.new)
         self.rmtree.assert_not_called()
         self.unlink.assert_called_once_with('/mnt/koji/packages/GConf2/3.2.6/15.fc23')
 
     def test_stray_dir(self):
-        old = self.old.copy()
-        new = self.new.copy()
-        old['task_id'] = new['task_id'] = 137
+        self.old['task_id'] = self.new['task_id'] = 137
         self.query_execute.side_effect = [[], [], []]
         self.get_build.return_value = {'build_id': 2, 'name': 'GConf2', 'version': '3.2.6',
                                        'release': '15.fc23'}
 
         self.exists.return_value = True
-        kojihub.recycle_build(old, new)
+        kojihub.recycle_build(self.old, self.new)
         self.unlink.assert_not_called()
         self.rmtree.assert_called_once_with('/mnt/koji/packages/GConf2/3.2.6/15.fc23')
+
+
+class TestRecycleLock(unittest.TestCase):
+
+    def setUp(self):
+        self.QP = mock.patch('kojihub.kojihub.QueryProcessor').start()
+
+    def tearDown(self):
+        mock.patch.stopall()
+
+    def test_recycle_lock(self):
+        old = {'id': 12345}
+        self.QP().executeOne.return_value = mock.sentinel.lock
+        result = kojihub._recycle_lock(old)
+
+        self.assertEqual(result, mock.sentinel.lock)
 
 
 # the end

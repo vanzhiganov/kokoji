@@ -6524,10 +6524,7 @@ def recycle_build(old, data):
     """Check to see if a build can by recycled and if so, update it"""
 
     # re-query with a rowlock
-    query = QueryProcessor(tables=['build'], columns=['state', 'task_id'],
-                           clauses=['id = %(id)s'], values=old,
-                           opts={'rowlock': True})
-    check = query.executeOne()
+    check = _recycle_lock(old)
     st_desc = koji.BUILD_STATES[check['state']]
     if st_desc == 'BUILDING':
         # check to see if this is the controlling task
@@ -6602,6 +6599,13 @@ def recycle_build(old, data):
     buildinfo = get_build(data['id'], strict=True)
     koji.plugin.run_callbacks('postBuildStateChange', attribute='state',
                               old=old['state'], new=data['state'], info=buildinfo)
+
+
+def _recycle_lock(old):
+    query = QueryProcessor(tables=['build'], columns=['state', 'task_id'],
+                           clauses=['id = %(id)s'], values=old,
+                           opts={'rowlock': True})
+    return query.executeOne()
 
 
 def check_noarch_rpms(basepath, rpms, logs=None):
