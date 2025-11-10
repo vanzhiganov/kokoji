@@ -4877,8 +4877,7 @@ def get_next_build(build_info):
     for try_no in range(2, 10):
         savepoint = Savepoint('get_next_build_pre_insert')
         try:
-            # using strict so we don't try to recycle
-            return new_build(build_info, strict=True)
+            return new_build(build_info)
         except (IntegrityError, koji.GenericError):
             savepoint.rollback()
             build_info['release'] = get_next_release(build_info, try_no)
