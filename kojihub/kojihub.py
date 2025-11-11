@@ -6533,7 +6533,7 @@ def recycle_build(old, data):
             # the controlling task must have restarted (and called initBuild again)
             return
         raise koji.GenericError("Build already in progress (task %(task_id)d)"
-                                % old)
+                                % check)
         # TODO? - reclaim 'stale' builds (state=BUILDING and task_id inactive)
 
     if st_desc not in ('FAILED', 'CANCELED'):
