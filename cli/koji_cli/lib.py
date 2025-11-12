@@ -58,7 +58,7 @@ class TimeOption(optparse.Option):
                "parsed by dateutil.parser. e.g. \"2020-12-31 12:35\" or \"December 31st 12:35\""
 
 
-greetings = ('hello', 'hi', 'yo', "what's up", "g'day", 'back to work',
+greetings = ('hello', 'hi', 'yo', "what's up", "g'day", 'back to work', 'howdy',
              'bonjour',
              'hallo',
              'ciao',
