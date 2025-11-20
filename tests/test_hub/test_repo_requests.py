@@ -42,7 +42,6 @@ class BaseTest(unittest.TestCase):
             'RequestCleanTime': 60 * 24,
             'RepoLag': 3600,
             'RepoAutoLag': 7200,
-            'RepoLagWindow': 600,
             'RepoQueueUser': 'kojira',
             'DebuginfoTags': '',
             'SourceTags': '',
@@ -758,8 +757,6 @@ class TestAutoRequests(BaseTest):
         self.request_repo.assert_called_once_with(99, priority=5, lag=lag)
 
     def test_auto_lag(self):
-        # use a trivial window to simplify the lag calculation
-        self.context.opts['RepoLagWindow'] = 1
         autokeys = [
             {'tag_id': 99, 'key': 'repo.auto', 'value': 'true'},
             {'tag_id': 99, 'key': 'repo.lag', 'value': '0'},
@@ -769,22 +766,6 @@ class TestAutoRequests(BaseTest):
         self.query_execute.return_value = autokeys
         self.tag_last_change_event.return_value = 1000
         self.request_repo.return_value = {'repo': None, 'request': 'REQ', 'duplicate': True}
-
-        repos.do_auto_requests()
-
-        self.request_repo.assert_called_once_with(99, priority=5, lag=0)
-
-    def test_auto_lag_window(self):
-        self.context.opts['RepoLagWindow'] = 600
-        autokeys = [
-            {'tag_id': 99, 'key': 'repo.auto', 'value': 'true'},
-            {'tag_id': 99, 'key': 'repo.lag', 'value': '0'},
-        ]
-        now = 1717171717
-        self.time.return_value = now
-        self.query_execute.return_value = autokeys
-        self.tag_last_change_event.return_value = 1000
-        self.request_repo.return_value = {'repo': None, 'request': 'REQ', 'duplicate': False}
 
         repos.do_auto_requests()
 
@@ -1263,7 +1244,6 @@ class TestDefaultMinEvent(BaseTest):
         now = 1717171717
         self.time.return_value = now
         self.context.opts['RepoLag'] = 3600
-        self.context.opts['RepoLagWindow'] = 1
         taginfo = {'id': 55, 'name': 'MYTAG', 'extra': {}}  # no lag override
         self.tag_last_change_event.return_value = 10000
         self.getLastEvent.return_value = {'id': 9999}
@@ -1280,7 +1260,6 @@ class TestDefaultMinEvent(BaseTest):
         now = 1717171717
         self.time.return_value = now
         self.context.opts['RepoLag'] = 3600
-        self.context.opts['RepoLagWindow'] = 1
         taginfo = {'id': 55, 'name': 'MYTAG', 'extra': {}}  # no lag override
         self.tag_last_change_event.return_value = 9900
         self.getLastEvent.return_value = {'id': 9999}
@@ -1293,31 +1272,10 @@ class TestDefaultMinEvent(BaseTest):
         base_ts = self.getLastEvent.call_args.kwargs['before']
         self.assertEqual(base_ts, now - 3600)
 
-    def test_window(self):
-        now = 1717171717
-        self.time.return_value = now
-        self.context.opts['RepoLag'] = 3600
-        self.context.opts['RepoLagWindow'] = 300
-        taginfo = {'id': 55, 'name': 'MYTAG', 'extra': {}}  # no lag override
-        self.tag_last_change_event.return_value = 9900
-        self.getLastEvent.return_value = {'id': 9999}
-
-        ev = repos.default_min_event(taginfo)
-
-        # we should report the ts for the tag, since it is older
-        self.assertEqual(ev, 9900)
-        self.getLastEvent.assert_called_once()
-        base_ts = self.getLastEvent.call_args.kwargs['before']
-        # should be earlier than target time, but within lag window
-        lag_ts = now - 3600
-        if base_ts > lag_ts or base_ts < lag_ts - 600:
-            raise Exception('Invalid lag window calculation')
-
     def test_lag_override(self):
         now = 1717171717
         self.time.return_value = now
         self.context.opts['RepoLag'] = 3600
-        self.context.opts['RepoLagWindow'] = 1
         taginfo = {'id': 55, 'name': 'MYTAG', 'extra': {'repo.lag': 1800}}
         self.tag_last_change_event.return_value = 10000
         self.getLastEvent.return_value = {'id': 9999}
@@ -1334,7 +1292,6 @@ class TestDefaultMinEvent(BaseTest):
         now = 1717171717
         self.time.return_value = now
         self.context.opts['RepoLag'] = 3600
-        self.context.opts['RepoLagWindow'] = 1
         taginfo = {'id': 55, 'name': 'MYTAG', 'extra': {'repo.lag': 'not an int'}}
         self.tag_last_change_event.return_value = 10000
         self.getLastEvent.return_value = {'id': 9999}
