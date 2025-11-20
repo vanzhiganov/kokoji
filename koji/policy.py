@@ -634,7 +634,7 @@ def rule_str(tests, negate, action):
     if isinstance(action, list):
         line += '{ ...'
     else:
-        line += action
+        line += str(action)
     return line
 
 
