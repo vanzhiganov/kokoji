@@ -542,6 +542,11 @@ class RuleChecker(object):
             results.append({'action': action, 'trace': trace})
             if not multi:
                 break
+        if not results:
+            self.logger.debug("  (no action)")
+        else:
+            for r in results:
+                self.logger.debug("  action: %s", r['action'])
         self.logger.debug("policy done")
         return self.lastrun
 
