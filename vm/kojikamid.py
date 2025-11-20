@@ -52,7 +52,8 @@ try:
 except ImportError:
     # just use stdlib in case defusedxml is missing
     pass
-import xmlrpc.client  # nosec B411, we don't always have non-stdlib libraries
+import xmlrpc.client  # nosec B411
+# (we don't always have non-stdlib libraries)
 import six    # noqa: F401, needed for imported code
 
 
