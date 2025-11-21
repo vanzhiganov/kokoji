@@ -56,7 +56,10 @@ class SidetagTest(koji.policy.MatchTest):
     name = 'is_sidetag'
 
     def run(self, data):
-        tag = get_tag(data['tag'])
+        tag = data.get('tag')
+        if not tag:
+            return False
+        tag = get_tag(tag)
         return is_sidetag(tag)
 
 
@@ -82,7 +85,9 @@ class SidetagOwnerTest(koji.policy.MatchTest):
         for field in fields:
             if field not in data:
                 return False
-            tag = get_tag(data[field])
+            tag = data.get(field)
+            if tag:
+                tag = get_tag(tag)
             if not tag or not is_sidetag_owner(tag, user):
                 return False
         return True
