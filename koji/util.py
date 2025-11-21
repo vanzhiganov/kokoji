@@ -303,8 +303,11 @@ class RepoWatcher(object):
             if not check['request']['active']:
                 if check['request']['task_id']:
                     tstate = koji.TASK_STATES[check['request']['task_state']]
-                    self.logger.error('Task %s state is %s', check['request']['task_id'], tstate)
-                raise koji.GenericError("Repo request no longer active")
+                    msg = 'Repo request inactive: task %s state is %s' % (
+                          check['request']['task_id'], tstate)
+                else:
+                    msg = 'Repo request no longer active'
+                raise koji.GenericError(msg)
             self.pause()
 
     def wait_builds(self, builds):
