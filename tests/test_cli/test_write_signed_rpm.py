@@ -128,8 +128,11 @@ class TestWriteSignedRPM(utils.CliTestCase):
         session = mock.MagicMock()
         mcall = session.multicall.return_value.__enter__.return_value
 
-        def vm(result):
-            m = koji.VirtualCall('mcall_method', [], {})
+        # helper function for mocking multicall
+        def vm(result, args=None):
+            if args is None:
+                args = []
+            m = koji.VirtualCall('mcall_method', args, {})
             if isinstance(result, dict) and result.get('faultCode'):
                 m._result = result
             else:
@@ -151,7 +154,7 @@ class TestWriteSignedRPM(utils.CliTestCase):
 
         mcall.getRPM.side_effect = [
             vm(rpm_data[0]),            # bash-4.4.12-5.fc26.src
-            vm(None),                   # bash-4.4.12-5.fc26
+            vm(None, args=['bash-4.4.12-5.fc26']),  # bash-4.4.12-5.fc26
         ]
         mcall.getBuild.return_value = vm({
             'package_name': 'bash',
@@ -207,8 +210,9 @@ class TestWriteSignedRPM(utils.CliTestCase):
         # result: raise koji.GenericError
         mcall.writeSignedRPM.reset_mock()
         mcall.getRPM.side_effect = None
-        mcall.getRPM.return_value = vm(None)
-        mcall.getBuild.return_value = vm({'faultCode': 1000, 'faultString': 'x'})
+        mcall.getRPM.return_value = vm(None, args=['gawk-4.1.4-3.fc26.x86_64'])
+        mcall.getBuild.return_value = vm({'faultCode': 1000, 'faultString': 'x'},
+                                         args=['gawk-4.1.4-3.fc26.x86_64'])
 
         args = arguments + ['gawk-4.1.4-3.fc26.x86_64']
         with self.assertRaises(koji.GenericError) as cm:
