@@ -4881,7 +4881,7 @@ def get_next_build(build_info):
         except (IntegrityError, koji.GenericError) as e:
             savepoint.rollback()
             build_info['release'] = get_next_release(build_info, incr)
-            logger.info(f'Incrementing next build release to {build_info['release']}: {e}')
+            logger.info(f'Incrementing next build release to {build_info["release"]}: {e}')
     # otherwise
     raise koji.GenericError("Can't find available release")
 
