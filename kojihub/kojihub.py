@@ -637,12 +637,7 @@ def make_task(method, arglist, **opts):
             opts['assign'] = get_host(opts['assign'], strict=True)['id']
     if 'parent' in opts:
         # for subtasks, we use some of the parent's options as defaults
-        query = QueryProcessor(
-            tables=['task'],
-            columns=['state', 'owner', 'channel_id', 'priority', 'arch'],
-            clauses=['id = %(parent)i'],
-            values={'parent': opts['parent']})
-        pdata = query.executeOne()
+        pdata = _get_task_parent(opts['parent'])
         if not pdata:
             raise koji.GenericError("Invalid parent task: %(parent)s" % opts)
         if pdata['state'] != koji.TASK_STATES['OPEN']:
@@ -769,6 +764,16 @@ def make_task(method, arglist, **opts):
     scheduler.log_both('task created', task_id=task_id)
     scheduler.auto_arch_refuse(task_id)  # temporary workaround
     return task_id
+
+
+def _get_task_parent(parent_id):
+    # helper for make_task
+    query = QueryProcessor(
+        tables=['task'],
+        columns=['state', 'owner', 'channel_id', 'priority', 'arch'],
+        clauses=['id = %(parent)s'],
+        values={'parent': parent_id})
+    return query.executeOne()
 
 
 def eventCondition(event, table=None):

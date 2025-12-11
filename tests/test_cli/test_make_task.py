@@ -10,7 +10,7 @@ from koji_cli.commands import handle_make_task
 from . import utils
 
 
-class TestAddNotification(utils.CliTestCase):
+class TestMakeTask(utils.CliTestCase):
     def setUp(self):
         self.maxDiff = None
         self.options = mock.MagicMock()

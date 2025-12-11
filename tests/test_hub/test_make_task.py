@@ -2,6 +2,8 @@ import unittest
 
 from unittest import mock
 
+import koji
+import koji.xmlrpcplus
 from kojihub import kojihub, kojixmlrpc
 
 QP = kojihub.QueryProcessor
@@ -47,6 +49,7 @@ class TestMakeTask(unittest.TestCase):
         self.get_channel_id = mock.patch('kojihub.kojihub.get_channel_id').start()
         self.currval = mock.patch('kojihub.kojihub.currval').start()
         self.auto_arch_refuse = mock.patch('kojihub.scheduler.auto_arch_refuse').start()
+        self.Task = mock.patch('kojihub.kojihub.Task').start()
 
         self.set_policy()
 
@@ -129,5 +132,70 @@ class TestMakeTask(unittest.TestCase):
                     'channel_id': 23}
         for key in expected:
             self.assertEqual(self.inserts[0].data[key], expected[key])
+
+    @mock.patch('kojihub.kojihub._get_task_parent')
+    def test_make_task_with_parent(self, _get_task_parent):
+        self.get_channel.return_value = {'name': 'testing', 'id': 23, 'enabled': True}
+        self.opts['DefaultChannelCompat'] = True
+        self.opts['policy']['channel'] = '''
+            has req_channel :: req
+            all :: use bad
+        '''
+        self.set_policy()
+        # mock parent data
+        kwargs = {'srpm': 'SRPM', 'build_tag': 100}
+        arglist = koji.encode_args(**kwargs)
+        request = koji.xmlrpcplus.dumps(tuple(arglist), methodname='parent_method')
+        pdata = {
+                'state': koji.TASK_STATES['OPEN'],
+                'owner': 1,
+                'channel_id':23,
+                'priority': 20,
+                'arch': 'noarch',
+                'parent': None,
+                'method': 'parent_method',
+                'request': request,
+        }
+        _get_task_parent.return_value = pdata
+        self.Task.return_value.getInfo.return_value = pdata
+
+        kojihub.make_task('something', [1, 2, 3], default_channel='testing', parent=5678)
+
+        # in compat mode we expect to hit the "req" policy result
+        self.get_channel.assert_called_once_with('testing')
+        self.get_channel_id.assert_not_called()
+        self.assertEqual(len(self.inserts), 1)
+        expected = {'state': 0, 'method': 'something', 'parent': 5678, 'arch': 'noarch',
+                    'channel_id': 23}
+        for key in expected:
+            self.assertEqual(self.inserts[0].data[key], expected[key])
+
+    @mock.patch('kojihub.kojihub._get_task_parent')
+    def test_make_task_with_invalid_parent(self, _get_task_parent):
+        _get_task_parent.return_value = None
+
+        with self.assertRaises(koji.GenericError) as ex:
+            kojihub.make_task('something', [1, 2, 3], default_channel='testing', parent=5678)
+
+        self.assertEqual('Invalid parent task: 5678', str(ex.exception))
+
+    @mock.patch('kojihub.kojihub._get_task_parent')
+    def test_make_task_with_nonopen_parent(self, _get_task_parent):
+        # mock parent data
+        pdata = {
+                'state': koji.TASK_STATES['FAILED'],
+                'owner': 1,
+                'channel_id':23,
+                'priority': 20,
+                'arch': 'noarch',
+                'parent': None,
+        }
+        _get_task_parent.return_value = pdata
+
+        with self.assertRaises(koji.GenericError) as ex:
+            kojihub.make_task('something', [1, 2, 3], default_channel='testing', parent=5678)
+
+        self.assertEqual('Parent task (id 5678) is not open', str(ex.exception))
+
 
 # the end
