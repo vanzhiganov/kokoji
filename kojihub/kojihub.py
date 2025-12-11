@@ -683,6 +683,8 @@ def make_task(method, arglist, **opts):
             req_channel_id = channel_info['id']
         else:
             raise koji.GenericError('Channel %s is disabled.' % opts['channel'])
+    if opts['parent']:
+        policy_data.update(policy_data_from_task(opts['parent'], recurse=True))
     policy_data.update(policy_data_from_task_args(method, arglist))
 
     ruleset = context.policy.get('channel')
@@ -10540,7 +10542,7 @@ def eval_policy(name, data):
     return ruleset.apply(data)
 
 
-def policy_data_from_task(task_id):
+def policy_data_from_task(task_id, recurse=False):
     """Calculate policy data from task id
 
         :param int task_id: the task id
@@ -10549,7 +10551,13 @@ def policy_data_from_task(task_id):
         """
     task = Task(task_id)
     taskinfo = task.getInfo(strict=True, request=True)
-    return policy_data_from_task_args(taskinfo['method'], taskinfo['request'])
+    if recurse and taskinfo['parent']:
+        # start with the parents data
+        data = policy_data_from_task(taskinfo['parent'], recurse=recurse)
+    else:
+        data = {}
+    data.update(policy_data_from_task_args(taskinfo['method'], taskinfo['request']))
+    return data
 
 
 def policy_data_from_task_args(method, arglist):
