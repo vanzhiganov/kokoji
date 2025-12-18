@@ -2148,7 +2148,7 @@ def read_config(profile_name, user_config=None):
         'topdir': '/mnt/koji',
         'max_retries': 30,
         'retry_interval': 20,
-        'anon_retry': False,
+        'anon_retry': True,
         'offline_retry': False,
         'offline_retry_interval': 20,
         'timeout': DEFAULT_REQUEST_TIMEOUT,
