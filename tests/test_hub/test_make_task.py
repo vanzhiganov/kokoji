@@ -133,8 +133,7 @@ class TestMakeTask(unittest.TestCase):
         for key in expected:
             self.assertEqual(self.inserts[0].data[key], expected[key])
 
-    @mock.patch('kojihub.kojihub._get_task_parent')
-    def test_make_task_with_parent(self, _get_task_parent):
+    def test_make_task_with_parent(self):
         self.get_channel.return_value = {'name': 'testing', 'id': 23, 'enabled': True}
         self.opts['DefaultChannelCompat'] = True
         self.opts['policy']['channel'] = '''
@@ -156,7 +155,6 @@ class TestMakeTask(unittest.TestCase):
                 'method': 'parent_method',
                 'request': request,
         }
-        _get_task_parent.return_value = pdata
         self.Task.return_value.getInfo.return_value = pdata
 
         kojihub.make_task('something', [1, 2, 3], default_channel='testing', parent=5678)
@@ -170,17 +168,15 @@ class TestMakeTask(unittest.TestCase):
         for key in expected:
             self.assertEqual(self.inserts[0].data[key], expected[key])
 
-    @mock.patch('kojihub.kojihub._get_task_parent')
-    def test_make_task_with_invalid_parent(self, _get_task_parent):
-        _get_task_parent.return_value = None
+    def test_make_task_with_invalid_parent(self):
+        self.Task.return_value.getInfo.return_value = None
 
         with self.assertRaises(koji.GenericError) as ex:
             kojihub.make_task('something', [1, 2, 3], default_channel='testing', parent=5678)
 
         self.assertEqual('Invalid parent task: 5678', str(ex.exception))
 
-    @mock.patch('kojihub.kojihub._get_task_parent')
-    def test_make_task_with_nonopen_parent(self, _get_task_parent):
+    def test_make_task_with_nonopen_parent(self):
         # mock parent data
         pdata = {
                 'state': koji.TASK_STATES['FAILED'],
@@ -190,7 +186,7 @@ class TestMakeTask(unittest.TestCase):
                 'arch': 'noarch',
                 'parent': None,
         }
-        _get_task_parent.return_value = pdata
+        self.Task.return_value.getInfo.return_value = pdata
 
         with self.assertRaises(koji.GenericError) as ex:
             kojihub.make_task('something', [1, 2, 3], default_channel='testing', parent=5678)
