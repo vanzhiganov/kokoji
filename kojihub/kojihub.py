@@ -3520,7 +3520,7 @@ def _delete_build_target(buildTargetInfo):
 
 def get_build_targets(info=None, event=None, buildTagID=None, destTagID=None, queryOpts=None):
     """Return data on all the build targets
-        :param int, str, dist info:         build target name, ID or dict
+        :param int, str, dict info:         build target name, ID or dict
         :param int event:                   provide event to query at a different time
         :param int, str, dict buildTagID:   build tag name, ID or dict
         :param int, str, dict destTagID:    destination tag name, ID or dict
