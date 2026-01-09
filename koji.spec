@@ -439,6 +439,8 @@ done
 %{make_with_dirs} PYTHON=%{__python2} install
 %endif
 %endif
+mkdir -p %{buildroot}/%{_sysusersdir}
+cp builder/koji.conf %{buildroot}/%{_sysusersdir}/koji.conf
 
 
 # python3 build
@@ -471,6 +473,8 @@ for fn in $scripts ; do
     sed -i 's|#!/usr/bin/python2|#!/usr/bin/python3|' $RPM_BUILD_ROOT$fn
 done
 %endif
+mkdir -p %{buildroot}/%{_sysusersdir}
+cp builder/koji.conf %{buildroot}/%{_sysusersdir}/koji.conf
 
 %if 0%{?fedora}
 # handle extra byte compilation
@@ -636,6 +640,7 @@ rm -rf $RPM_BUILD_ROOT
 %dir /etc/kojid
 %config(noreplace) /etc/kojid/kojid.conf
 %attr(-,kojibuilder,kojibuilder) /etc/mock/koji
+%config(noreplace) %{_sysusersdir}/koji.conf
 
 %pre builder
 /usr/sbin/useradd -r -s /usr/sbin/nologin -G mock -d /builddir -M kojibuilder 2>/dev/null ||:
