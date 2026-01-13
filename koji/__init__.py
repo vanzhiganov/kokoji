@@ -1205,7 +1205,9 @@ def get_rpm_ident(hdr):
 def get_rpm_ident_fields(hdr):
     """Extract rpm header fields used for identification"""
     # these base fields should always exist
-    fields = ('name', 'version', 'release', 'epoch', 'arch', 'buildtime')
+    fields = ('name', 'version', 'release', 'epoch', 'arch', 'buildtime', 'size')
+    # size and buildtime aren't actually used for identification, but they are
+    # required if the rpm is external
     data = get_header_fields(hdr, fields)
     # digest fields may vary
     digests = get_rpm_digests(hdr)
