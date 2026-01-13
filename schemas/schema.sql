@@ -807,7 +807,7 @@ CREATE TABLE rpminfo (
 	sha1header TEXT,
 	sha256header TEXT,
 	sha3_256header TEXT,
-	size BIGINT NOT NULL,
+	size BIGINT,
 	buildtime BIGINT NOT NULL,
 	metadata_only BOOLEAN NOT NULL DEFAULT FALSE,
 	extra TEXT,

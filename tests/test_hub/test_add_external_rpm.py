@@ -89,22 +89,22 @@ class TestAddExternalRPM(unittest.TestCase):
 
     def test_add_ext_rpm_bad_data(self):
         rpminfo = self.rpminfo.copy()
-        del rpminfo['size']
+        del rpminfo['buildtime']
 
         with self.assertRaises(koji.GenericError) as ex:
             kojihub.add_external_rpm(rpminfo, self.repo)
-        self.assertEqual(f"size field missing: {rpminfo}", str(ex.exception))
+        self.assertEqual(f"buildtime field missing: {rpminfo}", str(ex.exception))
 
         self.get_rpm.assert_not_called()
         self.nextval.assert_not_called()
         self.assertEqual(len(self.inserts), 0)
 
         rpminfo = self.rpminfo.copy()
-        rpminfo['size'] = ['invalid type']
+        rpminfo['buildtime'] = ['invalid type']
 
         with self.assertRaises(koji.GenericError) as ex:
             kojihub.add_external_rpm(rpminfo, self.repo)
-        self.assertEqual(f"Invalid value for size: {rpminfo['size']}",
+        self.assertEqual(f"Invalid value for buildtime: {rpminfo['buildtime']}",
                          str(ex.exception))
 
         self.get_rpm.assert_not_called()

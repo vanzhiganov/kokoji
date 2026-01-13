@@ -7763,13 +7763,15 @@ def add_external_rpm(rpminfo, external_repo, strict=True):
     # [!] Calling function should perform access checks
 
     # key required fields and types
+    rpminfo = rpminfo.copy()
+    rpminfo.setdefault('size', None)
     dtypes = (
         ('name', str),
         ('version', str),
         ('release', str),
         ('epoch', (int, type(None))),
         ('arch', str),
-        ('size', int),
+        ('size', (int, type(None))),
         ('buildtime', int))
     data = {}
     for field, allowed in dtypes:

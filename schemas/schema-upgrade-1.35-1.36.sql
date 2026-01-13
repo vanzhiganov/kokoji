@@ -25,6 +25,8 @@ CREATE INDEX rpminfo_sigmd5 ON rpminfo(sigmd5);
 CREATE INDEX rpminfo_sha1header ON rpminfo(sha1header);
 CREATE INDEX rpminfo_sha256header ON rpminfo(sha256header);
 CREATE INDEX rpminfo_sha3_256header ON rpminfo(sha3_256header);
+-- rpminfo.size can be null
+ALTER TABLE rpminfo ALTER COLUMN size DROP NOT NULL;
 
 
 COMMIT;
