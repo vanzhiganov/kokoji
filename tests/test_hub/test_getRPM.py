@@ -171,6 +171,7 @@ class TestGetRPMHeaders(unittest.TestCase):
         self.get_rpm = mock.patch('kojihub.kojihub.get_rpm').start()
         self.get_build = mock.patch('kojihub.kojihub.get_build').start()
         self.get_header_fields = mock.patch('koji.get_header_fields').start()
+        self.query_rpm_sigs = mock.patch('kojihub.kojihub.query_rpm_sigs').start()
         self.tempdir = tempfile.mkdtemp()
         self.pathinfo = koji.PathInfo(self.tempdir)
         mock.patch('koji.pathinfo', new=self.pathinfo).start()
@@ -189,6 +190,7 @@ class TestGetRPMHeaders(unittest.TestCase):
         self.get_rpm.assert_not_called()
         self.get_build.assert_not_called()
         self.get_header_fields.assert_not_called()
+        self.query_rpm_sigs.assert_not_called()
 
     def test_taskid_without_filepath(self):
         self.cursor.fetchone.return_value = None
@@ -199,6 +201,7 @@ class TestGetRPMHeaders(unittest.TestCase):
         self.get_rpm.assert_not_called()
         self.get_build.assert_not_called()
         self.get_header_fields.assert_not_called()
+        self.query_rpm_sigs.assert_not_called()
 
     def test_insufficient_args(self):
         with self.assertRaises(koji.GenericError) as cm:
@@ -210,6 +213,13 @@ class TestGetRPMHeaders(unittest.TestCase):
         self.assertEqual("either rpmID or taskID and filepath must be specified",
                          str(cm.exception))
         # we already test taskid without filepath above
+
+    def test_sigkey_not_allowed(self):
+        filepath = 'pkg-1-2.noarch.rpm'
+        with self.assertRaises(koji.GenericError) as cm:
+            self.exports.getRPMHeaders(taskID=99, filepath=filepath, sigkey='c0ffee')
+        self.assertEqual("The sigkey option cannot be used with a task id",
+                         str(cm.exception))
 
     def test_unknown_rpm(self):
         self.get_rpm.return_value = None
@@ -225,6 +235,7 @@ class TestGetRPMHeaders(unittest.TestCase):
         self.get_rpm.assert_called_with('FOO-1-1.noarch', strict=True)
         self.get_build.assert_not_called()
         self.get_header_fields.assert_not_called()
+        self.query_rpm_sigs.assert_not_called()
 
     def test_external_rpm(self):
         rpm_info = {'external_repo_id': 1, 'id': 'RPMID'}
@@ -238,6 +249,7 @@ class TestGetRPMHeaders(unittest.TestCase):
         self.assertEqual(f"External rpm: {rpm_info['id']}", str(cm.exception))
         self.get_build.assert_not_called()
         self.get_header_fields.assert_not_called()
+        self.query_rpm_sigs.assert_not_called()
 
     def test_deleted_build(self):
         self.get_rpm.return_value = {'build_id': 'BUILDID', 'external_repo_id': 0}
@@ -253,6 +265,7 @@ class TestGetRPMHeaders(unittest.TestCase):
         self.assertEqual(f"Build {build_info['nvr']} is deleted", str(cm.exception))
         self.get_build.assert_called_with('BUILDID', strict=True)
         self.get_header_fields.assert_not_called()
+        self.query_rpm_sigs.assert_not_called()
 
     def test_missing_rpm(self):
         self.get_rpm.return_value = {
@@ -281,6 +294,37 @@ class TestGetRPMHeaders(unittest.TestCase):
         self.assertEqual(f"Missing rpm file: {rpmpath}", str(e.exception))
         self.get_build.assert_called_with('BUILDID', strict=True)
         self.get_header_fields.assert_not_called()
+        self.query_rpm_sigs.assert_not_called()
+
+    def test_missing_sig(self):
+        self.get_rpm.return_value = {
+            'id': 1234,
+            'build_id': 'BUILDID',
+            'external_repo_id': 0,
+            'name': 'pkg',
+            'version': '1',
+            'release': '2',
+            'arch': 'noarch'}
+        self.get_build.return_value = {
+            'name': 'pkg',
+            'version': '1',
+            'release': '2',
+            'nvr': 'pkg-1-2',
+            'state': koji.BUILD_STATES['COMPLETE']}
+        self.query_rpm_sigs.return_value = []
+        rpmpath = '%s/packages/pkg/1/2/noarch/pkg-1-2.noarch.rpm' % self.tempdir
+
+        # rpm does not exist
+        result = self.exports.getRPMHeaders(rpmID='pkg-1-2.noarch', strict=False, sigkey='c0ffee')
+        self.assertEqual(result, {})
+        self.get_build.assert_called_with('BUILDID', strict=True)
+
+        # again with strict mode
+        with self.assertRaises(koji.GenericError) as e:
+            self.exports.getRPMHeaders(rpmID='FOO-1-1.noarch', strict=True, sigkey='c0ffee')
+        self.assertEqual(f"No c0ffee signature for rpm 1234", str(e.exception))
+        self.get_build.assert_called_with('BUILDID', strict=True)
+        self.get_header_fields.assert_not_called()
 
     def test_rpm_exists(self):
         self.get_rpm.return_value = {
@@ -307,6 +351,36 @@ class TestGetRPMHeaders(unittest.TestCase):
         self.assertEqual(result, fakeheaders)
         self.get_build.assert_called_with('BUILDID', strict=True)
         self.get_header_fields.assert_called_with(rpmpath, None)
+        self.query_rpm_sigs.assert_not_called()
+
+    def test_sig_exists(self):
+        self.get_rpm.return_value = {
+            'id': 1234,
+            'build_id': 'BUILDID',
+            'external_repo_id': 0,
+            'name': 'pkg',
+            'version': '1',
+            'release': '2',
+            'arch': 'noarch'}
+        self.get_build.return_value = {
+            'name': 'pkg',
+            'version': '1',
+            'release': '2',
+            'nvr': 'pkg-1-2',
+            'state': koji.BUILD_STATES['COMPLETE']}
+        self.query_rpm_sigs.return_value = [{'rpm_id': 1234, 'sigkey': 'c0ffee', 'sighash': 'whatever'}]
+        rpmpath = '%s/packages/pkg/1/2/data/signed/c0ffee/noarch/pkg-1-2.noarch.rpm' % self.tempdir
+        koji.ensuredir(os.path.dirname(rpmpath))
+        with open(rpmpath, 'w') as fo:
+            fo.write('hello world')
+        fakeheaders = {'HEADER': 'SOMETHING'}
+        self.get_header_fields.return_value = fakeheaders
+
+        result = self.exports.getRPMHeaders(rpmID='pkg-1-2.noarch', strict=True, sigkey='c0ffee')
+        self.assertEqual(result, fakeheaders)
+        self.get_build.assert_called_with('BUILDID', strict=True)
+        self.get_header_fields.assert_called_with(rpmpath, None)
+        self.query_rpm_sigs.assert_called_once()
 
     def test_task_rpm_exists(self):
         taskid = 137
@@ -323,6 +397,7 @@ class TestGetRPMHeaders(unittest.TestCase):
         self.get_rpm.assert_not_called()
         self.get_build.assert_not_called()
         self.get_header_fields.assert_called_with(rpmpath, None)
+        self.query_rpm_sigs.assert_not_called()
 
     def test_task_rpm_missing(self):
         taskid = 137
@@ -338,3 +413,7 @@ class TestGetRPMHeaders(unittest.TestCase):
         self.get_rpm.assert_not_called()
         self.get_build.assert_not_called()
         self.get_header_fields.assert_not_called()
+        self.query_rpm_sigs.assert_not_called()
+
+
+# the end
