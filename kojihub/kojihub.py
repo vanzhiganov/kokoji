@@ -7814,7 +7814,8 @@ def merge_scratch(task_id):
     if not build:
         raise koji.ImportError('no such build: %(name)s-%(version)s-%(release)s' %
                                build_nvr)
-    reject_draft(build, koji.ImportError(f"build to import is a draft build: {build['nvr']}"))
+    reject_draft(build,
+                 error=koji.ImportError(f"build to import is a draft build: {build['nvr']}"))
     if build['state'] != koji.BUILD_STATES['COMPLETE']:
         raise koji.ImportError('%s did not complete successfully' % build['nvr'])
     if not build['task_id']:
