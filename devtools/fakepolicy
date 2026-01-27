@@ -266,6 +266,8 @@ def make_task_params(args, session):
     data['user_id'] = tinfo['owner']
     if args.req_channel:
         data['req_channel'] = args.req_channel
+    if tinfo['parent']:
+        data.update(kojihub.policy_data_from_task(tinfo['parent'], recurse=True))
     data.update(kojihub.policy_data_from_task_args(tinfo['method'], taskargs))
     # ^ this relies on the mocks to work
     return args.policy, data
