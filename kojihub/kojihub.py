@@ -298,6 +298,7 @@ class Task(object):
         """Attempt to assign the task to host.
 
         returns True if successful, False otherwise"""
+        # we should only be called by scheduler, which calls log_both itself
         return self.lock(host_id, 'ASSIGNED', force)
 
     def open(self, host_id):
@@ -315,6 +316,7 @@ class Task(object):
                 data = base64.b64decode(ret['request'])
                 # we can't return raw bytes and this /should/ be a valid string
                 ret['request'] = decode_bytes(data)
+            scheduler.log_both('task opened', task_id=self.id, host_id=host_id)
             return ret
         else:
             return None
@@ -340,6 +342,7 @@ class Task(object):
         update.execute()
         self.runCallbacks('postTaskStateChange', info, 'state', koji.TASK_STATES['FREE'])
         self.runCallbacks('postTaskStateChange', info, 'host_id', None)
+        scheduler.log_both('task freed', task_id=self.id)
         return True
 
     def setWeight(self, weight):
@@ -352,6 +355,7 @@ class Task(object):
                                  data={'weight': weight})
         update.execute()
         self.runCallbacks('postTaskStateChange', info, 'weight', weight)
+        scheduler.log_both(f'task weight set to {weight}', task_id=self.id)
 
     def setPriority(self, priority, recurse=False):
         """Set priority for task"""
@@ -363,6 +367,7 @@ class Task(object):
                                  data={'priority': priority})
         update.execute()
         self.runCallbacks('postTaskStateChange', info, 'priority', priority)
+        scheduler.log_both(f'task priority set to {priority}', task_id=self.id)
 
         if recurse:
             # Change priority of child tasks
@@ -398,10 +403,12 @@ class Task(object):
     def close(self, result):
         # access checks should be performed by calling function
         self._close(result, koji.TASK_STATES['CLOSED'])
+        scheduler.log_both('task closed', task_id=self.id)
 
     def fail(self, result):
         # access checks should be performed by calling function
         self._close(result, koji.TASK_STATES['FAILED'])
+        scheduler.log_both('task failed', task_id=self.id)
 
     def getState(self):
         query = QueryProcessor(tables=['task'], columns=['state'], clauses=['id = %(id)i'],
@@ -453,6 +460,7 @@ class Task(object):
                                opts={'rowlock': True, 'asList': True})
         for (build_id,) in query.execute():
             cancel_build(build_id, cancel_task=False)
+        scheduler.log_both('task canceled', task_id=self.id)
         if recurse:
             # also cancel child tasks
             self.cancelChildren()
@@ -756,6 +764,7 @@ def make_task(method, arglist, **opts):
     opts['id'] = task_id
     koji.plugin.run_callbacks(
         'postTaskStateChange', attribute='state', old=None, new='FREE', info=opts)
+    scheduler.log_both('task created', task_id=task_id)
     scheduler.auto_arch_refuse(task_id)  # temporary workaround
     return task_id
 
