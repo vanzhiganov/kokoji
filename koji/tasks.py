@@ -543,6 +543,12 @@ class BaseTaskHandler(object):
         if arch != "noarch":
             return arch
 
+        if preferred_arch is None:
+            task_arch = self.taskinfo['arch']
+            if task_arch != 'noarch':
+                # if a "noarch" task has an arch, the parent has probably overridden
+                preferred_arch = task_arch
+
         # We need a concrete arch. Pick one that:
         #  a) this host can handle
         #  b) the build tag can support

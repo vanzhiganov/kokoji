@@ -529,6 +529,7 @@ class TasksTestCase(unittest.TestCase):
         temp_path = self.get_tmp_dir_path('TaskTest')
         makedirs(temp_path)
         obj = TaskTest(123, 'some_method', ['random_arg'], None, None, temp_path)
+        obj._taskinfo = {'arch': 'noarch'}
         self.assertEqual(obj.find_arch('x86_64', None, None), 'x86_64')
 
     def test_BaseTaskHandler_find_arch_noarch_bad_host(self):
@@ -539,6 +540,7 @@ class TasksTestCase(unittest.TestCase):
         makedirs(temp_path)
         host = {'arches': None, 'name': 'test.domain.local'}
         obj = TaskTest(123, 'some_method', ['random_arg'], None, None, temp_path)
+        obj._taskinfo = {'arch': 'noarch'}
         try:
             obj.find_arch('noarch', host, None)
             raise Exception('The BuildError Exception was not raised')
@@ -554,6 +556,7 @@ class TasksTestCase(unittest.TestCase):
         host = {'arches': 'x86_64', 'name': 'test.domain.local'}
         tag = {'arches': None, 'name': 'some_package-1.2-build'}
         obj = TaskTest(123, 'some_method', ['random_arg'], None, None, temp_path)
+        obj._taskinfo = {'arch': 'noarch'}
         try:
             obj.find_arch('noarch', host, tag)
             raise Exception('The BuildError Exception was not raised')
@@ -569,6 +572,7 @@ class TasksTestCase(unittest.TestCase):
         host = {'arches': 'x86_64', 'name': 'test.domain.local'}
         tag = {'arches': 'x86_64 aarch64', 'name': 'some_package-1.2-build'}
         obj = TaskTest(123, 'some_method', ['random_arg'], None, None, temp_path)
+        obj._taskinfo = {'arch': 'noarch'}
         self.assertEqual(obj.find_arch('noarch', host, tag), 'x86_64')
 
     def test_BaseTaskHandler_find_arch__noarch_no_match(self):
@@ -580,6 +584,7 @@ class TasksTestCase(unittest.TestCase):
         host = {'arches': 'i386', 'name': 'test.domain.local'}
         tag = {'arches': 'x86_64 aarch64', 'name': 'some_package-1.2-build'}
         obj = TaskTest(123, 'some_method', ['random_arg'], None, None, temp_path)
+        obj._taskinfo = {'arch': 'noarch'}
         try:
             obj.find_arch('noarch', host, tag)
             raise Exception('The BuildError Exception was not raised')

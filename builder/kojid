@@ -1647,16 +1647,8 @@ class BuildArchTask(BaseBuildTask):
         rootopts = {
             'repo_id': repo_id
         }
-        if arch == "noarch":
-            # There could have been forced taskarch Exclusive/ExcludeArch,
-            # so we should honor it here.
-            task = self.session.getTaskInfo(self.id)
-            preferred_arch = task['arch']
-        else:
-            preferred_arch = None
         br_arch = self.find_arch(arch, self.session.host.getHost(),
-                                 self.session.getBuildConfig(root, event=event_id),
-                                 preferred_arch=preferred_arch)
+                                 self.session.getBuildConfig(root, event=event_id))
         broot = BuildRoot(self.session, self.options, root, br_arch, self.id, **rootopts)
         broot.workdir = self.workdir
 
