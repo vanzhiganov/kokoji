@@ -82,6 +82,13 @@
 # If the definition isn't available for python3_pkgversion, define it
 %{?!python3_pkgversion:%global python3_pkgversion 3}
 
+# RPM v4.20+ support sysusers.d, Fedora 43 requires it (approach copied from mock's spec)
+%if 0%{?fedora} < 42 || (0%{?rhel} && 0%{?rhel} <= 10)
+%bcond_without sysusers_compat
+%else
+%bcond_with sysusers_compat
+%endif
+
 %define baserelease 1
 #build with --define 'testbuild 1' to have a timestamp appended to release
 %if "x%{?testbuild}" == "x1"
@@ -439,7 +446,10 @@ done
 %{make_with_dirs} PYTHON=%{__python2} install
 %endif
 %endif
-
+%if %{without sysusers_compat}
+mkdir -p %{buildroot}/%{_sysusersdir}
+cp builder/koji.conf %{buildroot}/%{_sysusersdir}/koji.conf
+%endif
 
 # python3 build
 %if 0%{py3_support}
@@ -470,6 +480,10 @@ scripts='%{_bindir}/koji %{_sbindir}/kojid %{_sbindir}/kojira %{_sbindir}/koji-s
 for fn in $scripts ; do
     sed -i 's|#!/usr/bin/python2|#!/usr/bin/python3|' $RPM_BUILD_ROOT$fn
 done
+%endif
+%if %{without sysusers_compat}
+mkdir -p %{buildroot}/%{_sysusersdir}
+cp builder/koji.conf %{buildroot}/%{_sysusersdir}/koji.conf
 %endif
 
 %if 0%{?fedora}
@@ -637,8 +651,12 @@ rm -rf $RPM_BUILD_ROOT
 %config(noreplace) /etc/kojid/kojid.conf
 %attr(-,kojibuilder,kojibuilder) /etc/mock/koji
 
+%if %{with sysusers_compat}
 %pre builder
 /usr/sbin/useradd -r -s /usr/sbin/nologin -G mock -d /builddir -M kojibuilder 2>/dev/null ||:
+%else
+%config(noreplace) %{_sysusersdir}/koji.conf
+%endif
 
 %post builder
 %systemd_post kojid.service
