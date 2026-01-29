@@ -41,6 +41,8 @@ class TestPromoteBuild(unittest.TestCase):
         self.os_symlink = mock.patch('os.symlink').start()
         self.list_tags = mock.patch('kojihub.kojihub.list_tags',
                                     return_value=[{'id': 101}]).start()
+        self.list_rpms = mock.patch('kojihub.kojihub.list_rpms', return_value=[]).start()
+        self.get_rpm = mock.patch('kojihub.kojihub.get_rpm', return_value=None).start()
         self.set_tag_update = mock.patch('kojihub.kojihub.set_tag_update').start()
         self._now = datetime.datetime.now()
         self._datetime = mock.patch('kojihub.kojihub.datetime.datetime').start()
@@ -178,6 +180,28 @@ class TestPromoteBuild(unittest.TestCase):
             'release': 'tgtrel'
         }, strict=False)
 
+    def test_promote_build_nvra_exists(self):
+        self.get_build.side_effect = [
+            self.draft_build,
+            None,
+        ]
+
+        rinfo = {
+            'name': 'N', 'version': 'V', 'release': 'R', 'arch': 'A',
+            'draft': False, 'external_repo_id': 0,
+            'id': 1234,
+        }
+        self.list_rpms.return_value = [rinfo.copy()]
+        self.get_rpm.return_value = rinfo.copy()
+
+        with self.assertRaises(koji.GenericError) as cm:
+            self.exports.promoteBuild('a-regular-build')
+        self.assertEqual(
+            str(cm.exception),
+            "Cannot promote build testnvr. Reason: NVRA conflict: N-V-R.A (#1234)"
+        )
+        self.assertEqual(len(self.updates), 0)
+
 
 class TestPromoteBuildFiles(unittest.TestCase):
     # these tests use a tempdir
@@ -219,6 +243,8 @@ class TestPromoteBuildFiles(unittest.TestCase):
                                       return_value={'id': 1, 'name': 'DEFAULT'}).start()
         self.list_tags = mock.patch('kojihub.kojihub.list_tags',
                                     return_value=[{'id': 101}]).start()
+        self.list_rpms = mock.patch('kojihub.kojihub.list_rpms', return_value=[]).start()
+        self.get_rpm = mock.patch('kojihub.kojihub.get_rpm', return_value=None).start()
         self.set_tag_update = mock.patch('kojihub.kojihub.set_tag_update').start()
         self._now = datetime.datetime.now()
         self._datetime = mock.patch('kojihub.kojihub.datetime.datetime').start()

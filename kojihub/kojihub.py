@@ -10815,6 +10815,16 @@ def _promote_build(build, force=False):
             f"Target build exists: {old_build['nvr']}(#{old_build['id']})"
         ))
 
+    # check for nvra conflicts
+    for rpminfo in list_rpms(buildID=binfo['id']):
+        _rinfo = dslice(rpminfo, ('name', 'version', 'release', 'arch'))
+        dup = get_rpm(_rinfo)
+        if dup and not dup['draft'] and not dup['external_repo_id']:
+            nvra = "%(name)s-%(version)s-%(release)s.%(arch)s" % dup
+            raise koji.GenericError(err_fmt.format(
+                f"NVRA conflict: {nvra} (#{dup['id']})"
+            ))
+
     # policy checks
     policy_data = {
         'build': binfo['id'],
