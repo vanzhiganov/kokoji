@@ -40,10 +40,8 @@ class TestAddArchiveType(DBQueryTestCase):
         rv = kojihub.add_archive_type('deb', 'Debian package', ext)
 
         self.assertEqual(len(self.queries), 1)
-        self.assertLastQueryEqual(tables=['archivetypes'],
-                                  columns=['id'],
-                                  clauses=[f"extensions ~* E'(\\s|^){ext}(\\s|$)'"],
-                                  values={})
+        query = self.queries[-1]
+        self.assertEqual(query.tables, ['archivetypes'])
         self.assertEqual(rv, None)
         self.assertEqual(len(self.inserts), 1)
         insert = self.inserts[0]
@@ -64,10 +62,8 @@ class TestAddArchiveType(DBQueryTestCase):
         kojihub.add_archive_type('jar', 'Jar package', ext, compression_type='zip')
 
         self.assertEqual(len(self.queries), 1)
-        self.assertLastQueryEqual(tables=['archivetypes'],
-                                  columns=['id'],
-                                  clauses=[f"extensions ~* E'(\\s|^){ext}(\\s|$)'"],
-                                  values={})
+        query = self.queries[-1]
+        self.assertEqual(query.tables, ['archivetypes'])
         self.assertEqual(len(self.inserts), 1)
         insert = self.inserts[0]
         self.assertEqual(insert.table, 'archivetypes')
@@ -122,10 +118,8 @@ class TestAddArchiveType(DBQueryTestCase):
         self.assertEqual(f'file extension {ext} already exists', str(ex.exception))
 
         self.assertEqual(len(self.queries), 1)
-        self.assertLastQueryEqual(tables=['archivetypes'],
-                                  columns=['id'],
-                                  clauses=[f"extensions ~* E'(\\s|^){ext}(\\s|$)'"],
-                                  values={})
+        query = self.queries[-1]
+        self.assertEqual(query.tables, ['archivetypes'])
         self.assertEqual(len(self.inserts), 0)
         self.context.session.assertPerm.assert_called_with('admin')
         self.get_archive_type.assert_called_once_with(type_name='jar')

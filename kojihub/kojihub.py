@@ -7959,11 +7959,13 @@ def add_archive_type(name, description, extensions, compression_type=None):
     if get_archive_type(type_name=name):
         raise koji.GenericError(f"archivetype {name} already exists")
     # No invalid or duplicate extensions
-    for ext in extensions.split(' '):
+    for ext in extensions.lower().split(' '):
         if not ext.replace('.', '').isalnum():
             raise koji.GenericError(f'No such {ext} file extension')
-        query = QueryProcessor(tables=['archivetypes'], columns=['id'],
-                               clauses=[f"extensions ~* E'(\\s|^){ext}(\\s|$)'"], values={})
+        query = QueryProcessor(
+            tables=['archivetypes'], columns=['id'], values={'ext': ext},
+            clauses=[r"%(ext)s IN (SELECT lower(s)"
+                     r" FROM unnest(regexp_split_to_array(extensions, '\s+')) AS s)"])
         results = query.execute()
         if len(results) > 0:
             raise koji.GenericError(f'file extension {ext} already exists')
