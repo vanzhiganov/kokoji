@@ -442,7 +442,8 @@ class TaskScheduler(object):
                 host = kojihub.get_host(task['host_id'], strict=False)
                 if not host:
                     # should not be possible
-                    log_both('Active task with nonexistent host', task_id=task['task_id'], level=logging.ERROR)
+                    log_both('Active task with nonexistent host', task_id=task['task_id'],
+                             level=logging.ERROR)
                     kojihub.Task(task['task_id']).free()
                     continue
                 host['data'] = {}
