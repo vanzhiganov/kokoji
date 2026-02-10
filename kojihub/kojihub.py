@@ -4874,14 +4874,14 @@ def get_next_build(build_info):
     if build_info.get('release') is not None:
         return new_build(build_info)
     build_info['release'] = get_next_release(build_info)
-    for try_no in range(2, 10):
+    for incr in range(2, 30):
         savepoint = Savepoint('get_next_build_pre_insert')
         try:
-            # using strict so we don't try to recycle
-            return new_build(build_info, strict=True)
-        except (IntegrityError, koji.GenericError):
+            return new_build(build_info)
+        except (IntegrityError, koji.GenericError) as e:
             savepoint.rollback()
-            build_info['release'] = get_next_release(build_info, try_no)
+            build_info['release'] = get_next_release(build_info, incr)
+            logger.info(f'Incrementing next build release to {build_info["release"]}: {e}')
     # otherwise
     raise koji.GenericError("Can't find available release")
 
@@ -6524,14 +6524,16 @@ def new_build(data, strict=False):
 def recycle_build(old, data):
     """Check to see if a build can by recycled and if so, update it"""
 
-    st_desc = koji.BUILD_STATES[old['state']]
+    # re-query with a rowlock
+    check = _recycle_lock(old)
+    st_desc = koji.BUILD_STATES[check['state']]
     if st_desc == 'BUILDING':
         # check to see if this is the controlling task
-        if data['state'] == old['state'] and data.get('task_id', '') == old['task_id']:
+        if data['state'] == check['state'] and data.get('task_id', '') == check['task_id']:
             # the controlling task must have restarted (and called initBuild again)
             return
         raise koji.GenericError("Build already in progress (task %(task_id)d)"
-                                % old)
+                                % check)
         # TODO? - reclaim 'stale' builds (state=BUILDING and task_id inactive)
 
     if st_desc not in ('FAILED', 'CANCELED'):
@@ -6598,6 +6600,13 @@ def recycle_build(old, data):
     buildinfo = get_build(data['id'], strict=True)
     koji.plugin.run_callbacks('postBuildStateChange', attribute='state',
                               old=old['state'], new=data['state'], info=buildinfo)
+
+
+def _recycle_lock(old):
+    query = QueryProcessor(tables=['build'], columns=['state', 'task_id'],
+                           clauses=['id = %(id)s'], values=old,
+                           opts={'rowlock': True})
+    return query.executeOne()
 
 
 def check_noarch_rpms(basepath, rpms, logs=None):

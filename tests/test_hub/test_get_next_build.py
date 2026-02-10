@@ -66,9 +66,12 @@ class TestGetNextBuild(unittest.TestCase):
         with self.assertRaises(koji.GenericError):
             result = kojihub.get_next_build(self.binfo)
 
-        # there should have been ten tries
-        self.assertEqual(len(self.new_build.mock_calls), 8)
-        self.assertEqual(len(self.get_next_release.mock_calls), 9)
+        # loop is over range(2, 30)
+        self.assertEqual(len(self.new_build.mock_calls), 28)
+        self.assertEqual(len(self.get_next_release.mock_calls), 29)
         # incr arg should have incremented on successive tries
         for i in range(1, 9):
             self.assertEqual(self.get_next_release.mock_calls[i][1][1], i+1)
+
+
+# the end
