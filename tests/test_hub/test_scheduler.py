@@ -265,10 +265,11 @@ class TestDoSchedule(BaseTest):
         self.assertEqual(t_assigned, list(range(3,5)))
         self.assertEqual(h_used, list(range(3,5)))
 
-class TestCheckActiveRuns(BaseTest):
+
+class TestCheckActiveTasks(BaseTest):
 
     def setUp(self):
-        super(TestCheckActiveRuns, self).setUp()
+        super(TestCheckActiveTasks, self).setUp()
         self.sched = scheduler.TaskScheduler()
 
         self.get_active_runs = mock.MagicMock()
@@ -285,6 +286,7 @@ class TestCheckActiveRuns(BaseTest):
         self.log_db = mock.MagicMock()
         mock.patch('kojihub.scheduler.log_db', new=self.log_db).start()
         self.set_refusal = mock.patch('kojihub.scheduler.set_refusal').start()
+        self.get_host = mock.patch('kojihub.kojihub.get_host').start()
 
     def test_check_no_active(self):
         self.assertEqual(self.sched.active_tasks, [])  # set by init
@@ -302,6 +304,21 @@ class TestCheckActiveRuns(BaseTest):
         self.sched.active_tasks = [{'task_id': 99, 'host_id': None}]
         self.sched.check_active_tasks()
         self.log_db.assert_called_once_with('Active task with no host', 99, None)
+        self.get_active_runs.assert_called_once()
+        self.assertEqual(self.frees, [99])
+        self.assertEqual(self.assigns, [])
+        self.assertEqual(len(self.updates), 1)
+        update = self.updates[0]
+        self.assertEqual(update.table, 'scheduler_task_runs')
+
+    def test_check_nonexistent_host(self):
+        self.sched.active_tasks = [{'task_id': 99, 'host_id': 12345}]
+        self.sched.hosts = {}
+        self.get_host.return_value = None
+
+        self.sched.check_active_tasks()
+
+        self.log_db.assert_called_once_with('Active task with nonexistent host', 99, None)
         self.get_active_runs.assert_called_once()
         self.assertEqual(self.frees, [99])
         self.assertEqual(self.assigns, [])
@@ -350,6 +367,29 @@ class TestCheckActiveRuns(BaseTest):
         update = self.updates[0]
         self.assertEqual(update.table, 'scheduler_task_runs')
 
+    def test_check_assign_to_disabled(self):
+        # task assigned to disabled host (non-override)
+        create_ts = 1000
+        now = 1000000
+        update_ts = now   # host is checking in
+        self.sched.active_tasks = [{'task_id': 99, 'host_id': 23, 'state': koji.TASK_STATES['ASSIGNED']}]
+        self.sched.hosts = {}  # disabled host not in our list
+        self.get_host.return_value = {'id': 23, 'name': 'test host 23', 'update_ts': update_ts, 'enabled': False}
+        self.sched.get_active_runs.return_value = {99: [{'create_ts': create_ts}]}
+
+        with mock.patch('time.time', return_value=now):
+            self.sched.check_active_tasks()
+
+        self.get_active_runs.assert_called_once()
+        self.set_refusal.assert_not_called()
+        self.log_db.assert_called_once_with('Task assigned to disabled host', 99, 23)
+        # we should free such tasks
+        self.assertEqual(self.frees, [99])
+        self.assertEqual(self.assigns, [])
+        self.assertEqual(len(self.updates), 1)
+        update = self.updates[0]
+        self.assertEqual(update.table, 'scheduler_task_runs')
+
     def test_check_implicit_refusal(self):
         # 'Task assignment timeout' case
         create_ts = 1000
@@ -390,3 +430,6 @@ class TestCheckActiveRuns(BaseTest):
         self.assertEqual(len(self.updates), 1)
         update = self.updates[0]
         self.assertEqual(update.table, 'scheduler_task_runs')
+
+
+# the end

@@ -348,7 +348,7 @@ class TaskScheduler(object):
             host = self.hosts.get(task['host_id'])
             if not host:
                 # not showing as ready
-                # TODO log and deal with this condition
+                # we'll address this later in check_active_tasks
                 continue
             host.setdefault('_load', 0.0)
             if not task['waiting']:
@@ -435,10 +435,19 @@ class TaskScheduler(object):
                 continue
 
             host = self.hosts.get(task['host_id'])
+
             if not host:
-                # host disabled?
-                # TODO
-                continue
+                # host most likely disabled
+                # simulate the data with get_host
+                host = kojihub.get_host(task['host_id'], strict=False)
+                if not host:
+                    # should not be possible
+                    log_both('Active task with nonexistent host', task_id=task['task_id'],
+                             level=logging.ERROR)
+                    kojihub.Task(task['task_id']).free()
+                    continue
+                host['data'] = {}
+                host['channels'] = []
 
             taskruns = runs.get(task['task_id'], [])
             if not taskruns:
@@ -455,6 +464,12 @@ class TaskScheduler(object):
                 # TODO fix
 
             if task['state'] == koji.TASK_STATES['ASSIGNED']:
+                if not host.get('enabled', True):
+                    # if the host is disabled there is no need to wait for a timeout
+                    log_both('Task assigned to disabled host', task_id=task['task_id'],
+                             host_id=host['id'])
+                    kojihub.Task(task['task_id']).free()
+                    continue
                 assign_ts = min([r['create_ts'] for r in taskruns])
                 age = time.time() - assign_ts
                 if age > self.assign_timeout:
