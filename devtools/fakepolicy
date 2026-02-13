@@ -385,7 +385,7 @@ def add_pkg_params(args, session):
 def cg_import_params(args, session):
     # simulate policy for cg imports
     policy = 'cg_import'
-    data = {'metadata_only': bool(args.metadata_only)}
+    data = {}
 
     if args.build:
         # pull metadata from existing build
@@ -397,6 +397,7 @@ def cg_import_params(args, session):
             data[key] = binfo[key]
         data['btypes'] = list(session.getBuildType(binfo['id']))
         data['cg_list'] = [binfo['cg_id']]
+        data['metadata_only'] = False
 
     elif args.metadata:
         metadata = koji.load_json(args.metadata)
@@ -405,13 +406,16 @@ def cg_import_params(args, session):
             data[key] = build[key]
         for key in ('source', 'draft'):
             data[key] = build.get(key)
+
+        # get btypes
         typeinfo = build.get('extra', {}).get('typeinfo', {})
         for btype in ('maven', 'win', 'image'):
             # legacy types can also be at top level of extra
             if btype in build['extra']:
                 typeinfo.setdefault(btype, build['extra'][btype])
         data['btypes'] = list(typeinfo)
-        # for metadata, the cg id comes from the buildroot list
+
+        # get cg id
         cg_id = None
         for brdata in metadata['buildroots']:
             cginfo = brdata['content_generator']
@@ -419,7 +423,18 @@ def cg_import_params(args, session):
             # ^ this relies on our mocks
             # just take the first one. we're not validating
             cg_id = cg['id']
+            break
         data['cg_list'] = [cg_id]
+
+        # check for metadata-only flag
+        data['metadata_only'] = False
+        for fileinfo in metadata['output']:
+            if fileinfo.get('metadata_only', False):
+                data['metadata_only'] = True
+                break
+
+    if args.metadata_only:
+        data['metadata_only'] = True
 
     return policy, data
 
