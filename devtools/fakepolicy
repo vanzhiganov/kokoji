@@ -389,15 +389,37 @@ def cg_import_params(args, session):
 
     if args.build:
         # pull metadata from existing build
-        binfo = session.getBuild(args.build, strict=True)
+        if args.build.isdigit():
+            binfo = session.getBuild(int(args.build), strict=True)
+        else:
+            binfo = session.getBuild(args.build, strict=True)
         for key in ('name', 'version', 'release', 'source', 'draft'):
             data[key] = binfo[key]
         data['btypes'] = list(session.getBuildType(binfo['id']))
         data['cg_list'] = [binfo['cg_id']]
 
     elif args.metadata:
-        # TODO
-        raise NotImplementedError()
+        metadata = koji.load_json(args.metadata)
+        build = metadata['build']
+        for key in ('name', 'version', 'release'):
+            data[key] = build[key]
+        for key in ('source', 'draft'):
+            data[key] = build.get(key)
+        typeinfo = build.get('extra', {}).get('typeinfo', {})
+        for btype in ('maven', 'win', 'image'):
+            # legacy types can also be at top level of extra
+            if btype in build['extra']:
+                typeinfo.setdefault(btype, build['extra'][btype])
+        data['btypes'] = list(typeinfo)
+        # for metadata, the cg id comes from the buildroot list
+        cg_id = None
+        for brdata in metadata['buildroots']:
+            cginfo = brdata['content_generator']
+            cg = kojihub.lookup_name('content_generator', cginfo['name'], strict=True)
+            # ^ this relies on our mocks
+            # just take the first one. we're not validating
+            cg_id = cg['id']
+        data['cg_list'] = [cg_id]
 
     return policy, data
 
