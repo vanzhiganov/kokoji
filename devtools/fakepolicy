@@ -127,6 +127,12 @@ def get_args():
     subp.add_argument('--action', help='select action', default='add')
     subp.add_argument('--force', help='select force setting', action='store_true', default=False)
     subp.set_defaults(func=add_pkg_params)
+
+    subp = subparsers.add_parser('cg-import', help='simulate policy for cg import')
+    subp.add_argument('-b', '--build', help='fetch data from existing build')
+    subp.add_argument('-m', '--metadata', help='fetch data from json file')
+    subp.add_argument('--metadata-only', help='', action='store_true', default=False)
+    subp.set_defaults(func=cg_import_params)
     ## end subcommands ##
 
     args = parser.parse_args()
@@ -372,6 +378,26 @@ def add_pkg_params(args, session):
     # kojihub is a bit inconsistent about the package field format
     # we opt for the string passed in, as happens with the add-pkg command
     data = {'tag': tinfo['id'], 'action': action, 'package': package, 'force': force}
+
+    return policy, data
+
+
+def cg_import_params(args, session):
+    # simulate policy for cg imports
+    policy = 'cg_import'
+    data = {'metadata_only': bool(args.metadata_only)}
+
+    if args.build:
+        # pull metadata from existing build
+        binfo = session.getBuild(args.build, strict=True)
+        for key in ('name', 'version', 'release', 'source', 'draft'):
+            data[key] = binfo[key]
+        data['btypes'] = list(session.getBuildType(binfo['id']))
+        data['cg_list'] = [binfo['cg_id']]
+
+    elif args.metadata:
+        # TODO
+        raise NotImplementedError()
 
     return policy, data
 
