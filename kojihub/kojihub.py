@@ -10889,11 +10889,11 @@ def rpmdiff(basepath, rpmlist, hashes):
     if len(rpmlist) < 2:
         return
     first_rpm = rpmlist[0]
-    task_id = first_rpm.split('/')[1]
-    first_hash = hashes.get(task_id, {}).get(os.path.basename(first_rpm), False)
+    task_id = first_rpm.split('/')[2]
+    first_hash = hashes.get(task_id, {}).get(os.path.basename(first_rpm))
     for other_rpm in rpmlist[1:]:
         if first_hash:
-            task_id = other_rpm.split('/')[1]
+            task_id = other_rpm.split('/')[2]
             other_hash = hashes[task_id][os.path.basename(other_rpm)]
             if first_hash == other_hash:
                 logger.debug("Skipping noarch rpmdiff for %s vs %s" % (first_rpm, other_rpm))
