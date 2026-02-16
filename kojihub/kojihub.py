@@ -13232,7 +13232,8 @@ class RootExports(object):
                 "No file: %s found in RPM: %s" % (filename, rpmID))
         return {}
 
-    def getRPMHeaders(self, rpmID=None, taskID=None, filepath=None, headers=None, strict=False):
+    def getRPMHeaders(self, rpmID=None, taskID=None, filepath=None, headers=None, strict=False,
+                      sigkey=None):
         """
         Get the requested headers from the rpm, specified either by rpmID or taskID + filepath
 
@@ -13268,7 +13269,16 @@ class RootExports(object):
                     raise koji.GenericError('Build %(nvr)s is deleted' % build_info)
                 else:
                     return {}
-            rpm_path = joinpath(koji.pathinfo.build(build_info), koji.pathinfo.rpm(rpm_info))
+            builddir = koji.pathinfo.build(build_info)
+            if sigkey is not None:
+                if not query_rpm_sigs(rpm_id=rpm_info['id'], sigkey=sigkey):
+                    if strict:
+                        raise koji.GenericError(f'No {sigkey} signature for rpm {rpm_info["id"]}')
+                    else:
+                        return {}
+                rpm_path = joinpath(builddir, koji.pathinfo.signed(rpm_info, sigkey))
+            else:
+                rpm_path = joinpath(builddir, koji.pathinfo.rpm(rpm_info))
             if not os.path.exists(rpm_path):
                 if strict:
                     raise koji.GenericError('Missing rpm file: %s' % rpm_path)
@@ -13277,6 +13287,8 @@ class RootExports(object):
                     logger.error('Missing rpm file: %s' % rpm_path)
                     return {}
         elif taskID:
+            if sigkey is not None:
+                raise koji.GenericError('The sigkey option cannot be used with a task id')
             if not filepath:
                 raise koji.GenericError('filepath must be specified with taskID')
             if filepath.startswith('/') or '../' in filepath:
