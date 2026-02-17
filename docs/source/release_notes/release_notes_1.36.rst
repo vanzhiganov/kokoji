@@ -29,7 +29,7 @@ System Changes
 
 .. _add-rpmv6-support:
 
-**Support rpm v6 support**
+**Support rpm v6 format**
 
 | PR: https://pagure.io/koji/pull-request/4446
 
