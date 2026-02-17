@@ -97,7 +97,7 @@
 %define release %{baserelease}
 %endif
 Name: koji
-Version: 1.35.3
+Version: 1.36.0
 Release: %{release}%{?dist}
 License: LGPL-2.1-only and GPL-2.0-or-later
 # the included arch lib from yum's rpmUtils is GPLv2+
@@ -696,6 +696,97 @@ rm -rf $RPM_BUILD_ROOT
 %endif
 
 %changelog
+* Tue Feb 17 2026 Mike McLean <mikem at redhat.com> - 1.36.0-1
+- PR#4446: rpm v6 support
+- PR#4472: AllowDraftComponents hub option
+- PR#4532: Allow querying headers from signed copy
+- PR#4498: adjust repo log logic
+- PR#4494: allow recycling in get_next_build
+- PR#4505: handler disabled hosts in scheduler
+- PR#4535: Fix reject_draft options
+- PR#4534: catch nvra dups on promote
+- PR#4524: Adds sysuser kojibuilder which is required by koji-builder package
+- PR#4531: fix duplicate check in add_archive_type
+- PR#3704: support multi-action policies and negated tests
+- PR#4463: merge misnamed schema upgrade script
+- PR#4519: always prefer task arch in find_arch()
+- PR#4514: recursive task policy data
+- PR#4506: capture more events in scheduler logs
+- PR#4520: Fix typo in kojihub: get_build_targets docstring
+- PR#4517: enable anonymous retries by default
+- PR#4470: write-signed-rpm: fix nvr fallback
+- PR#4496: show more info on waitrepo task failures
+- PR#4493: SidetagTest/SidetagOwnerTest: don't raise an error when the tag/from_tag value in data is None
+- PR#4487: Migration deprecated %py3_* macros in spec
+- PR#4486: CLI: add override option to assign-task
+- PR#4500: avoid stray comment after bandit annotation
+- PR#4495: Add new salutation.
+- PR#4483: fakepolicy dev tool
+- PR#4481: Enable parent tag as name, not ID only
+- PR#4480: Add weblink to NVR build for draft builds
+- PR#4475: web: add cg and draft filters for builds page
+- PR#4473: show source files on srpm info page
+- PR#4467: use label for waitrepo subtasks
+- PR#4484: addition data for cg volume policy
+- PR#4461: unit test mocking fixes for test_download_file and test_list_tagged
+- PR#4369: import-cg: print build when done
+- PR#4459: fully honor sigkey option in import-sig command
+- PR#4448: disable url sessions by default
+- PR#4409: Update links to yum/dnf/dnf5
+- PR#4457: fix some mocking in unit tests
+- PR#4456: Force terminal width to 80 chars.
+- PR#4452: fix default volume case for draft symlinks
+- PR#4444: additional validation for sigkey value
+- PR#4348: kojid --single mode
+- PR#4416: distrepos: support "x86_64_v2" arch
+- PR#4442: Improve reliability of kojid service start
+- PR#4134: indexes for standard_buildroot
+- PR#4428: cli access for sigkey naming
+- PR#4437: Add firewall configuration
+- PR#4436: Replace deprecated MaxRequestsPerChild in the docs.
+- PR#4396: channel defaults
+- PR#4427: work around nfs glitch in ensuredir
+- PR#4432: avoid loading system hub config in unit test
+- PR#4433: fix some utils tests for newer platforms
+- PR#4373: allow renaming rpm signatures
+- PR#4397: Clean up cli for comps management
+- PR#4423: docs: remove repetition in "Writing Koji plugins"
+- PR#4413: Fix race handling in get_next_build
+- PR#4304: Enable specific number of builds for dist-repo tasks
+- PR#4418: add jinja2 in requirements.txt
+- PR#4411: support --wait-repo/--wait-build in wrapper-rpm command
+- PR#4392: add listBuilds query params for promotion data
+- PR#4311: kojivmd: refuse tasks instead of ignoring them
+- PR#4150: fix callnum lookup on hub
+- PR#4387: repo requests web ui
+- PR#4383: handle cross-volume draft symlinks
+- PR#4355: listUsers excepts userType as int, list and Nonetype
+- PR#4403: schemas: wsl file suffix
+- PR#4391: Less log noise for empty or invalid requests
+- PR#4370: adjust upload offset and overwrite logic
+- PR#4219: Add archive types for erofs and squashfs
+- PR#4380: Restart kojivmd in same way as kojid
+- PR#4388: kojikamid fixes
+- PR#4316: ensure repos dir
+- PR#4389: set user of kojikamid service to Administrator
+- PR#4346: port kojiweb to jinja2
+- PR#4385: Add unit tests for add-external-repo
+- PR#4382: deprecate pathinfo.tmpdir
+- PR#4322: Return BuildError when kickstart file is not exists
+- PR#4375: Update Cheetah3 to CT3 PyPI repository
+- PR#4349: Raise weight cap
+- PR#4354: add-external-repo excepts comma-separated and space-separated list
+- PR#4342: download-build: allow fallback to unsigned with --key
+- PR#4224: Match longest extension first for archivetype
+- PR#4145: report tag_external_repos.arches in query_history
+- PR#4268: ensure macros and env values passed to mock are strings
+- PR#4259: allow setting ttl in protonmsg
+- PR#4171: koji-gc: Add ccache to koji-gc options
+- PR#4287: Add new option for mock option - bootstrap_image_ready
+- PR#4123: download-logs: prefer getBuildLogs for builds
+- PR#4125: partial draft support for cg_import
+- PR#4330: drop custom threadlocal implementation
+
 * Mon Oct  7 2024 Mike McLean <mikem at redhat.com> - 1.35.1-1
 - Fix CVE-2024-9427: New XSS attack on kojiweb
 - PR#4154: Reformat watchlogs.js indentation for consistency
