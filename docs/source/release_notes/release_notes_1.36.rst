@@ -110,7 +110,7 @@ Hub Changes
 The ``DisableURLSessions`` setting on the hub now defaults to True.
 Koji clients before 1.31 will not be able to authenticate
 
-If an admin want to support auth for clients before 1.31, they can turn this back on.
+If an admin wants to support auth for clients before 1.31, they can turn this back on.
 
 
 **Allow querying headers from signed copy**
@@ -120,13 +120,17 @@ If an admin want to support auth for clients before 1.31, they can turn this bac
 This adds a sigkey option to getRPMHeaders. If given, the corresponding signed copy will be queried instead of the primary copy. This allows querying signature headers that have changed in the signed copy (i.e. the signatures)
 
 
-**Adjust repo log logic**
+**Adjust repo lag logic**
 
 | PR: https://pagure.io/koji/pull-request/4498
 
 This change adjusts the repo lag logic and obsoletes the ``RepoLagWindow`` setting.
 
-The lag window was intended to keep avoid redundant regenerations for duplicate requests within a short span of time. Unfortunately, there are still a number of cases where nearby requests fall into separate windows. Depending on settings and repo regen time, this can even result in overlapping newRepo tasks for the same tag.
+The lag window was intended to avoid redundant regenerations for duplicate requests within a short
+span of time.
+Unfortunately, there are still a number of cases where nearby requests fall into separate windows.
+Depending on settings and repo regen time, this can even result in overlapping newRepo tasks for
+the same tag.
 
 
 **Recursive task policy data**
@@ -155,7 +159,7 @@ Previously the ``setInheritanceData`` call required specifying parent tags by id
 Now they can be specified by name as well.
 
 
-**Addition data for cg volume policy**
+**Additional data for cg volume policy**
 
 | PR: https://pagure.io/koji/pull-request/4484
 
@@ -232,7 +236,7 @@ A new configuration option for the protonmsg plugin
 | PR: https://pagure.io/koji/pull-request/4125
 | PR: https://pagure.io/koji/pull-request/4472
 
-The removes *some* obstacles for importing draft builds via the CG interface.
+This removes *some* obstacles for importing draft builds via the CG interface.
 
 Generators can now set ``draft: true`` in the metadata to import draft builds, but this is
 currently only allowed for rpm builds.
@@ -375,7 +379,7 @@ Builder Changes
 | PR: https://pagure.io/koji/pull-request/4268
 
 If an admin sets a macro value to a non-string value (which is easy to do by accident
-if the value is a number), the builder will now convert the value to a string rather.
+if the value is a number), the builder will now convert such values to a string.
 
 
 **Improve reliability of kojid service start**
