@@ -393,8 +393,9 @@ def cg_import_params(args, session):
             binfo = session.getBuild(int(args.build), strict=True)
         else:
             binfo = session.getBuild(args.build, strict=True)
-        for key in ('name', 'version', 'release', 'source', 'draft'):
+        for key in ('version', 'release', 'source', 'draft'):
             data[key] = binfo[key]
+        data['package'] = binfo['name']
         data['btypes'] = list(session.getBuildType(binfo['id']))
         data['cg_list'] = [binfo['cg_id']]
         data['metadata_only'] = False
@@ -402,10 +403,11 @@ def cg_import_params(args, session):
     elif args.metadata:
         metadata = koji.load_json(args.metadata)
         build = metadata['build']
-        for key in ('name', 'version', 'release'):
+        for key in ('version', 'release'):
             data[key] = build[key]
         for key in ('source', 'draft'):
             data[key] = build.get(key)
+        data['package'] = build['name']
 
         # get btypes
         typeinfo = build.get('extra', {}).get('typeinfo', {})
