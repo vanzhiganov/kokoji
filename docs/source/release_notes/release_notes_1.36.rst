@@ -96,7 +96,8 @@ policy checks.
 
 | PR: https://pagure.io/koji/pull-request/4382
 
-The ``pathinfo.tmpdir`` method in the koji library has never been used by Koji and is now deprecated.
+The ``pathinfo.tmpdir`` method in the koji library has never been used by Koji and is now
+deprecated.
 
 
 
@@ -117,7 +118,9 @@ If an admin wants to support auth for clients before 1.31, they can turn this ba
 
 | PR: https://pagure.io/koji/pull-request/4532
 
-This adds a sigkey option to getRPMHeaders. If given, the corresponding signed copy will be queried instead of the primary copy. This allows querying signature headers that have changed in the signed copy (i.e. the signatures)
+This adds a sigkey option to getRPMHeaders. If given, the corresponding signed copy will be
+queried instead of the primary copy.
+This allows querying signature headers that have changed in the signed copy (i.e. the signatures)
 
 
 **Adjust repo lag logic**
@@ -137,10 +140,11 @@ the same tag.
 
 | PR: https://pagure.io/koji/pull-request/4514
 
-When creating a new task, the data used for the policy tests includes values pulled from the task parameters.
+When creating a new task, the data used for the policy tests includes values pulled from the task
+parameters.
 This is now handled recursively. That is, the parameters of any parent task also apply.
-In particular, this allows making channel policy rules for ``buildArch`` tasks based on the target value
-of the parent ``build`` task.
+In particular, this allows making channel policy rules for ``buildArch`` tasks based on the target
+value of the parent ``build`` task.
 
 
 **Capture more events in scheduler logs**
@@ -173,8 +177,8 @@ This makes it possible to consider cg and draft status in the volume policy.
 This change allows policy to distinguish between a user channel override and a system provided
 default that is different from ``default`` (e.g. for maven and image builds).
 
-There is a new action for the channel policy named ``default`` which indicates that the default channel should be used,
-regardless of what that default is.
+There is a new action for the channel policy named ``default`` which indicates that the default
+channel should be used, regardless of what that default is.
 
 Currently, this change must be enabled by setting ``DefaultChannelCompat = False``.
 This default will change to True in a future release.
@@ -214,7 +218,11 @@ This makes calls like ``addExternalRepoToTag`` and ``editTagExternalRepo`` a bit
 
 | PR: https://pagure.io/koji/pull-request/4224
 
-This addresses a longstanding bug in get_archive_type. In cases of layered extensions, the code would match a shorter extension before a longer one. E.g. ".gz" would match before ".tar.gz". We have avoided such overlapping archivetypes for this reason, however we can't control what instances do.
+This addresses a longstanding bug in get_archive_type.
+In cases of layered extensions, the code would match a shorter extension before a longer one.
+E.g. ".gz" would match before ".tar.gz".
+We have avoided such overlapping archivetypes for this reason, however we can't control what
+instances do.
 
 
 **Report tag_external_repos.arches in query_history**
@@ -400,7 +408,8 @@ Clarify an error condition
 
 | PR: https://pagure.io/koji/pull-request/4287
 
-Admins can set ``mock.bootstrap_image_ready`` for a tag and this option will be added to the mock config.
+Admins can set ``mock.bootstrap_image_ready`` for a tag and this option will be added to the mock
+config.
 
 See also: https://rpm-software-management.github.io/mock/Feature-container-for-bootstrap
 
@@ -459,7 +468,8 @@ This change works around the unexpected kernel behavior.
 | PR: https://pagure.io/koji/pull-request/4413
 | PR: https://pagure.io/koji/pull-request/4494
 
-These fixes address cases where the automatic release incrementing mechanisms for image builds could fail.
+These fixes address cases where the automatic release incrementing mechanisms for image builds
+could fail.
 
 
 **Handle disabled hosts in scheduler**
@@ -564,7 +574,8 @@ Other changes
 
 | PR: https://pagure.io/koji/pull-request/4375
 
-Note: While Koji now uses Jinja2 in the web ui, Cheetah3 is still required for wrapper rpm templates.
+Note: While Koji now uses Jinja2 in the web ui, Cheetah3 is still required for wrapper rpm
+templates.
 
 This simply updates our requirements to point to the new upstream.
 
