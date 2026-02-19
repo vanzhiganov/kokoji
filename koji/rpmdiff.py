@@ -94,8 +94,8 @@ class Rpmdiff:
         else:
             ignore = set(ignore)
 
-        old = self.__load_pkg(old)
-        new = self.__load_pkg(new)
+        old = self._load_pkg(old)
+        new = self._load_pkg(new)
 
         # Compare single tags
         for tag in self.TAGS:
@@ -120,8 +120,8 @@ class Rpmdiff:
         indexes = [ofs for (code, ofs) in self.__FILEIDX if code not in ignore]
 
         # filter the data to only these indexes
-        old_files_dict = self.__getFilesDict(old)
-        new_files_dict = self.__getFilesDict(new)
+        old_files_dict = self._getFilesDict(old)
+        new_files_dict = self._getFilesDict(new)
         old_files_filtered = {}
         new_files_filtered = {}
         for f in old_files_dict:
@@ -171,7 +171,7 @@ class Rpmdiff:
         self.result.append((format, data))
 
     # load a package from a file or from the installed ones
-    def __load_pkg(self, filename):
+    def _load_pkg(self, filename):
         ts = rpm.ts()
         f = os.open(filename, os.O_RDONLY)
         hdr = ts.hdrFromFdno(f)
@@ -231,7 +231,7 @@ class Rpmdiff:
                            (self.ADDED, tagname, newentry[0],
                             self.sense2str(newentry[1]), newentry[2]))
 
-    def __getFilesDict(self, hdr):
+    def _getFilesDict(self, hdr):
         if not hasattr(rpm, 'files'):
             # fall back to file iterator
             return self.__fileIteratorToDict(hdr.fiFromHeader())
