@@ -89,8 +89,8 @@ class TestRPMDiff(unittest.TestCase):
         rpm1 = os.path.join(data_path, 'different_size_a.noarch.rpm')
         rpm2 = os.path.join(data_path, 'different_size_b.noarch.rpm')
 
-        hash1 = 'ed0bae957653692a7d2ff9d90dbc3eaf08486994af315e11a9e80929092f6d0e'
-        hash2 = '8cdd40b738ac156af09f31445831f324cedacd028bf1dc3e12cc48b2137ed190'
+        hash1 = '38e6838cfc14ae00265b0134ebb2e9c31f014b3e96b044173787e773e91c86bf'
+        hash2 = '8d55616a6ca4c270f9adf76eba0a352c26c6c91d016735d2f5a3b880ad21a0ed'
         for _ in range(2):
             # double check that kojihash is deterministic
             d = koji.rpmdiff.Rpmdiff(rpm1, rpm2)
@@ -117,8 +117,8 @@ class TestRPMDiff(unittest.TestCase):
                 attr[idx] = value
                 rpm_dict_new = {'a_file': attr}
 
-                args[0]._Rpmdiff__getFilesDict = mock.MagicMock()
-                args[0]._Rpmdiff__getFilesDict.side_effect = [rpm_dict_old, rpm_dict_new]
+                args[0]._getFilesDict = mock.MagicMock()
+                args[0]._getFilesDict.side_effect = [rpm_dict_old, rpm_dict_new]
                 orig_init(*args, **kwargs)
 
             # compare with every option
@@ -143,10 +143,10 @@ class TestRPMDiff(unittest.TestCase):
         check_diff_result('D', 4, 4, "...D....... a_file")
 
         # case 6 inode different
-        check_diff_result('N', 6, 6, "....N...... a_file")
+        check_diff_result('N', 5, 5, "....N...... a_file")
 
         # case 7 number of links different
-        check_diff_result('L', 7, 7, ".....L..... a_file")
+        check_diff_result('L', 6, 6, ".....L..... a_file")
 
         # case 8 vflag different
         check_diff_result('V', 8, 8, "......V.... a_file")
