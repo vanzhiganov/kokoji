@@ -51,12 +51,13 @@ class Rpmdiff:
 
     # {fname : (size, mode, mtime, flags, dev, inode,
     #          nlink, state, vflags, user, group, digest)}
+    # note: field 7 (state) is not considered
     __FILEIDX = [['S', 0],
                  ['M', 1],
                  ['5', 11],
                  ['D', 4],
-                 ['N', 6],
-                 ['L', 7],
+                 ['N', 5],
+                 ['L', 6],
                  ['V', 8],
                  ['U', 9],
                  ['G', 10],
