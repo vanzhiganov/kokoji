@@ -115,15 +115,23 @@ class Rpmdiff:
         for tag in self.PRCO:
             self.__comparePRCOs(old, new, tag)
 
-        # compare the files
+        # list of file indexes to compare
+        indexes = [ofs for (code, ofs) in self.__FILEIDX if code not in ignore]
 
+        # filter the data to only these indexes
         old_files_dict = self.__getFilesDict(old)
         new_files_dict = self.__getFilesDict(new)
+        old_files_filtered = {}
+        new_files_filtered = {}
+        for f in old_files_dict:
+            old_files_filtered[f] = dict([(k, old_files_dict[f][k]) for k in indexes])
+        for f in new_files_dict:
+            new_files_filtered[f] = dict([(k, new_files_dict[f][k]) for k in indexes])
 
         files = sorted(set(itertools.chain(six.iterkeys(old_files_dict),
                                            six.iterkeys(new_files_dict))))
-        self.old_data['files'] = old_files_dict
-        self.new_data['files'] = new_files_dict
+        self.old_data['files'] = old_files_filtered
+        self.new_data['files'] = new_files_filtered
 
         for f in files:
             diff = 0
@@ -140,9 +148,6 @@ class Rpmdiff:
                 for entry in self.__FILEIDX:
                     # entry = [character, value]
                     if entry[0] in ignore:
-                        # erase fields which are ignored
-                        old_file[entry[1]] = None
-                        new_file[entry[1]] = None
                         format = format + '.'
                     elif old_file[entry[1]] != new_file[entry[1]]:
                         format = format + entry[0]
