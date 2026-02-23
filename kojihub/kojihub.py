@@ -7433,7 +7433,8 @@ class CG_Importer(object):
             self.log_warning("IGNORING unmatched rpm component: %r" % comp)
             return None
         # TODO: we should consider how to handle them once draft build is enabled for CG
-        reject_draft(rinfo, is_rpm=True)
+        if not context.opts.get('AllowDraftComponents', False):
+            reject_draft(rinfo, is_rpm=True)
         if rinfo['payloadhash'] != comp['sigmd5']:
             # XXX - this is a temporary workaround until we can better track external refs
             self.log_warning("IGNORING rpm component (md5 mismatch): %r" % comp)
@@ -10758,9 +10759,8 @@ def importImageInternal(task_id, build_info, imgdata):
             data = add_external_rpm(an_rpm, location, strict=False)
         else:
             data = get_rpm(an_rpm, strict=True)
-            # unlike buildroot, we simply reject draft rpms as rpm components
-            # because we probably don't want to keep the nvra uniqueness here.
-            reject_draft(data, is_rpm=True)
+            if not context.opts.get('AllowDraftComponents', False):
+                reject_draft(data, is_rpm=True)
         rpm_ids.append(data['id'])
     # we sort to try to avoid deadlock issues
     rpm_ids.sort()
