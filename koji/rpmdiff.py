@@ -51,13 +51,18 @@ class Rpmdiff:
 
     # {fname : (size, mode, mtime, flags, dev, inode,
     #          nlink, state, vflags, user, group, digest)}
-    # note: field 7 (state) is not considered
+    # Notes:
+    #   - field 5 (inode) is not considered for backwards compatibility
+    #   - the N code maps to nlink, not inode
+    #   - the L code maps to state, not nlink
+    #   - field 7 (state) is not part of the rpm file, but is included for compatibility
+    #   - see https://github.com/rpm-software-management/rpmlint/issues/1465
     __FILEIDX = [['S', 0],
                  ['M', 1],
                  ['5', 11],
                  ['D', 4],
-                 ['N', 5],
-                 ['L', 6],
+                 ['N', 6],
+                 ['L', 7],
                  ['V', 8],
                  ['U', 9],
                  ['G', 10],
