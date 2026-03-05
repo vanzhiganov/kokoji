@@ -39,7 +39,6 @@ from .kojihub import (  # noqa: F401
     _pkglist_owner_add,
     _pkglist_owner_remove,
     _pkglist_remove,
-    _scan_sighdr,
     _set_build_volume,
     _tag_build,
     _untag_build,

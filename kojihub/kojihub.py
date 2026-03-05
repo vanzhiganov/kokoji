@@ -41,6 +41,7 @@ import re
 import secrets
 import shutil
 import stat
+import string
 import sys
 import tarfile
 import tempfile
@@ -1590,6 +1591,10 @@ def readTaggedRPMS(tag, package=None, arch=None, event=None, inherit=False, late
               ('rpminfo.id', 'id'),
               ('rpminfo.epoch', 'epoch'),
               ('rpminfo.draft', 'draft'),
+              ('rpminfo.sigmd5', 'sigmd5'),
+              ('rpminfo.sha1header', 'sha1header'),
+              ('rpminfo.sha256header', 'sha256header'),
+              ('rpminfo.sha3_256header', 'sha3_256header'),
               ('rpminfo.payloadhash', 'payloadhash'),
               ('rpminfo.size', 'size'),
               ('rpminfo.buildtime', 'buildtime'),
@@ -4917,7 +4922,11 @@ def get_rpm(rpminfo, strict=False, multi=False):
     - arch
     - draft
     - epoch
-    - payloadhash
+    - sigmd5
+    - sha1header
+    - sha256header
+    - sha3_256header
+    - payloadhash (legacy)
     - size
     - buildtime
     - build_id
@@ -5006,6 +5015,10 @@ def _get_rpms(data):
         ('draft', 'draft'),
         ('external_repo_id', 'external_repo_id'),
         ('external_repo.name', 'external_repo_name'),
+        ('sigmd5', 'sigmd5'),
+        ('sha1header', 'sha1header'),
+        ('sha256header', 'sha256header'),
+        ('sha3_256header', 'sha3_256header'),
         ('payloadhash', 'payloadhash'),
         ('size', 'size'),
         ('buildtime', 'buildtime'),
@@ -5046,6 +5059,10 @@ def list_rpms(buildID=None, buildrootID=None, imageID=None, componentBuildrootID
     - arch
     - epoch
     - draft
+    - sigmd5
+    - sha1header
+    - sha256header
+    - sha3_256header
     - payloadhash
     - size
     - buildtime
@@ -5076,6 +5093,10 @@ def list_rpms(buildID=None, buildrootID=None, imageID=None, componentBuildrootID
               ('rpminfo.arch', 'arch'),
               ('rpminfo.epoch', 'epoch'),
               ('rpminfo.draft', 'draft'),
+              ('rpminfo.sigmd5', 'sigmd5'),
+              ('rpminfo.sha1header', 'sha1header'),
+              ('rpminfo.sha256header', 'sha256header'),
+              ('rpminfo.sha3_256header', 'sha3_256header'),
               ('rpminfo.payloadhash', 'payloadhash'),
               ('rpminfo.size', 'size'), ('rpminfo.buildtime', 'buildtime'),
               ('rpminfo.build_id', 'build_id'), ('rpminfo.buildroot_id', 'buildroot_id'),
@@ -6838,7 +6859,8 @@ def import_rpm(fn, buildinfo=None, brootid=None, wrapper=False, fileinfo=None):
     rpminfo['id'] = nextval('rpminfo_id_seq')
     rpminfo['build_id'] = buildinfo['id']
     rpminfo['size'] = os.path.getsize(fn)
-    rpminfo['payloadhash'] = koji.hex_string(koji.get_header_field(hdr, 'sigmd5'))
+    rpminfo['payloadhash'] = koji.get_rpm_ident(hdr)  # legacy field
+    rpminfo.update(koji.get_rpm_digests(hdr))  # e.g. sha256header
     rpminfo['buildroot_id'] = brootid
     rpminfo['external_repo_id'] = 0
 
@@ -6864,6 +6886,40 @@ def import_rpm(fn, buildinfo=None, brootid=None, wrapper=False, fileinfo=None):
     rpminfo['build'] = buildinfo
     rpminfo['brootid'] = brootid
     return rpminfo
+
+
+def update_rpm_digests(rpminfo):
+    """Transitional function to add missing rpm digests to db"""
+    rinfo = get_rpm(rpminfo, strict=True)
+    binfo = get_build(rinfo['build_id'])
+    builddir = koji.pathinfo.build(binfo)
+    rpm_path = joinpath(builddir, koji.pathinfo.rpm(rinfo))
+
+    # read digests from the rpm
+    hdr = koji.get_rpm_header(rpm_path)
+    data = koji.get_rpm_digests(hdr)
+
+    # the ident should match
+    ident = koji.make_rpm_ident(data)
+    if rinfo['payloadhash'] != ident:
+        # should not happen
+        raise koji.GenericError(f'payloadhash mismatch for rpm {rpminfo["id"]}')
+
+    # determine updates
+    updates = {}
+    for key in data:
+        if rinfo[key] is not None:
+            # already set, should match
+            if rinfo[key] != data[key]:
+                raise koji.GenericError(f'{key} mismatch for rpm {rpminfo["id"]}')
+        else:
+            # not set yet
+            updates[key] = data[key]
+    if updates:
+        update = UpdateProcessor('rpminfo', values=rinfo, clauses=["id = %(id)s"], data=updates)
+        update.execute()
+
+    return updates
 
 
 def generate_token(nbytes=32):
@@ -7420,28 +7476,70 @@ class CG_Importer(object):
     log_error = functools.partialmethod(log, level=logging.ERROR)
 
     def match_rpm(self, comp):
+
+        # TODO: centralize this logic
+
         # TODO: do we allow inclusion of external rpms?
         if 'location' in comp:
             raise koji.GenericError("External rpms not allowed")
         if 'id' in comp:
-            # not in metadata spec, and will confuse get_rpm
-            raise koji.GenericError("Unexpected 'id' field in component")
-        # rpm is no more unique with NVRA as draft build is introduced
-        rinfo = get_rpm(comp, strict=False)
+            # look up by rpm id, but other data must still match
+            rinfo = get_rpm(comp['id'], strict=True)
+            for key in ('name', 'version', 'release', 'arch'):
+                if rinfo[key] != comp[key]:
+                    raise koji.GenericError(f"Mismatched {key} for component rpm {comp['id']}")
+            if 'epoch' in comp:
+                # The spec lists this field as required, but the code has not
+                # historically enforced it. If given, it should match.
+                if comp['epoch'] != rinfo['epoch']:
+                    raise koji.GenericError(f"Mismatched epoch for component rpm {comp['id']}")
+            # digest fields are checked later on
+        else:
+            # note: this will look up by nvra, which may not be unique for rpms with the
+            # advent of draft builds
+            rinfo = get_rpm(comp, strict=False)
         if not rinfo:
             # XXX - this is a temporary workaround until we can better track external refs
             self.log_warning("IGNORING unmatched rpm component: %r" % comp)
             return None
+
+        # Draft rpms are not allowed yet
         # TODO: we should consider how to handle them once draft build is enabled for CG
         if not context.opts.get('AllowDraftComponents', False):
             reject_draft(rinfo, is_rpm=True)
-        if rinfo['payloadhash'] != comp['sigmd5']:
+
+        # ident should match payloadhash
+        try:
+            ident = koji.make_rpm_ident(comp)
+        except KeyError:
+            raise koji.GenericError('No digest values for rpm component')
+        if ident != rinfo['payloadhash']:
+            if 'id' in comp:
+                # if client specifies an rpm id, we can expect the digest to match
+                raise koji.GenericError(f'Digest mismatch: {comp!r}')
             # XXX - this is a temporary workaround until we can better track external refs
             self.log_warning("IGNORING rpm component (md5 mismatch): %r" % comp)
-            # nvr = "%(name)s-%(version)s-%(release)s" % rinfo
+            return None
             # raise koji.GenericError("md5sum mismatch for %s: %s != %s"
             #            % (nvr, comp['sigmd5'], rinfo['payloadhash']))
-        # TODO - should we check the signature field?
+
+        # all specified digests must match
+        digest_fields = ('sigmd5', 'sha1header', 'sha256header', 'sha3_256header')
+        for key in digest_fields:
+            digest = comp.get(key)
+            if digest is None:
+                # treat the same as unspecified
+                continue
+            db_digest = rinfo[key]
+            if db_digest is None:
+                # our import may predate tracking this field
+                # TODO fix digests?
+                self.log_warning(f"Missing {key} digest in db for component: {comp}")
+                continue
+            if digest != db_digest:
+                # since we already matched one digest, we expect all digests to match
+                raise koji.GenericError(f'{key} mismatch: {comp!r}')
+
         return rinfo
 
     def match_file(self, comp):
@@ -7651,33 +7749,84 @@ def add_external_rpm(rpminfo, external_repo, strict=True):
         - entry will not reference a build
         - rpm not available to us -- the necessary data is passed in
 
-    The rpminfo arg should contain the following fields:
-        - name, version, release, epoch, arch, payloadhash, size, buildtime
+    The rpminfo arg MUST contain the following fields:
+        - name, version, release, epoch, arch, size, buildtime
+    The rpminfo SHOULD contain all non-null rpm header values for the following
+    digest fields:
+        - sigmd5, sha1header, sha256header, sha3_256header
+    But it MUST contain either at least one of the above or the legacy
+    payloadhash field.
 
     Returns info as get_rpm
     """
 
     # [!] Calling function should perform access checks
 
-    # sanity check rpminfo
+    # key required fields and types
+    rpminfo = rpminfo.copy()
+    rpminfo.setdefault('size', None)
     dtypes = (
         ('name', str),
         ('version', str),
         ('release', str),
         ('epoch', (int, type(None))),
         ('arch', str),
-        ('payloadhash', str),
-        ('size', int),
+        ('size', (int, type(None))),
         ('buildtime', int))
+    data = {}
     for field, allowed in dtypes:
         if field not in rpminfo:
             raise koji.GenericError("%s field missing: %r" % (field, rpminfo))
         if not isinstance(rpminfo[field], allowed):
             # this will catch unwanted NULLs
             raise koji.GenericError("Invalid value for %s: %r" % (field, rpminfo[field]))
-    # strip extra fields
-    rpminfo = dslice(rpminfo, [x[0] for x in dtypes])
-    # TODO: more sanity checks for payloadhash
+        data[field] = rpminfo[field]
+
+    # digests are more complicated
+    got_digest = False
+    digests = (
+        # key, length
+        ('sigmd5', 32),
+        ('sha1header', 40),
+        ('sha256header', 64),
+        ('sha3_256header', 64),
+    )
+    for key, hashlen in digests:
+        if key in rpminfo:
+            digest = rpminfo[key]
+            if digest is None:
+                # we treat this as if header is missing and caller did not filter out
+                continue
+            if not isinstance(digest, str):
+                # all our digests must be strings
+                raise koji.GenericError(f"Invalid value for {key}: {digest}")
+            if digest.strip(string.hexdigits):
+                raise koji.GenericError(f"Non-hex value for {key}: {digest}")
+            if len(digest) != hashlen:
+                raise koji.GenericError(f"Invalid hash length for {key}: {digest}")
+            # force lowercase
+            data[key] = digest.lower()
+            got_digest = True
+
+    if 'payloadhash' in rpminfo:
+        digest = rpminfo['payloadhash']
+        if not isinstance(digest, str):
+            raise koji.GenericError(f"Invalid value for payloadhash: {digest}")
+        # historically we have not been strict about the payloadhash value here
+        data['payloadhash'] = digest
+
+    if not got_digest:
+        # for backwards compatibility, specifying only payloadhash is allowed
+        if 'payloadhash' not in data:
+            raise koji.GenericError(f"Missing digest info: {rpminfo!r}")
+    else:
+        ident = koji.make_rpm_ident(data)
+        if 'payloadhash' in data:
+            # not required if digests are given, but must match if so
+            digest = rpminfo['payloadhash']
+            if digest != ident:
+                raise koji.GenericError(f"Mismatch for payloadhash: {digest} != {ident}")
+        data['payloadhash'] = ident
 
     def check_dup():
         # Check to see if we have it
@@ -7688,9 +7837,20 @@ def add_external_rpm(rpminfo, external_repo, strict=True):
             disp = "%(name)s-%(version)s-%(release)s.%(arch)s@%(external_repo_name)s" % previous
             if strict:
                 raise koji.GenericError("external rpm already exists: %s" % disp)
-            elif data['payloadhash'] != previous['payloadhash']:
+            if data['payloadhash'] != previous['payloadhash']:
                 raise koji.GenericError("hash changed for external rpm: %s (%s -> %s)"
                                         % (disp, previous['payloadhash'], data['payloadhash']))
+            # any other specified digests should match
+            for key, hashlen in digests:
+                if key not in data:
+                    # not specified
+                    continue
+                if previous[key] is None:
+                    # ignore - likely imported before we started tracking
+                    continue
+                if data[key] != previous[key]:
+                    raise koji.GenericError("hash %s changed for external rpm: %s (%s -> %s)"
+                                            % (key, disp, previous[key], data[key]))
             else:
                 return previous
 
@@ -7699,7 +7859,6 @@ def add_external_rpm(rpminfo, external_repo, strict=True):
         return previous
 
     # add rpminfo entry
-    data = rpminfo.copy()
     data['external_repo_id'] = get_external_repo_id(external_repo, strict=True)
     data['id'] = nextval('rpminfo_id_seq')
     data['build_id'] = None
@@ -8294,6 +8453,7 @@ def add_rpm_sig(an_rpm, sighdr, sigkey=None):
     if rinfo['external_repo_id']:
         raise koji.GenericError("Not an internal rpm: %s (from %s)"
                                 % (an_rpm, rinfo['external_repo_name']))
+    nvra = "%(name)s-%(version)s-%(release)s.%(arch)s" % rinfo
     binfo = get_build(rinfo['build_id'])
     builddir = koji.pathinfo.build(binfo)
     if not os.path.isdir(builddir):
@@ -8301,33 +8461,44 @@ def add_rpm_sig(an_rpm, sighdr, sigkey=None):
     if sigkey is not None:
         validate_sigkey_value(sigkey)
 
-    # verify sigmd5 matches rpm and pick sigkey if needed
-    rawhdr = koji.RawHeader(sighdr)
-    sigmd5 = koji.hex_string(rawhdr.get(koji.RPM_SIGTAG_MD5))
-    if sigmd5 != rinfo['payloadhash']:
-        # note: payloadhash is a misnomer, that field is populated with sigmd5.
-        # Double check using rpm in case we have somehow misread
-        rpm_path = "%s/%s" % (builddir, koji.pathinfo.rpm(rinfo))
-        sigmd5, rawsig = _scan_sighdr(sighdr, rpm_path)
-        sigmd5 = koji.hex_string(sigmd5)
-        if sigmd5 != rinfo['payloadhash']:
-            nvra = "%(name)s-%(version)s-%(release)s.%(arch)s" % rinfo
-            raise koji.GenericError("wrong md5 for %s: %s" % (nvra, sigmd5))
-    elif sigkey is None:
-        rawsig = rawhdr.get(koji.RPM_SIGTAG_GPG)
-        if not rawsig:
-            rawsig = rawhdr.get(koji.RPM_SIGTAG_PGP)
-        if not rawsig:
-            rawsig = rawhdr.get(koji.RPM_SIGTAG_DSA)
-        if not rawsig:
-            rawsig = rawhdr.get(koji.RPM_SIGTAG_RSA)
+    # verify sig matches existing checksum
+    rawsighdr = koji.RawHeader(sighdr)
+    rpm_path = "%s/%s" % (builddir, koji.pathinfo.rpm(rinfo))
+    orig_sig = koji.RawHeader(koji.rip_rpm_sighdr(rpm_path))
+    got_match = False
+    digests = (
+        ('MD5', koji.RPM_SIGTAG_MD5),
+        ('SHA1', koji.RPM_SIGTAG_SHA1),
+        ('SHA256', koji.RPM_SIGTAG_SHA256),
+        ('SHA3-256', koji.RPM_SIGTAG_SHA3_256),
+    )
+    for name, sigtag in digests:
+        if sigtag in rawsighdr and sigtag in orig_sig:
+            if rawsighdr[sigtag] != orig_sig[sigtag]:
+                # error on any mismatch
+                raise koji.GenericError(f'Wrong {name} in signature for {nvra}')
+            else:
+                got_match = True
+    if not got_match:
+        # new signatures must provide an overlapping checksum with old
+        raise koji.GenericError(f'Unable to validate signature for {nvra}')
 
+    # choose sigkey if needed
     if sigkey is None:
-        if not rawsig:
+        sigtags = (
+            koji.RPM_SIGTAG_GPG,
+            koji.RPM_SIGTAG_PGP,
+            koji.RPM_SIGTAG_DSA,
+            koji.RPM_SIGTAG_RSA,
+        )
+        for sigtag in sigtags:
+            rawsig = rawsighdr.get(sigtag)
+            if rawsig:
+                sigkey = koji.get_sigpacket_key_id(rawsig)
+                break
+        else:
             sigkey = ''
             # we use the sigkey='' to represent unsigned in the db (so that uniqueness works)
-        else:
-            sigkey = koji.get_sigpacket_key_id(rawsig)
 
     # do the insert
     sighash = md5_constructor(sighdr).hexdigest()
@@ -8338,7 +8509,6 @@ def add_rpm_sig(an_rpm, sighdr, sigkey=None):
     try:
         insert.execute()
     except IntegrityError:
-        nvra = "%(name)s-%(version)s-%(release)s.%(arch)s" % rinfo
         raise koji.GenericError("Signature already exists for package %s, key %s" % (nvra, sigkey))
 
     # - write to fs
@@ -8542,43 +8712,6 @@ def delete_rpm_sig(rpminfo, sigkey=None, all_sigs=False):
     # signatures is to allow the import of new, overlapping ones
 
     logger.warning("Deleted signatures %s for rpm %s", found_keys, rinfo['id'])
-
-
-def _scan_sighdr(sighdr, fn):
-    """Splices sighdr with other headers from fn and queries (no payload)"""
-    # This is hackish, but it works
-    if not os.path.exists(fn):
-        raise koji.GenericError("No such path: %s" % fn)
-    if not os.path.isfile(fn):
-        raise koji.GenericError("Not a regular file: %s" % fn)
-    # XXX should probably add an option to splice_rpm_sighdr to handle this instead
-    sig_start, sigsize = koji.find_rpm_sighdr(fn)
-    hdr_start = sig_start + sigsize
-    hdrsize = koji.rpm_hdr_size(fn, hdr_start)
-    inp = open(fn, 'rb')
-    outp = tempfile.TemporaryFile(mode='w+b')
-    # before signature
-    outp.write(inp.read(sig_start))
-    # signature
-    outp.write(sighdr)
-    inp.seek(sigsize, 1)
-    # main header
-    outp.write(inp.read(hdrsize))
-    inp.close()
-    outp.seek(0, 0)
-    ts = rpm.TransactionSet()
-    ts.setVSFlags(rpm._RPMVSF_NOSIGNATURES | rpm._RPMVSF_NODIGESTS)
-    # (we have no payload, so verifies would fail otherwise)
-    hdr = ts.hdrFromFdno(outp.fileno())
-    outp.close()
-    sig = koji.get_header_field(hdr, 'siggpg')
-    if not sig:
-        sig = koji.get_header_field(hdr, 'sigpgp')
-    if not sig:
-        sig = koji.get_header_field(hdr, 'dsaheader')
-    if not sig:
-        sig = koji.get_header_field(hdr, 'rsaheader')
-    return koji.get_header_field(hdr, 'sigmd5'), sig
 
 
 def query_rpm_sigs(rpm_id=None, sigkey=None, queryOpts=None):
@@ -13063,6 +13196,10 @@ class RootExports(object):
         - arch
         - epoch
         - draft
+        - sigmd5
+        - sha1header
+        - sha256header
+        - sha3_256header
         - payloadhash
         - size
         - buildtime
@@ -13154,13 +13291,13 @@ class RootExports(object):
 
         results = []
         hdr = koji.get_rpm_header(rpm_path)
-        fields = koji.get_header_fields(hdr, ['filenames', 'filemd5s', 'filesizes', 'fileflags',
+        fields = koji.get_header_fields(hdr, ['filenames', 'filedigests', 'filesizes', 'fileflags',
                                               'fileusername', 'filegroupname', 'filemtimes',
                                               'filemodes'])
         digest_algo = koji.util.filedigestAlgo(hdr)
 
         for (name, digest, size, flags, user, group, mtime, mode) \
-                in zip(fields['filenames'], fields['filemd5s'],
+                in zip(fields['filenames'], fields['filedigests'],
                        fields['filesizes'], fields['fileflags'],
                        fields['fileusername'], fields['filegroupname'],
                        fields['filemtimes'], fields['filemodes']):
@@ -13168,7 +13305,8 @@ class RootExports(object):
                 results.append([name, digest, size, flags, digest_algo, user, group, mtime, mode])
             else:
                 results.append({'name': name, 'digest': digest, 'digest_algo': digest_algo,
-                                'md5': digest, 'size': size, 'flags': flags,
+                                'size': size, 'flags': flags,
+                                'md5': digest,   # alias of digest for backwards compat
                                 'user': user, 'group': group, 'mtime': mtime, 'mode': mode})
 
         return _applyQueryOpts(results, queryOpts)
@@ -13212,8 +13350,7 @@ class RootExports(object):
             return {}
 
         hdr = koji.get_rpm_header(rpm_path)
-        # use filemd5s for backward compatibility
-        fields = koji.get_header_fields(hdr, ['filenames', 'filemd5s', 'filesizes', 'fileflags',
+        fields = koji.get_header_fields(hdr, ['filenames', 'filedigests', 'filesizes', 'fileflags',
                                               'fileusername', 'filegroupname', 'filemtimes',
                                               'filemodes'])
         digest_algo = koji.util.filedigestAlgo(hdr)
@@ -13221,8 +13358,9 @@ class RootExports(object):
         i = 0
         for name in fields['filenames']:
             if name == filename:
-                return {'rpm_id': rpm_info['id'], 'name': name, 'digest': fields['filemd5s'][i],
-                        'digest_algo': digest_algo, 'md5': fields['filemd5s'][i],
+                return {'rpm_id': rpm_info['id'], 'name': name, 'digest': fields['filedigests'][i],
+                        'digest_algo': digest_algo,
+                        'md5': fields['filedigests'][i],  # alias of digest for backwards compat
                         'size': fields['filesizes'][i], 'flags': fields['fileflags'][i],
                         'user': fields['fileusername'][i], 'group': fields['filegroupname'][i],
                         'mtime': fields['filemtimes'][i], 'mode': fields['filemodes'][i]}
@@ -13391,6 +13529,10 @@ class RootExports(object):
         """
         context.session.assertPerm('sign')
         return add_rpm_sig(an_rpm, base64.b64decode(data), sigkey=sigkey)
+
+    def updateRPMDigests(self, rpminfo):
+        context.session.assertPerm('admin')
+        return update_rpm_digests(rpminfo)
 
     def renameRPMSig(self, rpminfo, oldkey, newkey):
         """Rename rpm signature

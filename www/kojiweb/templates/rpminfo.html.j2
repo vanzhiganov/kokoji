@@ -68,9 +68,18 @@
     <tr>
       <th>Size</th><td><span title="{{ util.formatThousands(rpm.size) }}">{{ util.formatNatural(rpm.size) }}</span></td>
     </tr>
+    #for key in ('sigmd5', 'sha1header', 'sha256header', 'sha3_256header')
+    #if rpm.get(key)
     <tr>
-      <th><label title="The MD5 digest of the combined header and payload contents. You can query it by `rpmkeys -Kv foo.rpm`">SIGMD5</label></th><td>{{ rpm.payloadhash }}</td>
+      <th><label title="{{ key }} digest value for the rpm. Check `rpmkeys -Kv foo.rpm`">{{ key|upper }}</label></th><td>{{ rpm.get(key) }}</td>
     </tr>
+    #endif
+    #endfor
+    #if not got_digest
+    <tr>
+      <th><label title="Digest value for the rpm. Check `rpmkeys -Kv foo.rpm`">Digest</label></th><td>{{ rpm.payloadhash }}</td>
+    </tr>
+    #endif
     #if rpm.external_repo_id == 0
     <tr>
       <th>License</th><td>{{ license }}</td>

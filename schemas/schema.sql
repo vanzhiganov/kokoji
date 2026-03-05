@@ -802,7 +802,12 @@ CREATE TABLE rpminfo (
 	draft BOOLEAN,
 	external_repo_id INTEGER NOT NULL REFERENCES external_repo(id),
 	payloadhash TEXT NOT NULL,
-	size BIGINT NOT NULL,
+        -- payloadhash is a legacy field and misnamed
+	sigmd5 TEXT,
+	sha1header TEXT,
+	sha256header TEXT,
+	sha3_256header TEXT,
+	size BIGINT,
 	buildtime BIGINT NOT NULL,
 	metadata_only BOOLEAN NOT NULL DEFAULT FALSE,
 	extra TEXT,
@@ -816,6 +821,10 @@ CREATE INDEX rpminfo_build ON rpminfo(build_id);
 CREATE UNIQUE INDEX rpminfo_unique_nvra_not_draft ON rpminfo(name,version,release,arch,external_repo_id)
   WHERE draft IS NOT TRUE;
 CREATE INDEX rpminfo_nvra ON rpminfo(name,version,release,arch,external_repo_id);
+CREATE INDEX rpminfo_sigmd5 ON rpminfo(sigmd5);
+CREATE INDEX rpminfo_sha1header ON rpminfo(sha1header);
+CREATE INDEX rpminfo_sha256header ON rpminfo(sha256header);
+CREATE INDEX rpminfo_sha3_256header ON rpminfo(sha3_256header);
 -- index for default search method for rpms, PG11+ can benefit from new include method
 DO $$
    DECLARE version integer;

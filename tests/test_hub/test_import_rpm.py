@@ -33,9 +33,12 @@ class TestImportRPM(unittest.TestCase):
         self.context_db = mock.patch('kojihub.db.context').start()
         self.cursor = mock.MagicMock()
 
+        self.md5 = '7061796c6f61642068617368'
+
         self.rpm_header_retval = {
             'filename': 'name-version-release.arch.rpm',
             'sourcepackage': 2,
+            'sigmd5': bytearray.fromhex(self.md5),
             1000: 'name',
             1001: 'version',
             1002: 'release',
@@ -44,11 +47,13 @@ class TestImportRPM(unittest.TestCase):
             1022: 'arch',
             1044: 'name-version-release.src.rpm',
             1106: 'sourcepackage',
-            261: 'payload hash',
+            261: self.md5,
         }
         self.get_build = mock.patch('kojihub.kojihub.get_build').start()
         self.new_build = mock.patch('kojihub.kojihub.new_build').start()
         self.get_rpm_header = mock.patch('koji.get_rpm_header').start()
+        self.get_rpm_ident = mock.patch('koji.get_rpm_ident').start()
+        self.get_rpm_ident.return_value = self.md5
         self.new_typed_build = mock.patch('kojihub.kojihub.new_typed_build').start()
         self.nextval = mock.patch('kojihub.kojihub.nextval').start()
         self.os_path_exists = mock.patch('os.path.exists').start()
@@ -98,7 +103,7 @@ class TestImportRPM(unittest.TestCase):
             'arch': 'arch',
             'buildtime': 'buildtime',
             'draft': False,
-            'payloadhash': '7061796c6f61642068617368',
+            'payloadhash': self.md5,
             'epoch': 'epoch',
             'version': 'version',
             'buildroot_id': None,
@@ -106,6 +111,7 @@ class TestImportRPM(unittest.TestCase):
             'external_repo_id': 0,
             'id': 9876,
             'size': 0,
+            'sigmd5': self.md5,
         }
         self.assertEqual(len(self.inserts), 1)
         insert = self.inserts[0]
@@ -138,7 +144,7 @@ class TestImportRPM(unittest.TestCase):
             'arch': 'src',
             'buildtime': 'buildtime',
             'draft': False,
-            'payloadhash': '7061796c6f61642068617368',
+            'payloadhash': self.md5,
             'epoch': 'epoch',
             'version': 'version',
             'buildroot_id': None,
@@ -146,6 +152,7 @@ class TestImportRPM(unittest.TestCase):
             'external_repo_id': 0,
             'id': 9876,
             'size': 0,
+            'sigmd5': self.md5,
         }
         self.assertEqual(len(self.inserts), 1)
         insert = self.inserts[0]
@@ -196,7 +203,7 @@ class TestImportRPM(unittest.TestCase):
             'arch': 'arch',
             'buildtime': 'buildtime',
             'draft': False,
-            'payloadhash': '7061796c6f61642068617368',
+            'payloadhash': self.md5,
             'epoch': 'epoch',
             'version': 'version',
             'buildroot_id': None,
@@ -204,6 +211,7 @@ class TestImportRPM(unittest.TestCase):
             'external_repo_id': 0,
             'id': 9876,
             'size': 0,
+            'sigmd5': self.md5,
         }
         self.assertEqual(len(self.inserts), 1)
         insert = self.inserts[0]
@@ -257,7 +265,7 @@ class TestImportRPM(unittest.TestCase):
             'arch': 'arch',
             'buildtime': 'buildtime',
             'draft': True,
-            'payloadhash': '7061796c6f61642068617368',
+            'payloadhash': self.md5,
             'epoch': 'epoch',
             'version': 'version',
             'buildroot_id': None,
@@ -265,6 +273,7 @@ class TestImportRPM(unittest.TestCase):
             'external_repo_id': 0,
             'id': 9876,
             'size': 0,
+            'sigmd5': self.md5,
         }
         self.assertEqual(len(self.inserts), 1)
         insert = self.inserts[0]
@@ -298,7 +307,7 @@ class TestImportRPM(unittest.TestCase):
             'arch': 'src',
             'buildtime': 'buildtime',
             'draft': True,
-            'payloadhash': '7061796c6f61642068617368',
+            'payloadhash': self.md5,
             'epoch': 'epoch',
             'version': 'version',
             'buildroot_id': None,
@@ -306,6 +315,7 @@ class TestImportRPM(unittest.TestCase):
             'external_repo_id': 0,
             'id': 9876,
             'size': 0,
+            'sigmd5': self.md5,
         }
         self.assertEqual(len(self.inserts), 1)
         insert = self.inserts[0]

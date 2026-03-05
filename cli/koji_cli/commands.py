@@ -1380,8 +1380,10 @@ def handle_import(goptions, session, args):
     activate_session(session, goptions)
     to_import = {}
     for path in args:
-        data = koji.get_header_fields(path, ('name', 'version', 'release', 'epoch',
-                                             'arch', 'sigmd5', 'sourcepackage', 'sourcerpm'))
+        hdr = koji.get_rpm_header(path)
+        data = koji.get_header_fields(hdr, ('name', 'version', 'release', 'epoch',
+                                            'arch', 'sourcepackage', 'sourcerpm'))
+        data['_ident'] = koji.get_rpm_ident(hdr)
         if data['sourcepackage']:
             data['arch'] = 'src'
             nvr = "%(name)s-%(version)s-%(release)s" % data
@@ -1410,13 +1412,13 @@ def handle_import(goptions, session, args):
         rinfo = dict([(k, data[k]) for k in ('name', 'version', 'release', 'arch')])
         prev = session.getRPM(rinfo)
         if prev and not prev.get('external_repo_id', 0):
-            if prev['payloadhash'] == koji.hex_string(data['sigmd5']):
+            if prev['payloadhash'] == data['_ident']:
                 print("RPM already imported: %s" % path)
             else:
-                warn("md5sum mismatch for %s" % path)
+                warn("digest mismatch for %s" % path)
                 warn("  A different rpm with the same name has already been imported")
-                warn("  Existing sigmd5 is %r, your import has %r" % (
-                    prev['payloadhash'], koji.hex_string(data['sigmd5'])))
+                warn("  Existing rpm has %r, your import has %r" % (
+                    prev['payloadhash'], data['_ident']))
             print("Skipping import")
             return
         if options.test:
@@ -3861,7 +3863,21 @@ def anon_handle_rpminfo(goptions, session, args):
             print("SRPM Path: %s" % srpm_path)
             print("Built: %s" % time.strftime('%a, %d %b %Y %H:%M:%S %Z',
                                               time.localtime(info['buildtime'])))
-        print("SIGMD5: %(payloadhash)s" % info)
+        got_digest = False
+        for key in ('sigmd5', 'sha1header', 'sha256header', 'sha3_256header'):
+            # hubs before 1.36 will not report these fields
+            # old rpms in the system may have null values
+            digest = info.get(key)
+            if digest:
+                got_digest = True
+                print("%s: %s" % (key.upper(), digest))
+        if not got_digest:
+            if '::' in info['payloadhash']:
+                # shouldn't happen?
+                print("Legacy digest: %(payloadhash)s" % info)
+            else:
+                # compat case
+                print("SIGMD5: %(payloadhash)s" % info)
         print("Size: %(size)s" % info)
         if not info.get('external_repo_id', 0):
             headers = session.getRPMHeaders(rpmID=info['id'],

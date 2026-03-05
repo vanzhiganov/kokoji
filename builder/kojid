@@ -652,14 +652,6 @@ class BuildRoot(object):
             - external_repo, optional for external rpm
             - location, optional for external rpm
         """
-        fields = ('name',
-                  'version',
-                  'release',
-                  'epoch',
-                  'arch',
-                  'sigmd5',
-                  'size',
-                  'buildtime')
         # Determine db path
         dbpath = "%s/usr/lib/sysimage/rpm" % self.rootdir()
         if not os.path.exists(dbpath):
@@ -678,13 +670,11 @@ class BuildRoot(object):
         try:
             ts = rpm.TransactionSet()
             for h in ts.dbMatch():
-                pkg = koji.get_header_fields(h, fields)
+                pkg = koji.get_rpm_ident_fields(h)
                 # skip our fake packages
                 if pkg['name'] in ['buildsys-build', 'gpg-pubkey']:
                     # XXX config
                     continue
-                pkg['payloadhash'] = koji.hex_string(pkg['sigmd5'])
-                del pkg['sigmd5']
                 ret.append(pkg)
         finally:
             rpm.delMacro("_dbpath")
@@ -851,7 +841,7 @@ class BuildRoot(object):
         This mapping relies on the rpmlist.jsonl file for the repo. If this file is missing, the
         code will fall back to querying the hub.
 
-        This function will raise an error if there is a sigmd5 mismatch for a given rpm.
+        This function will raise an error if there is a digest mismatch for a given rpm.
 
         :param list rpmlist: rpm list fetched from local RPMDB.
         :return: None
@@ -3407,17 +3397,13 @@ class ImageTask(BaseTaskHandler):
         """
         found = False
         hdrlist = []
-        fields = ['name', 'version', 'release', 'epoch', 'arch',
-                  'buildtime', 'sigmd5']
         for root, dirs, files in os.walk(cachepath):
             for f in files:
                 if fnmatch(f, '*.rpm'):
                     pkgfile = os.path.join(root, f)
-                    hdr = koji.get_header_fields(pkgfile, fields)
-                    hdr['size'] = os.path.getsize(pkgfile)
-                    hdr['payloadhash'] = koji.hex_string(hdr['sigmd5'])
-                    del hdr['sigmd5']
-                    hdrlist.append(hdr)
+                    hdr = koji.get_rpm_header(pkgfile)
+                    data = koji.get_rpm_ident_fields(hdr)
+                    hdrlist.append(data)
                     found = True
         if not found:
             raise koji.LiveCDError('No repos found in yum cache!')

@@ -98,12 +98,83 @@ class TestAddRPMSig(unittest.TestCase):
 
         rpm_path = DATADIR + '/rpms/header-signed.rpm'
         sighdr = koji.rip_rpm_sighdr(rpm_path)
+        unsigned_path = DATADIR + '/rpms/header-unsigned.rpm'
+        orighdr = koji.rip_rpm_sighdr(unsigned_path)
 
-        kojihub.add_rpm_sig(1, sighdr)
+        with mock.patch('koji.rip_rpm_sighdr') as rip:
+            rip.return_value = orighdr
+            kojihub.add_rpm_sig(1, sighdr)
+
         self.assertEqual(len(self.inserts), 1)
         insert = self.inserts[0]
         self.assertEqual(insert.data['rpm_id'], 1)
         self.assertEqual(insert.data['sigkey'], '15f712be')
+
+    def test_add_rpm_sig_mismatch(self):
+        """Test addRPMSig with mismatched sig"""
+        self.query_execute.side_effect = [[]]
+        self.isdir.side_effect = [True]
+        self.get_rpm.side_effect = [{
+            'id': 1,
+            'name': 'testpkg',
+            'version': '1.0.0',
+            'release': '1',
+            'arch': 'noarch',
+            'epoch': None,
+            'payloadhash': '1706d0174aa29a5a3e5c60855a778c35',
+            'size': 123,
+            'external_repo_id': None,
+            'build_id': 1,
+        }]
+        self.open.side_effect = [mock.MagicMock()]
+
+        rpm_path = DATADIR + '/rpms/test-pkg-1.0.0-1.fc24.noarch.rpm'
+        sighdr = koji.rip_rpm_sighdr(rpm_path)
+        unsigned_path = DATADIR + '/rpms/header-unsigned.rpm'
+        orighdr = koji.rip_rpm_sighdr(unsigned_path)
+
+        with mock.patch('koji.rip_rpm_sighdr') as rip:
+            rip.return_value = orighdr
+            with self.assertRaises(koji.GenericError) as ex:
+                kojihub.add_rpm_sig(1, sighdr)
+
+        expected = 'Wrong MD5 in signature for testpkg-1.0.0-1.noarch'
+        self.assertEqual(str(ex.exception), expected)
+        self.assertEqual(len(self.inserts), 0)
+
+    def test_add_rpm_sig_no_digest_overlap(self):
+        """Test addRPMSig with no digest overlap"""
+        self.query_execute.side_effect = [[]]
+        self.isdir.side_effect = [True]
+        self.get_rpm.side_effect = [{
+            'id': 1,
+            'name': 'testpkg',
+            'version': '1.0.0',
+            'release': '1',
+            'arch': 'noarch',
+            'epoch': None,
+            'payloadhash': '1706d0174aa29a5a3e5c60855a778c35',
+            'size': 123,
+            'external_repo_id': None,
+            'build_id': 1,
+        }]
+        self.open.side_effect = [mock.MagicMock()]
+
+        # this v6 rpm has sha256 and sha3_256 digests only
+        rpm_path = DATADIR + '/rpms/fake-1.1-37.src.rpm.v6'
+        sighdr = koji.rip_rpm_sighdr(rpm_path)
+        # this v4 rpm is old enough to not have a sha256 digest
+        orig_path = DATADIR + '/rpms/test-pkg-1.0.0-1.fc24.noarch.rpm'
+        orighdr = koji.rip_rpm_sighdr(orig_path)
+
+        with mock.patch('koji.rip_rpm_sighdr') as rip:
+            rip.return_value = orighdr
+            with self.assertRaises(koji.GenericError) as ex:
+                kojihub.add_rpm_sig(1, sighdr)
+
+        expected = 'Unable to validate signature for testpkg-1.0.0-1.noarch'
+        self.assertEqual(str(ex.exception), expected)
+        self.assertEqual(len(self.inserts), 0)
 
     def test_add_rpm_sig_external(self):
         """external rpm failure case"""
@@ -134,7 +205,15 @@ class TestAddRPMSig(unittest.TestCase):
         """missing build dir failure case"""
         sighdr = 'SIG HEADER 99'
         self.isdir.side_effect = [False]
-        self.get_rpm.side_effect = [{'build_id': 100, 'external_repo_id': None}]
+        self.get_rpm.side_effect = [{
+            'id': 1,
+            'name': 'testpkg',
+            'version': '1.0.0',
+            'release': '1',
+            'arch': 'noarch',
+            'build_id': 100,
+            'external_repo_id': None,
+        }]
 
         with self.assertRaises(koji.GenericError):
             kojihub.add_rpm_sig(1, sighdr)
@@ -147,7 +226,15 @@ class TestAddRPMSig(unittest.TestCase):
         """bad sigkey failure case"""
         sighdr = 'SIG HEADER 99'
         self.isdir.return_value = True
-        self.get_rpm.return_value = {'build_id': 100, 'external_repo_id': None}
+        self.get_rpm.return_value = {
+            'id': 1,
+            'name': 'testpkg',
+            'version': '1.0.0',
+            'release': '1',
+            'arch': 'noarch',
+            'build_id': 100,
+            'external_repo_id': None,
+        }
 
         badkeys = [
             'white space',
@@ -163,19 +250,6 @@ class TestAddRPMSig(unittest.TestCase):
         self.assertEqual(len(self.inserts), 0)
         self.open.assert_not_called()
         self.isdir.assert_called()
-
-
-class TestScanHeaderOnly(unittest.TestCase):
-
-    def test_scan_sighdr_header_signed(self):
-        """Test _scan_sighdr on a header-only signed package"""
-        rpm_path = DATADIR + '/rpms/header-signed.rpm'
-        sighdr = koji.rip_rpm_sighdr(rpm_path)
-
-        sigmd5, sig = kojihub._scan_sighdr(sighdr, rpm_path)
-        self.assertEqual(koji.hex_string(sigmd5), '1706d0174aa29a5a3e5c60855a778c35')
-        sigkey = koji.get_sigpacket_key_id(sig)
-        self.assertEqual(sigkey, '15f712be')
 
 
 # the end

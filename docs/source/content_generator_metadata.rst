@@ -91,18 +91,37 @@ Each map in the buildroots list contains the following entries:
    -  version: Version of the tool used.
 
 -  components: List of maps containing information about content
-   installed in the build environment (if any). Each map is guaranteed
+   installed in the build environment (if any). Each map is required
    to contain a **type** field, which determines what other fields are
-   present in the map. For maps where **type = rpm**, the following
-   fields will be present:
+   present in the map. The currently available types are detailed below.
+
+-  For maps where **type = rpm**, the following fields must be present:
 
    -  name: The rpm name.
    -  version: The rpm version.
    -  release: The rpm release.
    -  epoch: The rpm epoch.
    -  arch: The rpm arch.
-   -  sigmd5: The SIGMD5 tag from the rpm header.
-   -  signature: The signature used to sign the rpm (if any).
+
+   Additionally, the following checksums from the rpm header
+   must be included if they exist in the header.
+   If given, these values must be lowercase hex strings.
+
+   -  sigmd5: The SIGMD5 tag value
+   -  sha1header: The SHA1HEADER tag value
+   -  sha256header: The SHA256HEADER tag value
+   -  sha3_256header: The SHA3_256HEADER tag value
+
+   For backwards compatibility, if is sufficient to specify only the sigmd5
+   checksum for rpm files having v4 and earlier formats.
+
+   The rpm id may be specified. If given, this must be the id of the rpm in Koji.
+
+   -  id: The Koji rpm id
+
+   Lastly for rpms, the following legacy field is accepted but ignored:
+
+   -  signature: ignored
 
 -  For maps where **type = file**, the following fields will be present:
 
@@ -198,31 +217,31 @@ The below JSON is based loosely on the output of a docker image build.
                                      "epoch": null,
                                      "arch": "x86_64",
                                      "sigmd5": "a1b2c3...",
-                                     "signature": "fd431d51"},
+                                     "sha1header": "2a1c91..."},
                                     {"type": "rpm",
                                      "name": "openssl",
                                      "version": "1.0.1e",
                                      "release": "42.el7",
                                      "epoch": null,
                                      "arch": "x86_64",
-                                     "sigmd5": "d4e5f6...",
-                                     "signature": "fd431d51"},
+                                     "sigmd5": "f8e857...",
+                                     "sha1header": "ea4c84..."},
                                     {"type": "rpm",
                                      "name": "bind-libs",
                                      "version": "9.9.4",
                                      "release": "18.el7",
                                      "epoch": 32,
                                      "arch": "x86_64",
-                                     "sigmd5": "987abc...",
-                                     "signature": null},
+                                     "sigmd5": "5b2ca0...",
+                                     "sha1header": "e73c78..."},
                                     {"type": "rpm",
                                      "name": "python-urllib3",
                                      "version": "1.5",
                                      "release": "8.el7",
                                      "epoch": null,
                                      "arch": "noarch",
-                                     "sigmd5": "123hgf...",
-                                     "signature": null},
+                                     "sigmd5": "5f38e3...",
+                                     "sha1header": "25a47b..."},
                                     {"type": "file",
                                      "filename": "jboss-eap-6.3.3-full-build.zip",
                                      "filesize": 12345678,

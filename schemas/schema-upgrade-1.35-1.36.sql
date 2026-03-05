@@ -16,4 +16,17 @@ CREATE INDEX IF NOT EXISTS standard_buildroot_task_id on standard_buildroot(task
 CREATE INDEX IF NOT EXISTS standard_buildroot_create_event on standard_buildroot(create_event);
 CREATE INDEX IF NOT EXISTS standard_buildroot_retire_event on standard_buildroot(retire_event);
 
+-- new rpminfo fields for v6 support
+ALTER TABLE rpminfo ADD COLUMN sigmd5 TEXT;
+ALTER TABLE rpminfo ADD COLUMN sha1header TEXT;
+ALTER TABLE rpminfo ADD COLUMN sha256header TEXT;
+ALTER TABLE rpminfo ADD COLUMN sha3_256header TEXT;
+CREATE INDEX rpminfo_sigmd5 ON rpminfo(sigmd5);
+CREATE INDEX rpminfo_sha1header ON rpminfo(sha1header);
+CREATE INDEX rpminfo_sha256header ON rpminfo(sha256header);
+CREATE INDEX rpminfo_sha3_256header ON rpminfo(sha3_256header);
+-- rpminfo.size can be null
+ALTER TABLE rpminfo ALTER COLUMN size DROP NOT NULL;
+
+
 COMMIT;

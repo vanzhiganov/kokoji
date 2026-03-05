@@ -1077,6 +1077,9 @@ def check_sigmd5(filename):
                 assert (data_type == 7)  # binary data
                 assert (count == 16)     # 16 bytes of md5
                 break
+        else:
+            # rpm v6 format does not include this header
+            return True
         # seek to location of md5
         f.seek(o + 8 + indexcount * 16 + offset)
         sigmd5 = f.read(16)
