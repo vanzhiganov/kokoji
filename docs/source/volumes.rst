@@ -70,6 +70,8 @@ for builds on other volumes.
     /mnt/koji/packages/fake/1.0/21: symbolic link to ../../../vol/vol3/packages/fake/1.0/21
 
 
+.. _adding-new-volume:
+
 Adding a new volume
 -------------------
 

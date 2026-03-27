@@ -505,6 +505,8 @@ Since 1.31, Koji clients have used http headers to pass their session info.
 However, the hub has been misreading the callnum since that time.
 
 
+.. _draft-symlink-fix-1-36:
+
 **Fix draft symlink handling**
 
 | PR: https://pagure.io/koji/pull-request/4383
@@ -512,6 +514,23 @@ However, the hub has been misreading the callnum since that time.
 
 When a draft build is promoted, Koji maintains a symlink at the original location.
 These fixes address cases where the hub did not create that link.
+
+As part of this fix, the system now requires that each volume directory contain a
+``toplink`` symlink that points to the main volume.
+We recommend using an absolute symlink. E.g.
+
+::
+
+     $ file /mnt/koji/vol/vol3/toplink
+     /mnt/koji/vol/vol3/toplink: symbolic link to /mnt/koji
+
+When adding a new volume, admins should create this symlink when they create
+the volume directory. If not, the hub will automatically create it using the
+configured topdir path and log a warning.
+
+For *existing* volumes, admins **must** create this symlink for each
+preexisting volume during their migration to 1.36.
+Failure to do so can result in build promotion failures.
 
 
 **Fix listUsers type check**
