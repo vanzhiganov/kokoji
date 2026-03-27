@@ -112,21 +112,35 @@ class TestEnsureDraftBacklink(unittest.TestCase):
         os.makedirs(basedir)
         files1 = list(find_files(self.tempdir))
 
-        with self.assertRaises(koji.GenericError):
+        with self.assertRaises(koji.GenericError) as ex:
             kojihub.ensure_draft_backlink(self.buildinfo)
 
+        self.assertIn('Unexpected build content', str(ex.exception))
         files2 = list(find_files(self.tempdir))
         self.assertEqual(files1, files2)
 
-    def test_draft_symlink_exists_error2(self):
-        # if the volume dir is bad, we should error
+    def test_draft_symlink_voldir_missing(self):
         os.unlink(self.volmount + '/toplink')
-        with self.assertRaises(koji.GenericError):
+        os.rmdir(self.volmount)
+        with self.assertRaises(koji.GenericError) as ex:
             kojihub.ensure_draft_backlink(self.buildinfo)
 
-        os.rmdir(self.volmount)
-        with self.assertRaises(koji.GenericError):
-            kojihub.ensure_draft_backlink(self.buildinfo)
+        self.assertIn('Missing volume dir', str(ex.exception))
+
+    def test_draft_symlink_missing(self):
+        # if the volume dir toplink is missing, we should NOT error
+        os.unlink(self.volmount + '/toplink')
+        kojihub.ensure_draft_backlink(self.buildinfo)
+
+        files = list(find_files(self.volmount))
+        expected = [
+            'packages',
+            # (toplink is missing)
+            'packages/some-image',
+            'packages/some-image/1.2.3.4',
+            'packages/some-image/1.2.3.4/3',
+        ]
+        self.assertEqual(files, expected)
 
     def test_draft_symlink_default(self):
         # the call should handle the default volume case

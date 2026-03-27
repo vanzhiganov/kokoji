@@ -34,6 +34,7 @@ class TestPromoteBuild(unittest.TestCase):
         self.apply_volume_policy = mock.patch('kojihub.kojihub.apply_volume_policy',
                                               return_value=None).start()
         self.safer_move = mock.patch('kojihub.kojihub.safer_move').start()
+        mock.patch('kojihub.kojihub.check_volume_toplink').start()
         self.ensure_volume_symlink = mock.patch('kojihub.kojihub.ensure_volume_symlink').start()
         self.ensure_draft_backlink = mock.patch('kojihub.kojihub.ensure_draft_backlink').start()
         self.lookup_name = mock.patch('kojihub.kojihub.lookup_name',
@@ -325,6 +326,73 @@ class TestPromoteBuildFiles(unittest.TestCase):
         # should be accessible via original path
         with open(orig_bdir + '/sentinel.txt', 'rt') as fp:
             assert fp.read() == sentinel
+
+    def test_promote_build_missing_toplink(self):
+        # missing toplink should block promotion without any changes
+        toplink = self.tempdir + '/vol_X/toplink'
+        os.unlink(toplink)
+
+        self.get_build.side_effect = [
+            self.draft_build,
+            None,
+            self.new_build
+        ]
+        orig_bdir = self.pathinfo.build(self.draft_build)
+        koji.ensuredir(orig_bdir)
+        sentinel = 'HELLO 873\n'
+        with open(orig_bdir + '/sentinel.txt', 'wt') as fp:
+            fp.write(sentinel)
+
+        orig_files = list(find_files(self.tempdir))
+
+        # promote should fail
+        with self.assertRaises(koji.GenericError) as ex:
+            self.exports.promoteBuild('a-draft-build')
+
+        self.assertIn('Missing volume toplink', str(ex.exception))
+
+        # no file changes
+        final_files = list(find_files(self.tempdir))
+        self.assertEqual(orig_files, final_files)
+
+        # no db changes
+        self.assertEqual(self.updates, [])
+
+    @mock.patch('kojihub.kojihub.ensure_draft_backlink')
+    def test_promote_build_backlink_error(self, ensure_draft_backlink):
+        # an error in ensure_draft_backlink should not break the promotion
+        ensure_draft_backlink.side_effect = Exception('some failure')
+
+        self.get_build.side_effect = [
+            self.draft_build,
+            None,
+            self.new_build
+        ]
+        orig_bdir = self.pathinfo.build(self.draft_build)
+        koji.ensuredir(orig_bdir)
+        sentinel = 'HELLO 873\n'
+        with open(orig_bdir + '/sentinel.txt', 'wt') as fp:
+            fp.write(sentinel)
+
+        # promote
+        ret = self.exports.promoteBuild('a-draft-build')
+
+        self.assertEqual(ret, self.new_build)
+        # orig_bdir not not exist because the backlink call failed
+        assert not os.path.exists(orig_bdir)
+
+        new_bdir = self.pathinfo.build(self.new_build)
+        with open(new_bdir + '/sentinel.txt', 'rt') as fp:
+            assert fp.read() == sentinel
+
+
+def find_files(dirpath):
+    '''Find all files under dir, report relative paths'''
+    for path, dirs, files in os.walk(dirpath, topdown=True):
+        # sort dirs in place for consistent traversal
+        dirs.sort()
+        for fn in sorted(dirs + files):
+            yield os.path.relpath(os.path.join(path, fn), dirpath)
 
 
 # the end
