@@ -127,6 +127,12 @@ def get_args():
     subp.add_argument('--action', help='select action', default='add')
     subp.add_argument('--force', help='select force setting', action='store_true', default=False)
     subp.set_defaults(func=add_pkg_params)
+
+    subp = subparsers.add_parser('cg-import', help='simulate policy for cg import')
+    subp.add_argument('-b', '--build', help='fetch data from existing build')
+    subp.add_argument('-m', '--metadata', help='fetch data from json file')
+    subp.add_argument('--metadata-only', help='', action='store_true', default=False)
+    subp.set_defaults(func=cg_import_params)
     ## end subcommands ##
 
     args = parser.parse_args()
@@ -372,6 +378,65 @@ def add_pkg_params(args, session):
     # kojihub is a bit inconsistent about the package field format
     # we opt for the string passed in, as happens with the add-pkg command
     data = {'tag': tinfo['id'], 'action': action, 'package': package, 'force': force}
+
+    return policy, data
+
+
+def cg_import_params(args, session):
+    # simulate policy for cg imports
+    policy = 'cg_import'
+    data = {}
+
+    if args.build:
+        # pull metadata from existing build
+        if args.build.isdigit():
+            binfo = session.getBuild(int(args.build), strict=True)
+        else:
+            binfo = session.getBuild(args.build, strict=True)
+        for key in ('version', 'release', 'source', 'draft'):
+            data[key] = binfo[key]
+        data['package'] = binfo['name']
+        data['btypes'] = list(session.getBuildType(binfo['id']))
+        data['cg_list'] = [binfo['cg_id']]
+        data['metadata_only'] = False
+
+    elif args.metadata:
+        metadata = koji.load_json(args.metadata)
+        build = metadata['build']
+        for key in ('version', 'release'):
+            data[key] = build[key]
+        for key in ('source', 'draft'):
+            data[key] = build.get(key)
+        data['package'] = build['name']
+
+        # get btypes
+        typeinfo = build.get('extra', {}).get('typeinfo', {})
+        for btype in ('maven', 'win', 'image'):
+            # legacy types can also be at top level of extra
+            if btype in build['extra']:
+                typeinfo.setdefault(btype, build['extra'][btype])
+        data['btypes'] = list(typeinfo)
+
+        # get cg id
+        cg_id = None
+        for brdata in metadata['buildroots']:
+            cginfo = brdata['content_generator']
+            cg = kojihub.lookup_name('content_generator', cginfo['name'], strict=True)
+            # ^ this relies on our mocks
+            # just take the first one. we're not validating
+            cg_id = cg['id']
+            break
+        data['cg_list'] = [cg_id]
+
+        # check for metadata-only flag
+        data['metadata_only'] = False
+        for fileinfo in metadata['output']:
+            if fileinfo.get('metadata_only', False):
+                data['metadata_only'] = True
+                break
+
+    if args.metadata_only:
+        data['metadata_only'] = True
 
     return policy, data
 
