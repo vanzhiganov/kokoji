@@ -327,10 +327,12 @@ class TestPromoteBuildFiles(unittest.TestCase):
         with open(orig_bdir + '/sentinel.txt', 'rt') as fp:
             assert fp.read() == sentinel
 
-    def test_promote_build_missing_toplink(self):
-        # missing toplink should block promotion without any changes
+    def test_promote_build_invalid_toplink(self):
+        # invalid toplink should block promotion without any changes
         toplink = self.tempdir + '/vol_X/toplink'
         os.unlink(toplink)
+        with open(toplink, 'wt') as fp:
+            fp.write('NOT A SYMLINK\n')
 
         self.get_build.side_effect = [
             self.draft_build,
@@ -349,7 +351,7 @@ class TestPromoteBuildFiles(unittest.TestCase):
         with self.assertRaises(koji.GenericError) as ex:
             self.exports.promoteBuild('a-draft-build')
 
-        self.assertIn('Missing volume toplink', str(ex.exception))
+        self.assertIn('Not a symlink:', str(ex.exception))
 
         # no file changes
         final_files = list(find_files(self.tempdir))
@@ -357,6 +359,34 @@ class TestPromoteBuildFiles(unittest.TestCase):
 
         # no db changes
         self.assertEqual(self.updates, [])
+
+    def test_promote_build_missing_toplink(self):
+        # missing toplink should be auto-created
+        toplink = self.tempdir + '/vol_X/toplink'
+        os.unlink(toplink)
+
+        self.get_build.side_effect = [
+            self.draft_build,
+            None,
+            self.new_build
+        ]
+        orig_bdir = self.pathinfo.build(self.draft_build)
+        koji.ensuredir(orig_bdir)
+        sentinel = 'HELLO 873\n'
+        with open(orig_bdir + '/sentinel.txt', 'wt') as fp:
+            fp.write(sentinel)
+
+        # promote
+        ret = self.exports.promoteBuild('a-draft-build')
+
+        self.assertEqual(ret, self.new_build)
+
+        # orig_bdir should be a symlink
+        assert os.path.islink(orig_bdir)
+
+        new_bdir = self.pathinfo.build(self.new_build)
+        with open(new_bdir + '/sentinel.txt', 'rt') as fp:
+            assert fp.read() == sentinel
 
     @mock.patch('kojihub.kojihub.ensure_draft_backlink')
     def test_promote_build_backlink_error(self, ensure_draft_backlink):

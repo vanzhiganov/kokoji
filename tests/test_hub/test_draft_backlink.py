@@ -129,13 +129,14 @@ class TestEnsureDraftBacklink(unittest.TestCase):
 
     def test_draft_symlink_missing(self):
         # if the volume dir toplink is missing, we should NOT error
+        # and toplink should be created
         os.unlink(self.volmount + '/toplink')
         kojihub.ensure_draft_backlink(self.buildinfo)
 
         files = list(find_files(self.volmount))
         expected = [
             'packages',
-            # (toplink is missing)
+            'toplink',  # re-created by call
             'packages/some-image',
             'packages/some-image/1.2.3.4',
             'packages/some-image/1.2.3.4/3',

@@ -6406,7 +6406,7 @@ def ensure_draft_backlink(old_binfo, new_binfo=None):
         if not os.path.isdir(voldir):
             raise koji.GenericError(f'Missing volume dir: {voldir}')
         # a missing toplink doesn't block us from proceeding, but we should log it
-        check_volume_toplink(voldir, strict=False, create=False)
+        check_volume_toplink(voldir, strict=False, create=True)
 
     # get the old build path (where we will place the symlink)
     olddir = koji.pathinfo.build(old_binfo)
@@ -11028,7 +11028,7 @@ def _promote_build(build, force=False):
     # fail early if toplink is missing
     if binfo['volume_name'] != 'DEFAULT':
         voldir = koji.pathinfo.volumedir(binfo['volume_name'])
-        check_volume_toplink(voldir, strict=True, create=False)
+        check_volume_toplink(voldir, strict=True, create=True)
 
     old_release = binfo['release']
     target_release = koji.parse_target_release(old_release)
