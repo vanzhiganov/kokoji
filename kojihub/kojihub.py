@@ -6209,14 +6209,18 @@ def check_volume_toplink(voldir, strict=False, create=False):
                 raise koji.GenericError(msg)
             else:
                 logger.error(msg)
-        if not os.path.samefile(toplink, koji.pathinfo.topdir):
+                return False
+        try:
+            is_same = os.path.samefile(toplink, koji.pathinfo.topdir)
+        except OSError:
+            is_same = False
+        if not is_same:
             msg = f'Invalid volume toplink: {toplink}'
             if strict:
                 raise koji.GenericError(msg)
             else:
                 logger.error(msg)
-        # link is valid
-        return True
+                return False
     elif os.path.exists(toplink):
         # present, but not a link
         msg = f'Not a symlink: {toplink}'
@@ -6224,6 +6228,7 @@ def check_volume_toplink(voldir, strict=False, create=False):
             raise koji.GenericError(msg)
         else:
             logger.error(msg)
+            return False
     else:
         # missing
         if create:
@@ -6237,9 +6242,10 @@ def check_volume_toplink(voldir, strict=False, create=False):
                 raise koji.GenericError(msg)
             else:
                 logger.error(msg)
+                return False
 
-    # if we reach here, link is missing or otherwise invalid
-    return False
+    # not reached, but just in case
+    return False  # pragma: no cover
 
 
 def remove_volume(volume):

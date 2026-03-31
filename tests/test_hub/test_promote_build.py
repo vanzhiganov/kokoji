@@ -416,6 +416,94 @@ class TestPromoteBuildFiles(unittest.TestCase):
             assert fp.read() == sentinel
 
 
+class TestCheckVolumeToplink(unittest.TestCase):
+    # these tests use a tempdir
+
+    def setUp(self):
+        # set up our dirs
+        self.tempdir = tempfile.mkdtemp()
+        self.topdir = self.tempdir + '/koji'
+        self.pathinfo = koji.PathInfo(self.topdir)
+
+        mock.patch('koji.pathinfo', new=self.pathinfo).start()
+        # separate dir for volume X
+        vol_x = self.tempdir + '/vol_X'
+        toplink = self.tempdir + '/vol_X/toplink'
+        self.toplink = toplink
+        koji.ensuredir(vol_x)
+        voldir = self.pathinfo.volumedir('X')
+        self.voldir = voldir
+        koji.ensuredir(os.path.dirname(voldir))  # koji/vol
+        os.symlink(vol_x, voldir)
+        os.symlink(self.topdir, toplink)
+
+    def tearDown(self):
+        mock.patch.stopall()
+        shutil.rmtree(self.tempdir)
+
+    def test_error_cases(self):
+        # various error cases should fail is strict and return False if not
+
+        # broken link
+        os.unlink(self.toplink)
+        os.symlink('_BROKEN_LINK', self.toplink)
+
+        with self.assertRaises(koji.GenericError) as ex:
+            kojihub.check_volume_toplink(self.voldir, strict=True)
+        self.assertIn('Broken volume toplink:', str(ex.exception))
+
+        ret = kojihub.check_volume_toplink(self.voldir, strict=False)
+        self.assertFalse(ret)
+
+        # invalid link
+        os.unlink(self.toplink)
+        os.symlink('/tmp', self.toplink)
+
+        with self.assertRaises(koji.GenericError) as ex:
+            kojihub.check_volume_toplink(self.voldir, strict=True)
+        self.assertIn('Invalid volume toplink:', str(ex.exception))
+
+        ret = kojihub.check_volume_toplink(self.voldir, strict=False)
+        self.assertFalse(ret)
+
+        # not a link
+        os.unlink(self.toplink)
+        with open(self.toplink, 'wt') as fp:
+            fp.write('NOT A SYMLINK\n')
+
+        with self.assertRaises(koji.GenericError) as ex:
+            kojihub.check_volume_toplink(self.voldir, strict=True)
+        self.assertIn('Not a symlink:', str(ex.exception))
+
+        ret = kojihub.check_volume_toplink(self.voldir, strict=False)
+        self.assertFalse(ret)
+
+        # missing
+        os.unlink(self.toplink)
+
+        with self.assertRaises(koji.GenericError) as ex:
+            kojihub.check_volume_toplink(self.voldir, strict=True)
+        self.assertIn('Missing volume toplink:', str(ex.exception))
+
+        ret = kojihub.check_volume_toplink(self.voldir, strict=False)
+        self.assertFalse(ret)
+
+    def test_samefile_error(self):
+        # an error from os.path.samefile should be handled sanely
+
+        # break our topdir so that samefile errors checking it
+        bad_topdir = self.tempdir + '/koji_bad'
+        os.symlink('_BROKEN_LINK', bad_topdir)
+        self.pathinfo.topdir = bad_topdir
+
+        with self.assertRaises(koji.GenericError) as ex:
+            kojihub.check_volume_toplink(self.voldir, strict=True)
+        self.assertIn('Invalid volume toplink:', str(ex.exception))
+
+        ret = kojihub.check_volume_toplink(self.voldir, strict=False)
+        self.assertFalse(ret)
+
+
 def find_files(dirpath):
     '''Find all files under dir, report relative paths'''
     for path, dirs, files in os.walk(dirpath, topdown=True):
