@@ -353,7 +353,10 @@ def _sortImage(orderVal, sortKey, orderVar):
 
 @safe_return
 @pass_context
-def passthrough(context, *varnames, prefix='&', invert=False, toggleOrder=None):
+def passthrough(context, *varnames, prefix='&', invert=False, toggleOrder=None, names=None):
+    if names is not None:
+        # alternate way to pass list of names
+        varnames += names
     if invert:
         _PASSTHROUGH = context.get('_PASSTHROUGH', None)
         if _PASSTHROUGH is None:
