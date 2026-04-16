@@ -998,7 +998,7 @@ class TestRequestRepo(BaseTest):
         self.get_repo.assert_called_once()
         ev = self.get_repo.call_args[1]['min_event']
         self.assertEqual(ev, last)
-        clauses = self.RepoQueueQuery.call_args_list[0].args[0]
+        clauses = self.RepoQueueQuery.call_args_list[0][0][0]
         self.assertIn(['min_event', '>=', last], clauses)
         self.InsertProcessor.assert_called_once()
         data = self.InsertProcessor.call_args[1]['data']
@@ -1108,7 +1108,7 @@ class TestRequestRepo(BaseTest):
         self.get_repo.assert_called_once()
         ev = self.get_repo.call_args[1]['min_event']
         self.assertEqual(ev, last)
-        clauses = self.RepoQueueQuery.call_args_list[0].args[0]
+        clauses = self.RepoQueueQuery.call_args_list[0][0][0]
         self.assertIn(['min_event', '>=', last], clauses)
         self.InsertProcessor.assert_called_once()
         data = self.InsertProcessor.call_args[1]['data']
