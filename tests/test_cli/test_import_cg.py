@@ -21,7 +21,8 @@ class TestImportCG(utils.CliTestCase):
         self.session = mock.MagicMock()
         self.workdir = tempfile.mkdtemp()
         self.outdir = self.workdir + '/output'
-        self.unique_path_mock = mock.patch('koji_cli.commands.unique_path').start()
+        self.unique_path_mock = mock.patch('koji_cli.commands.unique_path',
+                                           return_value='cli-import/12345.foobar').start()
         self.running_in_bg = mock.patch('koji_cli.commands._running_in_bg').start()
         self.running_in_bg.return_value = False
         self.linked_upload = mock.patch('koji_cli.commands.linked_upload').start()
@@ -82,10 +83,10 @@ class TestImportCG(utils.CliTestCase):
         handle_import_cg(self.options, self.session, arguments)
 
         self.assertEqual(len(self.session.uploadWrapper.mock_calls), len(metadata['output']))
-        kwargs = self.session.uploadWrapper.call_args.kwargs
+        kwargs = self.session.uploadWrapper.call_args[1]
         self.assertEqual(kwargs['callback'], _progress_callback)
         self.session.CGImport.assert_called_once()
-        args = self.session.CGImport.call_args.args
+        args = self.session.CGImport.call_args[0]
         self.assertEqual(args[0], metadata)
         self.linked_upload.assert_not_called()
 
@@ -172,7 +173,7 @@ class TestImportCG(utils.CliTestCase):
         self.session.uploadWrapper.assert_not_called()
         self.linked_upload.assert_not_called()
         self.session.CGImport.assert_called_once()
-        args = self.session.CGImport.call_args.args
+        args = self.session.CGImport.call_args[0]
         self.assertEqual(args[0], metadata)
 
     def test_handle_import_cg_draft(self):
@@ -189,7 +190,7 @@ class TestImportCG(utils.CliTestCase):
 
         self.assertEqual(len(self.session.uploadWrapper.mock_calls), len(metadata['output']))
         self.session.CGImport.assert_called_once()
-        args = self.session.CGImport.call_args.args
+        args = self.session.CGImport.call_args[0]
         self.assertEqual(args[0], metadata)
 
     def test_handle_import_cg_reserve(self):
@@ -206,7 +207,7 @@ class TestImportCG(utils.CliTestCase):
 
         self.assertEqual(len(self.session.uploadWrapper.mock_calls), len(metadata['output']))
         self.session.CGImport.assert_called_once()
-        args = self.session.CGImport.call_args.args
+        args = self.session.CGImport.call_args[0]
         self.assertEqual(args[0], expect)
 
     def test_handle_import_cg_linked(self):
@@ -220,7 +221,7 @@ class TestImportCG(utils.CliTestCase):
         self.session.uploadWrapper.assert_not_called()
         self.assertEqual(len(self.linked_upload.mock_calls), len(metadata['output']))
         self.session.CGImport.assert_called_once()
-        args = self.session.CGImport.call_args.args
+        args = self.session.CGImport.call_args[0]
         self.assertEqual(args[0], metadata)
 
     def test_handle_import_cg_noprogress(self):
@@ -232,10 +233,10 @@ class TestImportCG(utils.CliTestCase):
         handle_import_cg(self.options, self.session, arguments)
 
         self.assertEqual(len(self.session.uploadWrapper.mock_calls), len(metadata['output']))
-        kwargs = self.session.uploadWrapper.call_args.kwargs
+        kwargs = self.session.uploadWrapper.call_args[1]
         self.assertEqual(kwargs['callback'], None)
         self.session.CGImport.assert_called_once()
-        args = self.session.CGImport.call_args.args
+        args = self.session.CGImport.call_args[0]
         self.assertEqual(args[0], metadata)
         self.linked_upload.assert_not_called()
 
