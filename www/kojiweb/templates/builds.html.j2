@@ -10,7 +10,7 @@ Latest
 #elif state != None
 {{ util.stateName(state)|capitalize }}
 #endif
-#if draft and draft is not sameas none
+#if draft is sameas false
 Nondraft
 #elif draft
 Draft
@@ -80,8 +80,8 @@ in tag <a href="taginfo?tagID={{ tag.id }}">{{ tag.name }}</a>
         </td>
         <td>
         <select name="type" class="filterlist" onchange="javascript: window.location='builds?draft=' + this.value + '{{ util.passthrough_except('draft') }}';">
-          <option value="all" {{ 'selected' if draft is sameas none else '' }}>all</option>
-          <option value="1" {{ 'selected' if draft is sameas true else '' }}>yes</option>
+          <option value="all" {{ 'selected' if draft is none else '' }}>all</option>
+          <option value="1" {{ 'selected' if draft else '' }}>yes</option>
           <option value="0" {{ 'selected' if draft is sameas false else '' }}>no</option>
         </select>
         </td>
@@ -89,7 +89,7 @@ in tag <a href="taginfo?tagID={{ tag.id }}">{{ tag.name }}</a>
         <strong>Content Generator</strong>:
         </td><td>
         <select name="inherited" class="filterlist" onchange="javascript: window.location = 'builds?cg=' + this.value + '{{ util.passthrough_except('cg') }}';">
-          <option value="" {{ 'selected' if cg is sameas none else '' }}>all</option>
+          <option value="" {{ 'selected' if cg is none else '' }}>all</option>
           #for cgname in cgs
           <option value="{{ cgname }}" {{ 'selected' if cg == cgname else '' }}>{{ cgname }}</option>
           #endfor
