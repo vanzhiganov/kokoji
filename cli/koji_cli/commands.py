@@ -7108,6 +7108,8 @@ def anon_handle_download_build(options, session, args):
     parser.add_option("--topurl", metavar="URL", default=options.topurl,
                       help="URL under which Koji files are accessible")
     parser.add_option("--noprogress", action="store_true", help="Do not display progress meter")
+    parser.add_option("--nofailarch", action="store_true",
+                      help="Do not fail if package not available for specified arch(es)")
     parser.add_option("-q", "--quiet", action="store_true",
                       help="Suppress output", default=options.quiet)
     (suboptions, args) = parser.parse_args(args)
@@ -7178,8 +7180,14 @@ def anon_handle_download_build(options, session, args):
             all_rpms = session.listRPMs(buildID=info['id'], arches=arches)
         if not all_rpms:
             if arches:
-                error("No %s packages available for %s" %
-                      (" or ".join(arches), koji.buildLabel(info)))
+
+                errmsg = ("No %s packages available for %s" %
+                          (" or ".join(arches), koji.buildLabel(info)))
+                if suboptions.nofailarch:
+                    warn(errmsg)
+                    return
+                else:
+                    error(errmsg)
             else:
                 error("No packages available for %s" % koji.buildLabel(info))
         for rpm in all_rpms:
