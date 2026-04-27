@@ -8114,7 +8114,7 @@ def get_archive_type(filename=None, type_name=None, type_id=None, strict=False):
         tables=['archivetypes'],
         columns=['id', 'name', 'description', 'extensions', 'compression_type'],
         clauses=[r"%(ext)s IN (SELECT lower(s)"
-                 r" FROM unnest(regexp_split_to_array(extensions, '\s+')) AS s)"],
+                 r" FROM unnest(regexp_split_to_array(extensions, E'\\s+')) AS s)"],
     )
     # match longest extension first. e.g. .tar.gz before .gz
     parts = filename.lower().split('.')
@@ -8167,7 +8167,7 @@ def add_archive_type(name, description, extensions, compression_type=None):
         query = QueryProcessor(
             tables=['archivetypes'], columns=['id'], values={'ext': ext},
             clauses=[r"%(ext)s IN (SELECT lower(s)"
-                     r" FROM unnest(regexp_split_to_array(extensions, '\s+')) AS s)"])
+                     r" FROM unnest(regexp_split_to_array(extensions, E'\\s+')) AS s)"])
         results = query.execute()
         if len(results) > 0:
             raise koji.GenericError(f'file extension {ext} already exists')
