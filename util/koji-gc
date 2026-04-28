@@ -22,7 +22,7 @@ import requests
 
 import koji
 import koji.policy
-from koji.util import LazyDict, LazyValue, to_list
+from koji.util import LazyDict, LazyValue, to_list, multi_fnmatch
 
 
 def get_options():
@@ -757,9 +757,50 @@ class PackagePruneTest(koji.policy.MatchTest):
     field = 'pkgname'
 
 
-class VolumePruneTest(koji.policy.MatchTest):
+class VolumePruneTest(koji.policy.BaseSimpleTest):
     name = 'volume'
-    field = 'volname'
+
+    def run(self, data):
+        args = self.str.split()[1:]
+        volname = data['build'].get('vol_name')
+        if volname is None:
+            return False
+        return multi_fnmatch(volname, args)
+
+
+class DraftPruneTest(koji.policy.BaseSimpleTest):
+    name = 'is_draft'
+
+    def run(self, data):
+        # no args
+        return data['build'].get('draft', False)
+
+
+class DraftSupersededTest(koji.policy.BaseSimpleTest):
+    name = "draft_superseded"
+
+    def run(self, data):
+        # no args
+        build = data['build']
+        if not build.get('draft', False):
+            # not a draft
+            return False
+        try:
+            promoted = session.get_promoted_build(build['id'])
+        except Exception:
+            return False
+        return bool(promoted)
+
+
+class CGMatchAnyTest(koji.policy.BaseSimpleTest):
+    name = 'cg_match_any'
+
+    def run(self, data):
+        args = self.str.split()[1:]
+        cg_name = data['build'].get('cg_name')
+        if cg_name is None:
+            return False
+        return multi_fnmatch(cg_name, args)
 
 
 class SigPruneTest(koji.policy.BaseSimpleTest):
@@ -984,9 +1025,15 @@ def handle_prune():
                     'nvr': nvr,
                 }
                 data = LazyDict(data)
-                data['keys'] = LazyValue(get_build_sigs, (entry['build_id'],), {'cache': True})
-                data['volname'] = LazyValue(lambda x: session.getBuild(x).get('volume_name'),
-                                            (entry['build_id'],), cache=True)
+                data['keys'] = LazyValue(
+                    func=get_build_sigs,
+                    args=(entry['build_id'],),
+                    # get_build_sigs does its own caching
+                    kwargs={'cache': True})
+                data['build'] = LazyValue(
+                    func=lambda x: session.getBuild(x),
+                    args=(entry['build_id'],),
+                    cache=True)
                 data['tags'] = LazyValue(session.listTags, (entry['build_id'],), cache=True)
                 build_ids[nvr] = entry['build_id']
                 action = policies.apply(data)

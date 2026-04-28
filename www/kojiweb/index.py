@@ -1269,20 +1269,8 @@ def buildinfo(environ, buildID):
     # For draft builds, find the promoted build with the same target NVR
     promoted_build = None
     if build.get('draft'):
-        # Parse the target release from the draft release
-        # Draft release format: target_release,draft_<build_id>
         try:
-            target_release = koji.parse_target_release(build['release'])
-            # Query for a non-draft build with the same name, version, and target release
-            target_build_query = {
-                'name': build['name'],
-                'version': build['version'],
-                'release': target_release
-            }
-            result = server.getBuild(target_build_query, strict=False)
-            # Verify that the returned build is indeed a non-draft build
-            if result and not result.get('draft'):
-                promoted_build = result
+            promoted_build = server.getPromotedBuild(build['id'])
         except Exception:
             # If parsing fails or query fails, promoted_build remains None
             pass

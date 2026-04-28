@@ -4753,6 +4753,23 @@ def get_build(buildInfo, strict=False):
     return result
 
 
+def get_promoted_build(build):
+    binfo = get_build(build, strict=True)
+    if not binfo['draft']:
+        return None
+    target_release = koji.parse_target_release(binfo['release'])
+    target_build_query = {
+        'name': binfo['name'],
+        'version': binfo['version'],
+        'release': target_release
+    }
+    result = get_build(target_build_query, strict=False)
+    if result and result['draft']:
+        # should not be possible
+        raise koji.GenericError(f'Draft build at promotion target {result["nvr"]}')
+    return result
+
+
 def get_build_logs(build):
     """Return a list of log files for the given build
 
@@ -10476,6 +10493,25 @@ class IsDraftTest(koji.policy.BaseSimpleTest):
         return False
 
 
+class DraftSupersededTest(koji.policy.BaseSimpleTest):
+    """Check if a draft build has been superseded"""
+    name = "draft_superseded"
+
+    def run(self, data):
+        if 'build' not in data:
+            # this test only makes sense for policies that deal with an existing build
+            return False
+        build = get_build(data['build'])
+        if not build.get('draft', False):
+            # not a draft
+            return False
+        try:
+            promoted = get_promoted_build(build['id'])
+        except Exception:
+            return False
+        return bool(promoted)
+
+
 class UserInGroupTest(koji.policy.BaseSimpleTest):
     """Check if user is in group(s)
 
@@ -12511,6 +12547,7 @@ class RootExports(object):
     listTags = staticmethod(list_tags)
 
     getBuild = staticmethod(get_build)
+    getPromotedBuild = staticmethod(get_promoted_build)
     getBuildLogs = staticmethod(get_build_logs)
     getNextRelease = staticmethod(get_next_release)
     getMavenBuild = staticmethod(get_maven_build)
