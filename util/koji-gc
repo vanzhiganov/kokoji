@@ -785,10 +785,7 @@ class DraftSupersededTest(koji.policy.BaseSimpleTest):
         if not build.get('draft', False):
             # not a draft
             return False
-        try:
-            promoted = session.get_promoted_build(build['id'])
-        except Exception:
-            return False
+        promoted = session.getPromotedBuild(build['id'], safe=True)
         return bool(promoted)
 
 

@@ -1269,11 +1269,8 @@ def buildinfo(environ, buildID):
     # For draft builds, find the promoted build with the same target NVR
     promoted_build = None
     if build.get('draft'):
-        try:
-            promoted_build = server.getPromotedBuild(build['id'])
-        except Exception:
-            # If parsing fails or query fails, promoted_build remains None
-            pass
+        promoted_build = server.getPromotedBuild(build['id'], safe=True)
+        # TODO use safe=False and report problem without dying here
     values['promoted_build'] = promoted_build
 
     tags = server.listTags(build['id'])

@@ -4753,11 +4753,21 @@ def get_build(buildInfo, strict=False):
     return result
 
 
-def get_promoted_build(build):
-    binfo = get_build(build, strict=True)
-    if not binfo['draft']:
+def get_promoted_build(build, safe=False):
+    # avoiding the common "strict" param because there are too many interpretations
+    binfo = get_build(build, strict=(not safe))
+    if not binfo or not binfo['draft']:
         return None
-    target_release = koji.parse_target_release(binfo['release'])
+    try:
+        target_release = koji.parse_target_release(binfo['release'])
+    except Exception:
+        # shouldn't happen
+        msg = f'Invalid draft release: {binfo["nvr"]}'
+        if safe:
+            logger.error(msg)
+            return None
+        else:
+            raise koji.GenericError(msg)
     target_build_query = {
         'name': binfo['name'],
         'version': binfo['version'],
@@ -4766,7 +4776,12 @@ def get_promoted_build(build):
     result = get_build(target_build_query, strict=False)
     if result and result['draft']:
         # should not be possible
-        raise koji.GenericError(f'Draft build at promotion target {result["nvr"]}')
+        msg = f'Draft build at promotion target {result["nvr"]}'
+        if safe:
+            logger.error(msg)
+            return None
+        else:
+            raise koji.GenericError(msg)
     return result
 
 
@@ -10505,10 +10520,7 @@ class DraftSupersededTest(koji.policy.BaseSimpleTest):
         if not build.get('draft', False):
             # not a draft
             return False
-        try:
-            promoted = get_promoted_build(build['id'])
-        except Exception:
-            return False
+        promoted = get_promoted_build(build['id'], safe=True)
         return bool(promoted)
 
 
