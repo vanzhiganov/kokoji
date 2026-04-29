@@ -372,6 +372,86 @@ class TestBuildTypeTest(unittest.TestCase):
         self.get_build_type.assert_not_called()
 
 
+class TestIsDraftTest(unittest.TestCase):
+
+    def setUp(self):
+        self.get_build = mock.patch('kojihub.kojihub.get_build').start()
+        self.test = kojihub.IsDraftTest('is_draft')
+
+    def tearDown(self):
+        mock.patch.stopall()
+
+    def test_draft_field(self):
+        data = {'draft': True}
+        self.assertTrue(self.test.run(data))
+
+        data = {'draft': False}
+        self.assertFalse(self.test.run(data))
+
+        self.get_build.assert_not_called()
+
+    def test_build_field(self):
+        data = {'build': 'BUILD'}
+
+        self.get_build.return_value = {'draft': True}
+        self.assertTrue(self.test.run(data))
+
+        self.get_build.return_value = {'draft': False}
+        self.assertFalse(self.test.run(data))
+
+    def test_no_build(self):
+        data = {}
+        self.assertFalse(self.test.run(data))
+        self.get_build.assert_not_called()
+
+
+class TestDraftSupersededTest(unittest.TestCase):
+
+    def setUp(self):
+        self.get_build = mock.patch('kojihub.kojihub.get_build').start()
+        self.get_promoted_build = mock.patch('kojihub.kojihub.get_promoted_build').start()
+        self.test = kojihub.DraftSupersededTest('draft_superseded')
+
+    def tearDown(self):
+        mock.patch.stopall()
+
+    def test_no_build_data(self):
+        data = {}
+        self.assertFalse(self.test.run(data))
+        self.get_build.assert_not_called()
+        self.get_promoted_build.assert_not_called()
+
+    def test_no_build(self):
+        data = {'build': 'missing'}
+        self.get_build.return_value = None
+        self.assertFalse(self.test.run(data))
+        self.get_build.assert_called_once()
+        self.get_promoted_build.assert_not_called()
+
+    def test_not_a_draft(self):
+        data = {'build': 'BUILD'}
+        self.get_build.return_value = {'draft': False}
+        self.assertFalse(self.test.run(data))
+        self.get_build.assert_called_once()
+        self.get_promoted_build.assert_not_called()
+
+    def test_not_promoted(self):
+        data = {'build': 'BUILD'}
+        self.get_build.return_value = {'draft': True, 'id': 100}
+        self.get_promoted_build.return_value = None
+        self.assertFalse(self.test.run(data))
+        self.get_build.assert_called_once()
+        self.get_promoted_build.assert_called_once
+
+    def test_promoted(self):
+        data = {'build': 'BUILD'}
+        self.get_build.return_value = {'draft': True, 'id': 100}
+        self.get_promoted_build.return_value = {'id': 101, 'draft': False}
+        self.assertTrue(self.test.run(data))
+        self.get_build.assert_called_once()
+        self.get_promoted_build.assert_called_once
+
+
 class TestImportedTest(unittest.TestCase):
     def setUp(self):
         self.list_rpms = mock.patch('kojihub.kojihub.list_rpms').start()
