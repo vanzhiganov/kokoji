@@ -10517,7 +10517,7 @@ class DraftSupersededTest(koji.policy.BaseSimpleTest):
             # this test only makes sense for policies that deal with an existing build
             return False
         build = get_build(data['build'])
-        if not build.get('draft', False):
+        if not build or not build.get('draft', False):
             # not a draft
             return False
         promoted = get_promoted_build(build['id'], safe=True)
