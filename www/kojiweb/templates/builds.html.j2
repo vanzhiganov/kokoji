@@ -10,9 +10,9 @@ Latest
 #elif state != None
 {{ util.stateName(state)|capitalize }}
 #endif
-#if draft is false
+#if draft is sameas false
 Nondraft
-#elif draft is true
+#elif draft
 Draft
 #endif
 #if type
@@ -81,8 +81,8 @@ in tag <a href="taginfo?tagID={{ tag.id }}">{{ tag.name }}</a>
         <td>
         <select name="type" class="filterlist" onchange="javascript: window.location='builds?draft=' + this.value + '{{ util.passthrough_except('draft') }}';">
           <option value="all" {{ 'selected' if draft is none else '' }}>all</option>
-          <option value="1" {{ 'selected' if draft is true else '' }}>yes</option>
-          <option value="0" {{ 'selected' if draft is false else '' }}>no</option>
+          <option value="1" {{ 'selected' if draft else '' }}>yes</option>
+          <option value="0" {{ 'selected' if draft is sameas false else '' }}>no</option>
         </select>
         </td>
         <td>
