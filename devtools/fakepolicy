@@ -110,6 +110,7 @@ def get_args():
     subp.add_argument('tag', help='select tag')
     subp.add_argument('build', help='select build')
     subp.add_argument('--fromtag', help='select from tag (i.e. move)')
+    subp.add_argument('--by-tag-subtask', action='store_true', help='mark operation as by_tag_subtask')
     subp.set_defaults(func=tag_build_params)
 
     subp = subparsers.add_parser('move-build', help='simulate policy for moving a build')
@@ -350,6 +351,9 @@ def tag_build_params(args, session):
     # kojihub is a bit inconsistent about the data passed (e.g. id vs name vs dict)
     # we mimic the main tagBuild handler
     data = {'tag': tinfo['id'], 'build': binfo['id'], 'fromtag': fromtag, 'operation': operation}
+
+    if args.by_tag_subtask:
+        data['by_tag_subtask'] = True
 
     return policy, data
 
