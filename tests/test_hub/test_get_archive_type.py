@@ -73,7 +73,7 @@ class TestGetArchiveType(DBQueryTestCase):
         self.assertEqual(query.joins, None)
         _clauses = [
             "%(ext)s IN (SELECT lower(s) FROM "
-            "unnest(regexp_split_to_array(extensions, '\\s+')) AS s)"]
+            r"unnest(regexp_split_to_array(extensions, E'\\s+')) AS s)"]
         self.assertEqual(query.clauses, _clauses)
         self.assertEqual(query.columns,
                          ['compression_type', 'description', 'extensions', 'id', 'name'])
@@ -97,7 +97,7 @@ class TestGetArchiveType(DBQueryTestCase):
         self.assertEqual(query.joins, None)
         _clauses = [
             "%(ext)s IN (SELECT lower(s) FROM "
-            "unnest(regexp_split_to_array(extensions, '\\s+')) AS s)"]
+            r"unnest(regexp_split_to_array(extensions, E'\\s+')) AS s)"]
         self.assertEqual(query.clauses, _clauses)
         self.assertEqual(query.columns,
                          ['compression_type', 'description', 'extensions', 'id', 'name'])
@@ -120,7 +120,7 @@ class TestGetArchiveType(DBQueryTestCase):
         self.assertEqual(query.joins, None)
         _clauses = [
             "%(ext)s IN (SELECT lower(s) FROM "
-            "unnest(regexp_split_to_array(extensions, '\\s+')) AS s)"]
+            r"unnest(regexp_split_to_array(extensions, E'\\s+')) AS s)"]
         self.assertEqual(query.clauses, _clauses)
         self.assertEqual(query.columns,
                          ['compression_type', 'description', 'extensions', 'id', 'name'])
@@ -141,7 +141,7 @@ class TestGetArchiveType(DBQueryTestCase):
         self.assertEqual(query.joins, None)
         _clauses = [
             "%(ext)s IN (SELECT lower(s) FROM "
-            "unnest(regexp_split_to_array(extensions, '\\s+')) AS s)"]
+            r"unnest(regexp_split_to_array(extensions, E'\\s+')) AS s)"]
         self.assertEqual(query.clauses, _clauses)
         self.assertEqual(query.columns,
                          ['compression_type', 'description', 'extensions', 'id', 'name'])
