@@ -463,6 +463,28 @@ all :: {
         action = obj.apply(data)
         self.assertEqual(action, 'OK')
 
+    def test_flag_leaks(self):
+        tests = koji.policy.findSimpleTests(koji.policy.__dict__)
+        data = {}
+
+        policy = '''
+        flagged bar :: BAD
+        flagged foo :: BAD
+        flagged baz :: BAD
+        true :: flag foo
+        false :: flag bar
+        flagged bar :: BAD
+        flagged foo :: OK
+        flagged baz :: BAD
+        '''
+        obj = koji.policy.SimpleRuleSet(policy.splitlines(), tests)
+        action = obj.apply(data)
+        self.assertEqual(action, 'OK')
+
+        # run again, to make sure flag does not persist
+        action = obj.apply(data)
+        self.assertEqual(action, 'OK')
+
     def test_complex_policy(self):
         tests = koji.policy.findSimpleTests(koji.policy.__dict__)
         data = {}

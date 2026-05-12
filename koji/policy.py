@@ -514,7 +514,7 @@ class RuleChecker(object):
 
     def __init__(self, ruleset, data):
         self.ruleset = ruleset
-        self.data = data
+        self.data = data.copy()
         self.logger = logging.getLogger('koji.policy')
         self.lastrule = None
         self.lastaction = None
