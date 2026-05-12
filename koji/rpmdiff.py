@@ -51,6 +51,12 @@ class Rpmdiff:
 
     # {fname : (size, mode, mtime, flags, dev, inode,
     #          nlink, state, vflags, user, group, digest)}
+    # Notes:
+    #   - field 5 (inode) is not considered for backwards compatibility
+    #   - the N code maps to nlink, not inode
+    #   - the L code maps to state, not nlink
+    #   - field 7 (state) is not part of the rpm file, but is included for compatibility
+    #   - see https://github.com/rpm-software-management/rpmlint/issues/1465
     __FILEIDX = [['S', 0],
                  ['M', 1],
                  ['5', 11],
@@ -93,8 +99,8 @@ class Rpmdiff:
         else:
             ignore = set(ignore)
 
-        old = self.__load_pkg(old)
-        new = self.__load_pkg(new)
+        old = self._load_pkg(old)
+        new = self._load_pkg(new)
 
         # Compare single tags
         for tag in self.TAGS:
@@ -115,15 +121,23 @@ class Rpmdiff:
         for tag in self.PRCO:
             self.__comparePRCOs(old, new, tag)
 
-        # compare the files
+        # list of file indexes to compare
+        indexes = [ofs for (code, ofs) in self.__FILEIDX if code not in ignore]
 
-        old_files_dict = self.__getFilesDict(old)
-        new_files_dict = self.__getFilesDict(new)
+        # filter the data to only these indexes
+        old_files_dict = self._getFilesDict(old)
+        new_files_dict = self._getFilesDict(new)
+        old_files_filtered = {}
+        new_files_filtered = {}
+        for f in old_files_dict:
+            old_files_filtered[f] = dict([(k, old_files_dict[f][k]) for k in indexes])
+        for f in new_files_dict:
+            new_files_filtered[f] = dict([(k, new_files_dict[f][k]) for k in indexes])
 
         files = sorted(set(itertools.chain(six.iterkeys(old_files_dict),
                                            six.iterkeys(new_files_dict))))
-        self.old_data['files'] = old_files_dict
-        self.new_data['files'] = new_files_dict
+        self.old_data['files'] = old_files_filtered
+        self.new_data['files'] = new_files_filtered
 
         for f in files:
             diff = 0
@@ -140,9 +154,6 @@ class Rpmdiff:
                 for entry in self.__FILEIDX:
                     # entry = [character, value]
                     if entry[0] in ignore:
-                        # erase fields which are ignored
-                        old_file[entry[1]] = None
-                        new_file[entry[1]] = None
                         format = format + '.'
                     elif old_file[entry[1]] != new_file[entry[1]]:
                         format = format + entry[0]
@@ -165,7 +176,7 @@ class Rpmdiff:
         self.result.append((format, data))
 
     # load a package from a file or from the installed ones
-    def __load_pkg(self, filename):
+    def _load_pkg(self, filename):
         ts = rpm.ts()
         f = os.open(filename, os.O_RDONLY)
         hdr = ts.hdrFromFdno(f)
@@ -225,7 +236,7 @@ class Rpmdiff:
                            (self.ADDED, tagname, newentry[0],
                             self.sense2str(newentry[1]), newentry[2]))
 
-    def __getFilesDict(self, hdr):
+    def _getFilesDict(self, hdr):
         if not hasattr(rpm, 'files'):
             # fall back to file iterator
             return self.__fileIteratorToDict(hdr.fiFromHeader())
