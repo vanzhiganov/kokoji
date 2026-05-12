@@ -17,6 +17,8 @@ import koji
 from kojihub import auth, kojixmlrpc, kojihub, db
 from koji.context import context
 from koji.util import dslice, extract_build_task
+from koji.tasks import parse_task_params
+from koji.daemon import SCM
 import koji.xmlrpcplus
 
 
@@ -92,7 +94,7 @@ def get_args():
     subp = subparsers.add_parser('make-task', help='simulate policies for make_task')
     subp.add_argument('--policy', help='select policy', default='channel')
     subp.add_argument('--req-channel', help='simulate a requested channel', metavar='CHANNEL')
-    subp.add_argument('task', help='select task')
+    subp.add_argument('task', type=int, help='select task')
     subp.set_defaults(func=make_task_params)
 
     subp = subparsers.add_parser('promote-build',
@@ -133,6 +135,15 @@ def get_args():
     subp.add_argument('-m', '--metadata', help='fetch data from json file')
     subp.add_argument('--metadata-only', help='', action='store_true', default=False)
     subp.set_defaults(func=cg_import_params)
+
+    subp = subparsers.add_parser('build-from-scm', help='simulate build_from_scm policy check')
+    subp.add_argument('-t', '--task', type=int, help='fetch data from existing task')
+    subp.add_argument('-u', '--url', help='specify scm url')
+    subp.add_argument('-o', '--owner', help='specify task owner')
+    subp.add_argument('-c', '--channel', help='specify task channel')
+    subp.add_argument('--scratch', action='store_true', help='specify scratch=True')
+    subp.add_argument('--no-scratch', action='store_false', dest='scratch', help='specify scratch=False')
+    subp.set_defaults(func=build_from_scm_params)
     ## end subcommands ##
 
     args = parser.parse_args()
@@ -437,6 +448,53 @@ def cg_import_params(args, session):
 
     if args.metadata_only:
         data['metadata_only'] = True
+
+    return policy, data
+
+
+def build_from_scm_params(args, session):
+    # simulate policy for adding a package list entry
+    policy = 'build_from_scm'
+
+    task_params = None
+    if args.task:
+        task = args.task  # should be int
+        tinfo = session.getTaskInfo(task, request=True, strict=False)
+        if tinfo['method'] != 'buildSRPMFromSCM':
+            # TODO extend
+            raise NotImplementedError('Only buildSRPMFrom SCM is supported yet')
+        task_params = parse_task_params(tinfo['method'], tinfo['request'])
+
+    if args.url:
+        url = args.url
+    elif task_params:
+        url = task_params['url']
+    else:
+        raise Exception('No url or task specified')
+
+    extra = {}
+    if task_params:
+        extra['user_id'] = tinfo['owner']
+        extra['channel'] = session.getChannel(tinfo['channel_id'], strict=True)
+        extra['scratch'] = task_params.get('opts', {}).get('scratch')
+    if args.scratch is not None:
+        extra['scratch'] = args.scratch
+    if args.owner:
+        extra['user_id'] = session.getUser(args.owner, strict=True)['id']
+    if args.channel:
+        extra['channel'] = session.getChannel(args.channel, strict=True)
+
+    # generate policy data similar to assert_allowed_by_policy
+    scm = SCM(url)
+    scminfo = scm.get_info()
+    data = {}
+    for k in scminfo:
+        v = scminfo[k]
+        if not k.startswith('scm_'):
+            k = 'scm_' + k
+        data[k] = v
+    # and add the normal extra data
+    data.update(extra)
 
     return policy, data
 
