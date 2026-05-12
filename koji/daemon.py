@@ -262,7 +262,8 @@ class SCM(object):
 
     def get_info(self, keys=None):
         if keys is None:
-            keys = ["url", "scheme", "user", "host", "repository", "module", "revision", "scmtype"]
+            keys = ["url", "scheme", "user", "host", "repository", "module",
+                    "revision", "scmtype", "has_escapes", "is_normalized"]
         return dslice(vars(self), keys)
 
     def _parse_url(self, allow_password=False):
@@ -308,7 +309,16 @@ class SCM(object):
             raise koji.GenericError(
                 'Unable to parse SCM URL: %s . Could not find the path element.' % self.url)
 
-        path = os.path.normpath(path)
+        # normalize path
+        _path = urllib.parse.unquote(path)  # e.g. for /%3e%3e/
+        self.has_escapes = (_path != path)
+        n_path = os.path.normpath(_path)
+        self.is_normalized = (n_path == _path)
+        # re-escape if we need to and underlying scm also uses urls
+        if self.has_escapes and not scheme.startswith('cvs'):
+            path = urllib.parse.quote(n_path)
+        else:
+            path = n_path
 
         # path and query should not end with /
         path = path.rstrip('/')

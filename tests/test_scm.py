@@ -16,6 +16,10 @@ policy = {
         match scm_host goodserver :: allow none
         match scm_host badserver :: deny
         match scm_host maybeserver && match scm_repository /badpath/* :: deny
+        match scm_host maybeserver2 :: {
+            match scm_repository /goodpath/* :: allow
+            all :: deny
+        }
         all :: allow
     ''',
     'two': '''
@@ -133,10 +137,13 @@ class TestSCM(unittest.TestCase):
             !badserver:*
             !maybeserver:/badpath/*
             maybeserver:*:no
+            maybeserver2:/goodpath/*:no
+            !maybeserver2:*
             '''
         good = [
             "git://goodserver/path1#1234",
             "git+ssh://maybeserver/path1#1234",
+            "git+ssh://maybeserver2/goodpath/my-repo#1234",
         ]
         bad = [
             "cvs://badserver/projects/42#ref",
@@ -149,6 +156,11 @@ class TestSCM(unittest.TestCase):
             "git://maybeserver/goodpath/../badpath/project#1234",
             "git://maybeserver/goodpath/..//badpath/project#1234",
             "git://maybeserver/..//badpath/project#1234",
+            "git+ssh://maybeserver2/not-good-path/my-repo#1234",
+            "git+ssh://maybeserver2/badpath/my-repo#1234",
+            "git+ssh://maybeserver2/goodpath/../badpath/my-repo#1234",
+            "git+https://maybeserver2/goodpath/../badpath/my-repo#1234",
+            "git+https://maybeserver2/goodpath/%2e%2e/badpath/my-repo#1234",
         ]
         for url in good:
             scm = SCM(url)
@@ -259,6 +271,7 @@ class TestSCM(unittest.TestCase):
         good = [
             "git://goodserver/path1#1234",
             "git+ssh://maybeserver/path1#1234",
+            "git+ssh://maybeserver2/goodpath/my-repo#1234",
         ]
         bad = [
             "cvs://badserver/projects/42#ref",
@@ -271,6 +284,13 @@ class TestSCM(unittest.TestCase):
             "git://maybeserver/goodpath/../badpath/project#1234",
             "git://maybeserver/goodpath/..//badpath/project#1234",
             "git://maybeserver/..//badpath/project#1234",
+            "git+ssh://maybeserver2/not-good-path/my-repo#1234",
+            "git+ssh://maybeserver2/badpath/my-repo#1234",
+            "git+ssh://maybeserver2/goodpath/../badpath/my-repo#1234",
+            "git+https://maybeserver2/goodpath/%2e%2e/badpath/my-repo#1234",
+            "git+https://maybeserver2/goodpath/.%2e/badpath/my-repo#1234",
+            "git+https://maybeserver2/goodpath/%2E.%2fbadpath/my-repo#1234",
+            "git+https://maybeserver2/goodpath/%2E%2E/badpath/my-repo#1234",
         ]
         session = mock.MagicMock()
         session.evalPolicy.side_effect = FakePolicy(policy['one']).evalPolicy
