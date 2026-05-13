@@ -6575,12 +6575,20 @@ def new_build(data, strict=False):
     if old_binfo:
         old_str = '%(nvr)s (id=%(id)s)' % old_binfo
         if data['draft']:
+            # don't allow new drafts for existing non-draft builds
             raise koji.GenericError(f'Target build already exists: {old_str}')
         elif strict:
             raise koji.GenericError(f'Existing build found: {old_str}')
         recycle_build(old_binfo, data)
         # Raises exception if there is a problem
         return old_binfo['id']
+    elif data['draft']:
+        # attempt to recycle draft builds in narrow cases
+        old_binfo = _get_old_draft_build(data)
+        if old_binfo:
+            recycle_build(old_binfo, data)
+            return old_binfo['id']
+
     koji.plugin.run_callbacks('preBuildStateChange', attribute='state', old=None,
                               new=data['state'], info=data)
 
@@ -6609,6 +6617,46 @@ def new_build(data, strict=False):
                               new=data['state'], info=new_binfo)
     # return build_id
     return data['id']
+
+
+def _get_old_draft_build(data):
+    """Get existing draft build matching data"""
+    # This is a helper function for new_build()
+
+    if not data['draft']:
+        # shouldn't happen
+        return None
+
+    if not data['task_id']:
+        # if we're not being initialized by a task, create a fresh draft
+        return None
+
+    if data['state'] != koji.BUILD_STATES['BUILDING']:
+        # we're not being called via host.initBuild
+        return None
+
+    qdata = data.copy()
+    qdata['_rel_pattern'] = f'{data["release"]},draft_[0-9]+'
+
+    # otherwise we're looking for a matching draft
+    # e.g. the build task was restarted
+    query = QueryProcessor(tables=['build'], columns=['build.id'],
+                           clauses=['package.name=%(name)s',
+                                    'build.version=%(version)s',
+                                    'build.release ~ %(_rel_pattern)s',
+                                    'build.task_id=%(task_id)s',
+                                    'build.state=%(state)s'],  # BUILDING
+                           joins=['package ON build.pkg_id=package.id'],
+                           opts={'order': '-build.id'},
+                           values=qdata)
+
+    # we don't normally expect more than one match, but just in case
+    r = query.execute()
+    if not r:
+        return None
+    else:
+        # there should be only one, but pick the newest if not
+        return get_build(r[0]['build.id'])
 
 
 def recycle_build(old, data):
