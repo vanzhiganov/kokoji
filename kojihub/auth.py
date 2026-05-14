@@ -532,7 +532,7 @@ class Session(object):
         # use sha? sha.new(phrase).hexdigest()
 
         if renew and self.id is not None:
-            # just update key
+            # just update the existing session
             session_id = self.id
             self.key = key
             if self.master:
@@ -546,8 +546,15 @@ class Session(object):
 
             update = UpdateProcessor('sessions',
                                      clauses=['id=%(id)i'],
-                                     rawdata={'update_time': 'NOW()', 'renew_time': 'NOW()'},
-                                     data={'key': self.key, 'expired': False},
+                                     rawdata={
+                                         'update_time': 'NOW()',
+                                         'renew_time': 'NOW()',
+                                     },
+                                     data={
+                                         'key': self.key,
+                                         'expired': False,
+                                         'callnum': None,
+                                     },
                                      values={'id': self.id})
             update.execute()
         else:
