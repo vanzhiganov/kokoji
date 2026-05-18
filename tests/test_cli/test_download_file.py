@@ -45,11 +45,12 @@ class TestDownloadFile(unittest.TestCase):
         actual = self.stdout.getvalue()
         expected = 'Downloading: %s\n' % self.tempdir
         self.assertMultiLineEqual(actual, expected)
+        # Check errno (21 = EISDIR) and use os.strerror for locale-independent message check
         if isinstance(cm.exception, tuple):
             self.assertEqual(cm.exception[0], 21)
-            self.assertEqual(cm.exception[1], 'Is a directory')
+            self.assertEqual(cm.exception[1], os.strerror(21))
         else:
-            self.assertEqual(cm.exception.args, (21, 'Is a directory'))
+            self.assertEqual(cm.exception.args, (21, os.strerror(21)))
 
     @mock.patch('os.utime')
     @mock.patch('os.unlink')
