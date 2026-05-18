@@ -52,15 +52,11 @@ class TestGetOptions(unittest.TestCase):
                    '--topdir', 'path/topdir', '--weburl', 'http://serverkoji.com/koji',
                    '--topurl', 'http://serverkoji.com/kojifiles', '--help-commands',
                    '--keytab', 'testkeytab']
-        orig = optparse.OptionParser
-
         def gargs(self, args):
             return options
 
-        original_get_args = orig._get_args
-        orig._get_args = gargs
-        opts, cmd, args = cli.get_options()
-        orig._get_args = original_get_args
+        with mock.patch.object(optparse.OptionParser, '_get_args', gargs):
+            opts, cmd, args = cli.get_options()
         self.assertEqual(opts.user, 'kojiadmin')
         self.assertEqual(opts.password, 'testpass')
         self.assertEqual(opts.profile, 'brew')
@@ -90,15 +86,11 @@ class TestGetOptions(unittest.TestCase):
         options = ['-p', 'brew', '-c', 'path/to/config', '-d', '-q', '-s',
                    'https://serverkoji.com/kojihub']
 
-        orig = optparse.OptionParser
-
         def gargs(self, args):
             return options
 
-        original_get_args = orig._get_args
-        orig._get_args = gargs
-        opts, cmd, args = cli.get_options()
-        orig._get_args = original_get_args
+        with mock.patch.object(optparse.OptionParser, '_get_args', gargs):
+            opts, cmd, args = cli.get_options()
         self.assertEqual(opts.profile, 'brew')
         self.assertEqual(opts.config, 'path/to/config')
         self.assertEqual(opts.debug, True)
