@@ -22,6 +22,7 @@ class TestDownloadBuild(utils.CliTestCase):
 
 Downloads files from the specified build entry
 Note: scratch builds do not have build entries. Use download-task for those
+
 (Specify the --help global option for a list of other help options)
 
 %s: error: {message}
@@ -283,6 +284,7 @@ Note: scratch builds do not have build entries. Use download-task for those
 
 Downloads files from the specified build entry
 Note: scratch builds do not have build entries. Use download-task for those
+
 (Specify the --help global option for a list of other help options)
 
 Options:

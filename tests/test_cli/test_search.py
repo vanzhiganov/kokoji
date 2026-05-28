@@ -17,7 +17,9 @@ class TestSearch(utils.CliTestCase):
 
     def setUp(self):
         self.error_format = """Usage: %s search [options] <search_type> <pattern>
+
 Available search types: package, build, tag, target, user, host, rpm, maven, win
+
 (Specify the --help global option for a list of other help options)
 
 %s: error: {message}
@@ -83,7 +85,9 @@ Available search types: package, build, tag, target, user, host, rpm, maven, win
         self.assert_help(
             anon_handle_search,
             """Usage: %s search [options] <search_type> <pattern>
+
 Available search types: package, build, tag, target, user, host, rpm, maven, win
+
 (Specify the --help global option for a list of other help options)
 
 Options:

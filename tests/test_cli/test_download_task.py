@@ -61,6 +61,7 @@ class TestDownloadTask(utils.CliTestCase):
         self.parent_task_info = {'id': self.parent_task_id, 'method': 'buildArch',
                                  'arch': 'taskarch', 'state': 2, 'parent': None}
         self.error_format = """Usage: %s download-task <task_id>
+
 Default behavior without --all option downloads .rpm files only for build and buildArch tasks.
 
 (Specify the --help global option for a list of other help options)
@@ -417,6 +418,7 @@ Default behavior without --all option downloads .rpm files only for build and bu
         self.assert_help(
             anon_handle_download_task,
             """Usage: %s download-task <task_id>
+
 Default behavior without --all option downloads .rpm files only for build and buildArch tasks.
 
 (Specify the --help global option for a list of other help options)
