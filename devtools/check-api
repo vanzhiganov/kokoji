@@ -9,7 +9,7 @@ from collections import OrderedDict
 
 # import koji code from our checkout
 if os.path.exists(__file__):
-    kojitop = os.path.dirname(os.path.dirname(__file__))
+    kojitop = os.path.normpath(os.path.dirname(__file__) + '/..')
 else:
     # e.g. <stdin>
     kojitop = os.getcwd()

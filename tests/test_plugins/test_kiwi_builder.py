@@ -19,6 +19,7 @@ class TestKiwiBuildTask(unittest.TestCase):
     def SCM(self, *args, **kwargs):
         scm = mock.MagicMock()
         scm.assert_allowed = mock.MagicMock()
+        scm.checkout.return_value = '/tmp/NO-SUCH-PATH'
         self.scm.append(scm)
         return scm
 

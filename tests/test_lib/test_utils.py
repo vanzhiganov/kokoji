@@ -1521,7 +1521,7 @@ class TestRmtree(unittest.TestCase):
         self.assertEqual(rmtree_nofork.call_args[0][0], path)
         _exit.assert_called_once()
         if mock.__package__ == 'unittest':
-            logger = rmtree_nofork.call_args.kwargs['logger']
+            logger = rmtree_nofork.call_args[1]['logger']
         else:
             logger = rmtree_nofork.call_args[1]['logger']
 

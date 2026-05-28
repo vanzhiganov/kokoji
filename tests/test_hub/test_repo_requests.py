@@ -599,8 +599,8 @@ class TestQueueTask(BaseTest):
         repos.repo_queue_task(req)
 
         self.make_task.assert_called_once()
-        method, args = self.make_task.call_args.args
-        taskopts = self.make_task.call_args.kwargs
+        method, args = self.make_task.call_args[0]
+        taskopts = self.make_task.call_args[1]
         self.assertEqual(method, 'newRepo')
         self.assertEqual(taskopts['channel'], 'createrepo')
         params = koji.tasks.parse_task_params('newRepo', args)
@@ -633,7 +633,7 @@ class TestUpdateEndEvents(BaseTest):
         self.tag_last_change_event.assert_not_called()
         expect = [{'id': 1, 'end_event': 1001}]
         self.BulkUpdateProcessor.assert_called_once()
-        updates = self.BulkUpdateProcessor.call_args.kwargs['data']
+        updates = self.BulkUpdateProcessor.call_args[1]['data']
         self.assertEqual(updates, expect)
 
     def test_event_cache(self):
@@ -662,7 +662,7 @@ class TestUpdateEndEvents(BaseTest):
         self.assertEqual(self.tag_first_change_event.mock_calls, expect_calls)
         expect_updates = [{'id': 4, 'end_event': 1000}]
         self.BulkUpdateProcessor.assert_called_once()
-        updates = self.BulkUpdateProcessor.call_args.kwargs['data']
+        updates = self.BulkUpdateProcessor.call_args[1]['data']
         self.assertEqual(updates, expect_updates)
 
 
@@ -799,14 +799,14 @@ class TestGetRepo(BaseTest):
         repos.get_repo('TAGID', at_event=101010)
 
         self.RepoQuery.assert_called_once()
-        clauses, fields, qopts = self.RepoQuery.call_args.args
+        clauses, fields, qopts = self.RepoQuery.call_args[0]
         self.assertIn(['create_event', '=', 101010], clauses)
 
     def test_get_repo_min_event(self):
         repos.get_repo('TAGID', min_event=101010)
 
         self.RepoQuery.assert_called_once()
-        clauses, fields, qopts = self.RepoQuery.call_args.args
+        clauses, fields, qopts = self.RepoQuery.call_args[0]
         self.assertIn(['create_event', '>=', 101010], clauses)
 
 
@@ -996,12 +996,12 @@ class TestRequestRepo(BaseTest):
 
         # check all the calls made with the value
         self.get_repo.assert_called_once()
-        ev = self.get_repo.call_args.kwargs['min_event']
+        ev = self.get_repo.call_args[1]['min_event']
         self.assertEqual(ev, last)
-        clauses = self.RepoQueueQuery.call_args_list[0].args[0]
+        clauses = self.RepoQueueQuery.call_args_list[0][0][0]
         self.assertIn(['min_event', '>=', last], clauses)
         self.InsertProcessor.assert_called_once()
-        data = self.InsertProcessor.call_args.kwargs['data']
+        data = self.InsertProcessor.call_args[1]['data']
         self.assertEqual(data['min_event'], last)
 
     def test_request_priority(self):
@@ -1015,7 +1015,7 @@ class TestRequestRepo(BaseTest):
 
         # check all the calls made with the value
         self.InsertProcessor.assert_called_once()
-        data = self.InsertProcessor.call_args.kwargs['data']
+        data = self.InsertProcessor.call_args[1]['data']
         self.assertEqual(data['min_event'], ev + 10)  # tag last change
         self.assertEqual(data['priority'], 25)  # default + 5
 
@@ -1106,12 +1106,12 @@ class TestRequestRepo(BaseTest):
 
         # check all the calls made with the value
         self.get_repo.assert_called_once()
-        ev = self.get_repo.call_args.kwargs['min_event']
+        ev = self.get_repo.call_args[1]['min_event']
         self.assertEqual(ev, last)
-        clauses = self.RepoQueueQuery.call_args_list[0].args[0]
+        clauses = self.RepoQueueQuery.call_args_list[0][0][0]
         self.assertIn(['min_event', '>=', last], clauses)
         self.InsertProcessor.assert_called_once()
-        data = self.InsertProcessor.call_args.kwargs['data']
+        data = self.InsertProcessor.call_args[1]['data']
         self.assertEqual(data['min_event'], last)
 
 
@@ -1253,7 +1253,7 @@ class TestDefaultMinEvent(BaseTest):
         # we should report the ts from the last event, minus lag
         self.assertEqual(ev, 9999)
         self.getLastEvent.assert_called_once()
-        base_ts = self.getLastEvent.call_args.kwargs['before']
+        base_ts = self.getLastEvent.call_args[1]['before']
         self.assertEqual(base_ts, now - 3600)
 
     def test_tag_older(self):
@@ -1269,7 +1269,7 @@ class TestDefaultMinEvent(BaseTest):
         # we should report the ts for the tag, since it is older
         self.assertEqual(ev, 9900)
         self.getLastEvent.assert_called_once()
-        base_ts = self.getLastEvent.call_args.kwargs['before']
+        base_ts = self.getLastEvent.call_args[1]['before']
         self.assertEqual(base_ts, now - 3600)
 
     def test_lag_override(self):
@@ -1285,7 +1285,7 @@ class TestDefaultMinEvent(BaseTest):
         # we should report the ts from the last event, minus lag
         self.assertEqual(ev, 9999)
         self.getLastEvent.assert_called_once()
-        base_ts = self.getLastEvent.call_args.kwargs['before']
+        base_ts = self.getLastEvent.call_args[1]['before']
         self.assertEqual(base_ts, now - 1800)
 
     def test_lag_override_invalid(self):
@@ -1301,7 +1301,7 @@ class TestDefaultMinEvent(BaseTest):
         # we should report the ts from the last event, minus lag
         self.assertEqual(ev, 9999)
         self.getLastEvent.assert_called_once()
-        base_ts = self.getLastEvent.call_args.kwargs['before']
+        base_ts = self.getLastEvent.call_args[1]['before']
         self.assertEqual(base_ts, now - 3600)
 
     def test_no_last_event(self):
@@ -1405,32 +1405,32 @@ class TestExports(BaseTest):
         with self.assertRaises(koji.ActionNotAllowed):
             self.exports.setRequestPriority(99, 1)
         self.set_request_priority.assert_not_called()
-        self.assertEqual(self.assertPerm.call_args.args, ('admin',))
+        self.assertEqual(self.assertPerm.call_args[0], ('admin',))
 
         with self.assertRaises(koji.ActionNotAllowed):
             self.exports.setState(99, 1)
         self.repo_set_state.assert_not_called()
-        self.assertEqual(self.assertPerm.call_args.args, ('repo',))
+        self.assertEqual(self.assertPerm.call_args[0], ('repo',))
 
         with self.assertRaises(koji.ActionNotAllowed):
             self.exports.setExternalRepoData(99, 1)
         self.set_external_repo_data.assert_not_called()
-        self.assertEqual(self.assertPerm.call_args.args, ('repo',))
+        self.assertEqual(self.assertPerm.call_args[0], ('repo',))
 
         with self.assertRaises(koji.ActionNotAllowed):
             self.exports.autoRequests()
         self.do_auto_requests.assert_not_called()
-        self.assertEqual(self.assertPerm.call_args.args, ('repo',))
+        self.assertEqual(self.assertPerm.call_args[0], ('repo',))
 
         with self.assertRaises(koji.ActionNotAllowed):
             self.exports.checkQueue()
         self.check_repo_queue.assert_not_called()
-        self.assertEqual(self.assertPerm.call_args.args, ('repo',))
+        self.assertEqual(self.assertPerm.call_args[0], ('repo',))
 
         with self.assertRaises(koji.ActionNotAllowed):
             self.exports.updateEndEvents()
         self.update_end_events.assert_not_called()
-        self.assertEqual(self.assertPerm.call_args.args, ('repo',))
+        self.assertEqual(self.assertPerm.call_args[0], ('repo',))
 
     def test_with_perm(self):
         # assertPerm does not raise

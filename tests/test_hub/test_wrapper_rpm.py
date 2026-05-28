@@ -102,7 +102,7 @@ class TestWrapperRPM(unittest.TestCase):
         self.exports.wrapperRPM(self.build, self.url, self.target, opts=opts)
 
         self.make_task.assert_called_once()
-        taskargs = self.make_task.call_args.args[1]
+        taskargs = self.make_task.call_args[0][1]
         expect_opts = {'scratch': True}  # repo_id filtered out
         self.assertEqual(taskargs[4], expect_opts)
 

@@ -4,6 +4,7 @@ import shutil
 import tempfile
 import unittest
 
+import koji
 import kojihub
 
 
@@ -16,9 +17,9 @@ class TestImportImageInternal(unittest.TestCase):
         self.Task.return_value.assertHost = mock.MagicMock()
         self.get_build = mock.patch('kojihub.kojihub.get_build').start()
         self.get_archive_type = mock.patch('kojihub.kojihub.get_archive_type').start()
-        self.path_work = mock.patch('koji.pathinfo.work').start()
+        self.pathinfo = koji.PathInfo(self.tempdir)
+        mock.patch('koji.pathinfo', new=self.pathinfo).start()
         self.import_archive = mock.patch('kojihub.kojihub.import_archive').start()
-        self.build = mock.patch('koji.pathinfo.build').start()
         self.get_rpm = mock.patch('kojihub.kojihub.get_rpm').start()
 
     def tearDown(self):
@@ -45,8 +46,7 @@ class TestImportImageInternal(unittest.TestCase):
             'release': 'release',
         }
         self.get_archive_type.return_value = 4
-        self.path_work.return_value = self.tempdir
-        os.makedirs(self.tempdir + "/tasks/1/1")
+        os.makedirs(self.tempdir + "/work/tasks/1/1")
         kojihub.importImageInternal(
             task_id=1, build_info=self.get_build.return_value, imgdata=imgdata)
 
@@ -85,13 +85,11 @@ class TestImportImageInternal(unittest.TestCase):
         self.get_build.return_value = build_info
         self.get_rpm.return_value = rpm
         self.get_archive_type.return_value = 4
-        self.path_work.return_value = self.tempdir
-        self.build.return_value = self.tempdir
         self.import_archive.return_value = {
             'id': 9,
             'filename': self.tempdir + '/foo.archive',
         }
-        workdir = self.tempdir + "/tasks/1/1"
+        workdir = self.tempdir + "/work/tasks/1/1"
         os.makedirs(workdir)
         # Create a log file to exercise that code path
         with open(workdir + '/foo.log', 'w'):
@@ -102,7 +100,7 @@ class TestImportImageInternal(unittest.TestCase):
         # Check that the log symlink made it to where it was supposed to.
         dest = os.readlink(workdir + '/foo.log')
         dest = os.path.abspath(os.path.join(workdir, dest))
-        self.assertEqual(dest, self.tempdir + '/data/logs/image/foo.log')
+        self.assertEqual(dest, self.tempdir + '/packages/name/version/release/data/logs/image/foo.log')
 
         # And.. check all the sql statements
         self.assertEqual(len(cursor.execute.mock_calls), 1)
@@ -135,13 +133,11 @@ class TestImportImageInternal(unittest.TestCase):
         self.context_db.session.host_id = 42
         self.get_build.return_value = build_info
         self.get_archive_type.return_value = 4
-        self.path_work.return_value = self.tempdir
-        self.build.return_value = self.tempdir
         self.import_archive.return_value = {
             'id': 9,
             'filename': self.tempdir + '/foo.archive',
         }
-        workdir = self.tempdir + "/tasks/1/1"
+        workdir = self.tempdir + "/work/tasks/1/1"
         os.makedirs(workdir)
         # Create a log file to exercise that code path
         with open(workdir + '/foo.log', 'w'):
@@ -149,8 +145,8 @@ class TestImportImageInternal(unittest.TestCase):
 
         # Create a same named log file already present
         # This should force the function to add arch to the final path
-        os.makedirs(self.tempdir + '/data/logs/image')
-        with open(self.tempdir + '/data/logs/image/foo.log', 'w'):
+        os.makedirs(self.tempdir + '/packages/name/version/release/data/logs/image')
+        with open(self.tempdir + '/packages/name/version/release/data/logs/image/foo.log', 'w'):
             pass
 
         kojihub.importImageInternal(task_id=1, build_info=build_info, imgdata=imgdata)
@@ -158,7 +154,7 @@ class TestImportImageInternal(unittest.TestCase):
         # Check that the log symlink made it to where it was supposed to.
         dest = os.readlink(workdir + '/foo.log')
         dest = os.path.abspath(os.path.join(workdir, dest))
-        self.assertEqual(dest, self.tempdir + '/data/logs/image/x86_64/foo.log')
+        self.assertEqual(dest, self.tempdir + '/packages/name/version/release/data/logs/image/x86_64/foo.log')
 
     def test_with_livemedia_task(self):
         taskinfo = {'id': 101010, 'method': 'livemedia'}
@@ -182,13 +178,11 @@ class TestImportImageInternal(unittest.TestCase):
         self.context_db.session.host_id = 42
         self.get_build.return_value = build_info
         self.get_archive_type.return_value = 4
-        self.path_work.return_value = self.tempdir
-        self.build.return_value = self.tempdir
         self.import_archive.return_value = {
             'id': 9,
             'filename': self.tempdir + '/foo.archive',
         }
-        workdir = self.tempdir + "/tasks/1/1"
+        workdir = self.tempdir + "/work/tasks/1/1"
         os.makedirs(workdir)
         # Create a log file to exercise that code path
         with open(workdir + '/foo.log', 'w'):
@@ -199,7 +193,7 @@ class TestImportImageInternal(unittest.TestCase):
         # Check that the log symlink made it to where it was supposed to.
         dest = os.readlink(workdir + '/foo.log')
         dest = os.path.abspath(os.path.join(workdir, dest))
-        self.assertEqual(dest, self.tempdir + '/data/logs/image/x86_64/foo.log')
+        self.assertEqual(dest, self.tempdir + '/packages/name/version/release/data/logs/image/x86_64/foo.log')
 
 
 # the end
