@@ -44,7 +44,7 @@ class TestGetOptions(unittest.TestCase):
     def test_get_options(self):
         self.read_config.return_value = self.config_dict
         self.expanduser.side_effect = self.expanduser_values
-        options = ['--user', 'kojiadmin', '--password', 'testpass', '--profile', 'brew',
+        argv = ['koji', '--user', 'kojiadmin', '--password', 'testpass', '--profile', 'brew',
                    '--config', 'path/to/config', '--principal', 'testuser@kerberos.org',
                    '--runas', 'testuser2', '--noauth', '--plugin-paths', 'path/to/plugins',
                    '--force-auth', '--authtype', 'kerberos', '--debug', '--debug-xmlrpc',
@@ -52,11 +52,8 @@ class TestGetOptions(unittest.TestCase):
                    '--topdir', 'path/topdir', '--weburl', 'http://serverkoji.com/koji',
                    '--topurl', 'http://serverkoji.com/kojifiles', '--help-commands',
                    '--keytab', 'testkeytab']
-        def gargs(self, args):
-            return options
 
-        with mock.patch.object(optparse.OptionParser, '_get_args', gargs):
-            opts, cmd, args = cli.get_options()
+        opts, cmd, args = cli.get_options(argv)
         self.assertEqual(opts.user, 'kojiadmin')
         self.assertEqual(opts.password, 'testpass')
         self.assertEqual(opts.profile, 'brew')
@@ -83,14 +80,10 @@ class TestGetOptions(unittest.TestCase):
         self.read_config.return_value = self.config_dict
         self.expanduser.side_effect = self.expanduser_values
 
-        options = ['-p', 'brew', '-c', 'path/to/config', '-d', '-q', '-s',
+        argv = ['koji', '-p', 'brew', '-c', 'path/to/config', '-d', '-q', '-s',
                    'https://serverkoji.com/kojihub']
 
-        def gargs(self, args):
-            return options
-
-        with mock.patch.object(optparse.OptionParser, '_get_args', gargs):
-            opts, cmd, args = cli.get_options()
+        opts, cmd, args = cli.get_options(argv)
         self.assertEqual(opts.profile, 'brew')
         self.assertEqual(opts.config, 'path/to/config')
         self.assertEqual(opts.debug, True)
