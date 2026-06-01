@@ -16,6 +16,36 @@ As in previous releases, we provide a migration script that updates the database
     # psql koji koji < /usr/share/koji/schema-upgrade-1.35-1.36.sql
 
 
+Volume toplinks
+---------------
+
+.. warning:: Action required for non-default volumes
+
+In order to address a previous issue with promoting builds, the system now
+requires that each volume directory contain a ``toplink`` symlink that points
+to the main volume.
+This is simply a symlink that points to the main volume. E.g.
+
+::
+
+     $ file /mnt/koji/vol/vol3/toplink
+     /mnt/koji/vol/vol3/toplink: symbolic link to /mnt/koji
+
+You **must** create this symlink for any existing volumes used in your system.
+Failure to do so can result in build promotion failures.
+
+We recommend using an absolute symlink, as in the example above.
+
+When adding a new volume, admins should create this symlink when they create
+the volume directory. If not, the hub will automatically create it using the
+configured topdir path and log a warning.
+
+For more information, see
+
+* :ref:`Fix draft symlink handling <draft-symlink-fix-1-36>`
+* :ref:`adding-new-volume`
+
+
 Notable configuration changes
 -----------------------------
 
