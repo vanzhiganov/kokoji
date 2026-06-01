@@ -100,6 +100,13 @@ koji due to easier integration with rest of the code.
 It is used for managing `sidetags` which are light-weight short-lived build tags
 for developer's use. Sidetag creation is governed by hub's policy.
 
+Sidetag creation involves creating one tag based on some existing buildtag (it
+is the only parameter needed for sidetag creation). It automatically creates
+inheritance chain from it. Second part is creating target which has same name,
+source and destination. So, any build created for this target will appear in
+the tag itself. Developers can reuse new builds as part of the sidetag
+buildroot and build whole dependency chain if they need.
+
 Hub
 ---
 
@@ -173,6 +180,31 @@ like:
    f30-build-side-123456
    Successfully waited 1:36 for a new f30-build-side-123456 repo
 
+   $ koji taginfo fedora-30-build-side-123456
+   Tag: fedora-30-build-side-123456 [123456]
+   Arches: x86_64
+   Groups: appliance-build, build, kiwi-build, livecd-build, livemedia-build, srpm-build
+   Maven support?: no
+   Include all Maven archives?: no
+   Tag options:
+      mock.use_bootstrap : 1       [fedora-30-build]
+      sidetag : True
+      sidetag_user : 'username'
+     sidetag_user_id : 1
+   Targets that build into this tag:
+     fedora-30-build-side-123456 (fedora-30-build-side-123456, no active repo)
+     This tag is a buildroot for one or more targets
+     Current repo: no active repo
+   Targets that build from this tag:
+       fedora-30-build-side-123456
+   Inheritance:
+     0    .... fedora-30-build [84]
+
+   $ koji list-targets --name=fedora-30-build-side-123456
+   Name                           Buildroot                      Destination
+   ---------------------------------------------------------------------------------------------
+   fedora-30-build-side-123456    fedora-30-build-side-123456    fedora-30-build-side-123456
+
    $ koji remove-sidetag f30-build-side-123456
 
 API
@@ -226,7 +258,7 @@ The following fields are understood:
 The ``[message]`` section sets parameters for how messages are formed.
 
 * ``extra_limit`` -- the maximum allowed size for ``build.extra`` fields that
-  appear in messages. If the ``build.extra`` field is longer (in terms of 
+  appear in messages. If the ``build.extra`` field is longer (in terms of
   json-encoded length), then it will be omitted. The default value is ``0``
   which means no limit.
 * ``ttl`` -- The time to live to set for messages. Measured in seconds
