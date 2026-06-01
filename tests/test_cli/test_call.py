@@ -27,6 +27,7 @@ class TestCall(utils.CliTestCase):
 
 <arg> values of the form NAME=VALUE are treated as keyword arguments
 Note, that you can use global option --noauth for anonymous calls here
+
 (Specify the --help global option for a list of other help options)
 
 %s: error: {message}
@@ -84,7 +85,8 @@ Note, that you can use global option --noauth for anonymous calls here
         self.assert_system_exit(
             handle_call,
             self.options, self.session, arguments,
-            stderr=self.format_error_message("The --python option conflicts with using --json-input"),
+            stderr=self.format_error_message(
+                "The --python option conflicts with using --json-input"),
             activate_session=None)
         self.activate_session_mock.assert_not_called()
 
@@ -167,6 +169,7 @@ Note, that you can use global option --noauth for anonymous calls here
 
 <arg> values of the form NAME=VALUE are treated as keyword arguments
 Note, that you can use global option --noauth for anonymous calls here
+
 (Specify the --help global option for a list of other help options)
 
 Options:

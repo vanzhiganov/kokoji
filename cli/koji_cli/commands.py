@@ -1013,7 +1013,8 @@ def handle_call(goptions, session, args):
         usage: %prog call [options] <name> [<arg> ...]
 
         <arg> values of the form NAME=VALUE are treated as keyword arguments
-        Note, that you can use global option --noauth for anonymous calls here"""
+        Note, that you can use global option --noauth for anonymous calls here
+        """
     usage = textwrap.dedent(usage)
     parser = OptionParser(usage=get_usage_str(usage))
     parser.add_option("-p", "--python", action="store_true",
@@ -7089,7 +7090,7 @@ def anon_handle_download_build(options, session, args):
     "[download] Download a completed build"
     usage = "usage: %prog download-build [options] <n-v-r|build_id>"
     usage += "\n\nDownloads files from the specified build entry"
-    usage += "\nNote: scratch builds do not have build entries. Use download-task for those"
+    usage += "\nNote: scratch builds do not have build entries. Use download-task for those\n"
     parser = OptionParser(usage=get_usage_str(usage))
     parser.add_option("--arch", "-a", dest="arches", metavar="ARCH", action="append", default=[],
                       help="Only download packages for this arch (may be used multiple times)")
@@ -7384,7 +7385,7 @@ def anon_handle_download_logs(options, session, args):
 def anon_handle_download_task(options, session, args):
     "[download] Download the output of a build task"
     usage = "usage: %prog download-task <task_id>\n" \
-            "Default behavior without --all option downloads .rpm files only for build " \
+            "\nDefault behavior without --all option downloads .rpm files only for build " \
             "and buildArch tasks.\n"
     parser = OptionParser(usage=get_usage_str(usage))
     parser.add_option("--arch", dest="arches", metavar="ARCH", action="append", default=[],
@@ -7953,8 +7954,7 @@ def handle_dist_repo(options, session, args):
             "one. For such behaviour admin (with 'tag' permission) needs to\n" \
             "modify given tag's extra field 'distrepo.cancel_others' to True'\n" \
             "via 'koji edit-tag -x distrepo.cancel_others=True'\n"
-    usage += "\n(Specify the --help option for a list of other options)"
-    parser = OptionParser(usage=usage)
+    parser = OptionParser(usage=get_usage_str(usage))
     parser.add_option('--allow-missing-signatures', action='store_true',
                       default=False,
                       help='For RPMs not signed with a desired key, fall back to the primary copy')
@@ -8111,7 +8111,7 @@ _search_types = ('package', 'build', 'tag', 'target', 'user', 'host', 'rpm',
 def anon_handle_search(goptions, session, args):
     "[search] Search the system"
     usage = "usage: %prog search [options] <search_type> <pattern>"
-    usage += '\nAvailable search types: %s' % ', '.join(_search_types)
+    usage += '\n\nAvailable search types: %s\n' % ', '.join(_search_types)
     parser = OptionParser(usage=get_usage_str(usage))
     parser.add_option("-r", "--regex", action="store_true", help="treat pattern as regex")
     parser.add_option("--exact", action="store_true", help="exact matches only")

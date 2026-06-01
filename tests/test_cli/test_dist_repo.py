@@ -75,7 +75,7 @@ one. For such behaviour admin (with 'tag' permission) needs to
 modify given tag's extra field 'distrepo.cancel_others' to True'
 via 'koji edit-tag -x distrepo.cancel_others=True'
 
-(Specify the --help option for a list of other options)
+(Specify the --help global option for a list of other help options)
 
 %s: error: {message}
 """ % (self.progname, self.progname)
@@ -359,7 +359,7 @@ one. For such behaviour admin (with 'tag' permission) needs to
 modify given tag's extra field 'distrepo.cancel_others' to True'
 via 'koji edit-tag -x distrepo.cancel_others=True'
 
-(Specify the --help option for a list of other options)
+(Specify the --help global option for a list of other help options)
 
 Options:
   -h, --help            show this help message and exit
