@@ -9,8 +9,8 @@ class TestHostTagBuild(unittest.TestCase):
 
     def setUp(self):
         self.Host = mock.patch('kojihub.kojihub.Host').start()
-        self.Task = mock.patch('kojihub.kojihub.Task').start()
-        self.Task().assertHost = mock.MagicMock()
+        self.Task = mock.patch('kojihub.kojihub.Task', autospec=True).start()
+        self.Task.return_value.assertHost = mock.MagicMock()
         self.get_build = mock.patch('kojihub.kojihub.get_build').start()
         self.get_tag = mock.patch('kojihub.kojihub.get_tag').start()
         self.assert_policy = mock.patch('kojihub.kojihub.assert_policy').start()
@@ -44,14 +44,15 @@ class TestHostTagBuild(unittest.TestCase):
         binfo = {'name': 'foo', 'version': '1', 'release': '3.x', 'package_id': 100}
         self.get_build.return_value = binfo
         user_id = 1701
-        self.Task().getOwner.return_value = user_id
-        self.Task().getInfo.return_value = {'id': task_id, 'parent': 12340}
+        self.Task.return_value.getOwner.return_value = user_id
+        self.Task.return_value.getInfo.return_value = {'id': task_id, 'parent': 12340}
         self.readPackageList.return_value = {100: {'package_name': 'foo', 'blocked': False}}
 
         # make the call
         self.tagBuild(task_id, tag, build)
 
         # check
+        self.assertEqual(self.Task.call_args_list, [mock.call(task_id)])
         self._tag_build.assert_called_once_with(tag, binfo, user_id=user_id, force=False)
         self._untag_build.assert_not_called()
         self.pkglist_add.assert_not_called()
@@ -77,8 +78,8 @@ class TestHostTagBuild(unittest.TestCase):
         binfo = {'name': 'foo', 'version': '1', 'release': '3.x', 'package_id': 100}
         self.get_build.return_value = binfo
         user_id = 1701
-        self.Task().getOwner.return_value = user_id
-        self.Task().getInfo.return_value = {'id': task_id, 'parent': None}
+        self.Task.return_value.getOwner.return_value = user_id
+        self.Task.return_value.getInfo.return_value = {'id': task_id, 'parent': None}
         self.readPackageList.return_value = {100: {'package_name': 'foo', 'blocked': False}}
 
         # make the call
@@ -115,8 +116,8 @@ class TestHostTagBuild(unittest.TestCase):
         binfo = {'name': 'foo', 'version': '1', 'release': '3.x', 'package_id': 100}
         self.get_build.return_value = binfo
         user_id = 1701
-        self.Task().getOwner.return_value = user_id
-        self.Task().getInfo.return_value = {'id': task_id, 'parent': 12340}
+        self.Task.return_value.getOwner.return_value = user_id
+        self.Task.return_value.getInfo.return_value = {'id': task_id, 'parent': 12340}
         self.readPackageList.return_value = {}  # not in list
 
         # make the call
@@ -143,8 +144,8 @@ class TestHostTagBuild(unittest.TestCase):
         binfo = {'name': 'foo', 'version': '1', 'release': '3.x', 'package_id': 100, 'nvr': 'NVR'}
         self.get_build.return_value = binfo
         user_id = 1701
-        self.Task().getOwner.return_value = user_id
-        self.Task().getInfo.return_value = {'id': task_id, 'parent': 12340}
+        self.Task.return_value.getOwner.return_value = user_id
+        self.Task.return_value.getInfo.return_value = {'id': task_id, 'parent': 12340}
         self.readPackageList.return_value = {}  # not in list
 
         # should error without perms

@@ -16242,7 +16242,7 @@ class HostExports(object):
         host.verify()
         task = Task(task_id)
         task.assertHost(host.id)
-        taskinfo = task.getInfo(task_id, strict=True)
+        taskinfo = task.getInfo(strict=True)
         build = get_build(build, strict=True)
         pkg_id = build['package_id']
         tag_id = get_tag(tag, strict=True)['id']
