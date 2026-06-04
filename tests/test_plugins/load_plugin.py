@@ -12,18 +12,22 @@ def load_plugin(plugin_type, plugin_name):
         "../../plugins",
         plugin_type,
         "%s.py" % plugin_name)
+    saved_path = sys.path[:]
     sys.path = [os.path.dirname(CLI_FILENAME),
                 os.path.join(os.path.dirname(__file__), "../..", plugin_type)] + \
                sys.path
-    if sys.version_info[0] >= 3:
-        import importlib.machinery
-        loader = importlib.machinery.SourceFileLoader(mod_name, CLI_FILENAME)
-        spec = importlib.util.spec_from_loader(loader.name, loader)
-        plugin = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(plugin)
-        loader.exec_module(plugin)
-        sys.modules[mod_name] = plugin
-    else:
-        import imp
-        plugin = imp.load_source(mod_name, CLI_FILENAME)
+    try:
+        if sys.version_info[0] >= 3:
+            import importlib.machinery
+            loader = importlib.machinery.SourceFileLoader(mod_name, CLI_FILENAME)
+            spec = importlib.util.spec_from_loader(loader.name, loader)
+            plugin = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(plugin)
+            loader.exec_module(plugin)
+            sys.modules[mod_name] = plugin
+        else:
+            import imp
+            plugin = imp.load_source(mod_name, CLI_FILENAME)
+    finally:
+        sys.path = saved_path
     return plugin

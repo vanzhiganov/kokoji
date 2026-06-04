@@ -32,8 +32,7 @@ class TestAuthSession(unittest.TestCase):
 
     def setUp(self):
         self.context = mock.patch('kojihub.auth.context').start()
-        kojihub.db.context = self.context
-        kojihub.auth.context = self.context
+        mock.patch('kojihub.db.context', new=self.context).start()
         self.UpdateProcessor = mock.patch('kojihub.auth.UpdateProcessor',
                                           side_effect=self.getUpdate).start()
         self.updates = []

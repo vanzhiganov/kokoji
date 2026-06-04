@@ -594,26 +594,27 @@ Bytes: 1
         isreg.return_value = True
         rv = handle_prune_signed_copies(self.options, self.session, arguments)
         actual = stdout.getvalue()
-        expected = """Cutoff date: Sat Apr  20 14:08:17 2023
-Getting builds...
-...got 1 builds
-DEBUG: package-name-1.3-4
-Tags: ['test-tag1', 'test-tag2']
-Sat Apr  20 14:08:17 2023: Tagged package-name-1.3-4 with test-tag1 [still active]
-Sat Apr  20 14:08:17 2023: Untagged package-name-1.3-4 from test-tag1
-tag test-tag1: package-name-1.3-4 not latest (revoked Sat Apr  20 14:08:17 2023)
-Sat Apr  20 14:08:17 2023: Tagged package-name-1.3-4 with test-tag2 [still active]
-Sat Apr  20 14:08:17 2023: Untagged package-name-1.3-4 from test-tag2
-tag test-tag2: package-name-1.3-4 not latest (revoked Sat Apr  20 14:08:17 2023)
-Unlinking: fakebuildpath/data/signed/qwertyuiop/test-arch/test-1.3-1.test-arch.rpm
-Error removing fakebuildpath/data/signed/qwertyuiop/test-arch/test-1.3-1.test-arch.rpm: [Errno 2] No such file or directory: 'fakebuildpath/data/signed/qwertyuiop/test-arch/test-1.3-1.test-arch.rpm'
-This script needs write access to /mnt/koji
-(build has no signed copies)
---- Grand Totals ---
-Files: 0
-Bytes: 0
-"""
-        self.assertMultiLineEqual(actual, expected)
+        # Check output line by line, using regex for locale-dependent error message
+        lines = actual.split('\n')
+        self.assertEqual(lines[0], 'Cutoff date: Sat Apr  20 14:08:17 2023')
+        self.assertEqual(lines[1], 'Getting builds...')
+        self.assertEqual(lines[2], '...got 1 builds')
+        self.assertEqual(lines[3], 'DEBUG: package-name-1.3-4')
+        self.assertEqual(lines[4], "Tags: ['test-tag1', 'test-tag2']")
+        self.assertEqual(lines[5], 'Sat Apr  20 14:08:17 2023: Tagged package-name-1.3-4 with test-tag1 [still active]')
+        self.assertEqual(lines[6], 'Sat Apr  20 14:08:17 2023: Untagged package-name-1.3-4 from test-tag1')
+        self.assertEqual(lines[7], 'tag test-tag1: package-name-1.3-4 not latest (revoked Sat Apr  20 14:08:17 2023)')
+        self.assertEqual(lines[8], 'Sat Apr  20 14:08:17 2023: Tagged package-name-1.3-4 with test-tag2 [still active]')
+        self.assertEqual(lines[9], 'Sat Apr  20 14:08:17 2023: Untagged package-name-1.3-4 from test-tag2')
+        self.assertEqual(lines[10], 'tag test-tag2: package-name-1.3-4 not latest (revoked Sat Apr  20 14:08:17 2023)')
+        self.assertEqual(lines[11], 'Unlinking: fakebuildpath/data/signed/qwertyuiop/test-arch/test-1.3-1.test-arch.rpm')
+        # Error message contains errno and path but message text is locale-dependent
+        self.assertRegex(lines[12], r'^Error removing fakebuildpath/data/signed/qwertyuiop/test-arch/test-1\.3-1\.test-arch\.rpm: \[Errno 2\] .+: .+fakebuildpath/data/signed/qwertyuiop/test-arch/test-1\.3-1\.test-arch\.rpm')
+        self.assertEqual(lines[13], 'This script needs write access to /mnt/koji')
+        self.assertEqual(lines[14], '(build has no signed copies)')
+        self.assertEqual(lines[15], '--- Grand Totals ---')
+        self.assertEqual(lines[16], 'Files: 0')
+        self.assertEqual(lines[17], 'Bytes: 0')
         self.assertNotEqual(rv, 1)
         self.activate_session_mock.assert_called_once_with(self.session, self.options)
         self.session.getBuild.assert_not_called()
@@ -666,28 +667,29 @@ Bytes: 0
         isreg.return_value = True
         rv = handle_prune_signed_copies(self.options, self.session, arguments)
         actual = stdout.getvalue()
-        expected = """Cutoff date: Sat Apr  20 14:08:17 2023
-Getting builds...
-...got 1 builds
-DEBUG: package-name-1.3-4
-Tags: ['test-tag1', 'test-tag2']
-Sat Apr  20 14:08:17 2023: Tagged package-name-1.3-4 with test-tag1 [still active]
-Sat Apr  20 14:08:17 2023: Untagged package-name-1.3-4 from test-tag1
-tag test-tag1: package-name-1.3-4 not latest (revoked Sat Apr  20 14:08:17 2023)
-Sat Apr  20 14:08:17 2023: Tagged package-name-1.3-4 with test-tag2 [still active]
-Sat Apr  20 14:08:17 2023: Untagged package-name-1.3-4 from test-tag2
-tag test-tag2: package-name-1.3-4 not latest (revoked Sat Apr  20 14:08:17 2023)
-Unlinking: fakebuildpath/data/signed/qwertyuiop/test-arch/test-1.3-1.test-arch.rpm
-Removing dir: fakebuildpath/data/signed/qwertyuiop/test-arch
-Error removing fakebuildpath/data/signed/qwertyuiop/test-arch/test-1.3-1.test-arch.rpm: [Errno 2] No such file or directory: 'fakebuildpath/data/signed/qwertyuiop/test-arch'
-Removing dir: fakebuildpath/data/signed/qwertyuiop
-Error removing fakebuildpath/data/signed/qwertyuiop/test-arch/test-1.3-1.test-arch.rpm: [Errno 2] No such file or directory: 'fakebuildpath/data/signed/qwertyuiop'
-Build: package-name-1.3-4, Removed 1 signed copies (1 bytes). Total: 1/1
---- Grand Totals ---
-Files: 1
-Bytes: 1
-"""
-        self.assertMultiLineEqual(actual, expected)
+        # Check output line by line, using regex for locale-dependent error messages
+        lines = actual.split('\n')
+        self.assertEqual(lines[0], 'Cutoff date: Sat Apr  20 14:08:17 2023')
+        self.assertEqual(lines[1], 'Getting builds...')
+        self.assertEqual(lines[2], '...got 1 builds')
+        self.assertEqual(lines[3], 'DEBUG: package-name-1.3-4')
+        self.assertEqual(lines[4], "Tags: ['test-tag1', 'test-tag2']")
+        self.assertEqual(lines[5], 'Sat Apr  20 14:08:17 2023: Tagged package-name-1.3-4 with test-tag1 [still active]')
+        self.assertEqual(lines[6], 'Sat Apr  20 14:08:17 2023: Untagged package-name-1.3-4 from test-tag1')
+        self.assertEqual(lines[7], 'tag test-tag1: package-name-1.3-4 not latest (revoked Sat Apr  20 14:08:17 2023)')
+        self.assertEqual(lines[8], 'Sat Apr  20 14:08:17 2023: Tagged package-name-1.3-4 with test-tag2 [still active]')
+        self.assertEqual(lines[9], 'Sat Apr  20 14:08:17 2023: Untagged package-name-1.3-4 from test-tag2')
+        self.assertEqual(lines[10], 'tag test-tag2: package-name-1.3-4 not latest (revoked Sat Apr  20 14:08:17 2023)')
+        self.assertEqual(lines[11], 'Unlinking: fakebuildpath/data/signed/qwertyuiop/test-arch/test-1.3-1.test-arch.rpm')
+        self.assertEqual(lines[12], 'Removing dir: fakebuildpath/data/signed/qwertyuiop/test-arch')
+        # Error messages contain errno and path but message text is locale-dependent
+        self.assertRegex(lines[13], r'^Error removing fakebuildpath/data/signed/qwertyuiop/test-arch/test-1\.3-1\.test-arch\.rpm: \[Errno 2\] .+: .+fakebuildpath/data/signed/qwertyuiop/test-arch')
+        self.assertEqual(lines[14], 'Removing dir: fakebuildpath/data/signed/qwertyuiop')
+        self.assertRegex(lines[15], r'^Error removing fakebuildpath/data/signed/qwertyuiop/test-arch/test-1\.3-1\.test-arch\.rpm: \[Errno 2\] .+: .+fakebuildpath/data/signed/qwertyuiop')
+        self.assertEqual(lines[16], 'Build: package-name-1.3-4, Removed 1 signed copies (1 bytes). Total: 1/1')
+        self.assertEqual(lines[17], '--- Grand Totals ---')
+        self.assertEqual(lines[18], 'Files: 1')
+        self.assertEqual(lines[19], 'Bytes: 1')
         self.assertNotEqual(rv, 1)
         self.activate_session_mock.assert_called_once_with(self.session, self.options)
         self.session.getBuild.assert_not_called()

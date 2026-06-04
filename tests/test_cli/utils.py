@@ -194,20 +194,19 @@ class CliTestCase(unittest.TestCase):
 
     @mock.patch('koji_cli.commands.activate_session')
     def assert_help(self, callableObj, message, activate_session_mock):
-        # optarse uses gettext directly and it is driven by LANGUAGE
-        # we need english to get comparable strings
-        os.environ['LANGUAGE'] = 'C'
-        os.environ['COLUMNS'] = '80'
-        self.assert_system_exit(
-            callableObj,
-            mock.MagicMock(),
-            mock.MagicMock(),
-            ['--help'],
-            stdout=message,
-            stderr='',
-            activate_session=None,
-            exit_code=0)
-        activate_session_mock.assert_not_called()
+        # optparse uses gettext directly and it is driven by LANGUAGE;
+        # COLUMNS fixes terminal width so help text line-wrapping is deterministic
+        with mock.patch.dict(os.environ, {'LANGUAGE': 'C', 'COLUMNS': '80'}):
+            self.assert_system_exit(
+                callableObj,
+                mock.MagicMock(),
+                mock.MagicMock(),
+                ['--help'],
+                stdout=message,
+                stderr='',
+                activate_session=None,
+                exit_code=0)
+            activate_session_mock.assert_not_called()
 
     def assertExitCode(self, ex, code):
         if isinstance(ex.exception, int):

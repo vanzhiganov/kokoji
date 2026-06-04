@@ -178,8 +178,10 @@ class TestListCommands(unittest.TestCase):
 
     @mock_stdout()
     def test_runroot_help(self, stdout):
-        with self.assertRaises(SystemExit) as ex:
-            runroot.handle_runroot(self.options, self.session, ['--help'])
+        # Set COLUMNS to ensure deterministic help text wrapping
+        with mock.patch.dict(os.environ, {'COLUMNS': '80'}):
+            with self.assertRaises(SystemExit) as ex:
+                runroot.handle_runroot(self.options, self.session, ['--help'])
         std_output = get_stdout_value(stdout).decode('utf-8')
         expected_help = """Usage: %s runroot [options] <tag> <arch> <command>
 (Specify the --help global option for a list of other help options)

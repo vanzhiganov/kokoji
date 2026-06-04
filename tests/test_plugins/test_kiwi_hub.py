@@ -9,18 +9,18 @@ class TestKiwiHub(unittest.TestCase):
     def setUp(self):
         self.context = mock.patch('plugins.hub.kiwi.context').start()
         self.context.session.assertPerm = mock.MagicMock()
-        kojihub.get_build_target = mock.MagicMock()
-        kojihub.get_build_target.return_value = {'id': 1, 'name': 'target'}
-        kojihub.make_task = mock.MagicMock()
-        kojihub.make_task.return_value = 1
+        self.get_build_target = mock.patch('kojihub.get_build_target').start()
+        self.get_build_target.return_value = {'id': 1, 'name': 'target'}
+        self.make_task = mock.patch('kojihub.make_task').start()
+        self.make_task.return_value = 1
 
     def tearDown(self):
         mock.patch.stopall()
 
     def test_kiwi_basic(self):
         kiwi.kiwiBuild('target', ['arch1', 'arch2'], 'desc_url', 'desc_path')
-        kojihub.get_build_target.assert_called_once_with('target', strict=True)
-        kojihub.make_task.assert_called_once_with(
+        self.get_build_target.assert_called_once_with('target', strict=True)
+        self.make_task.assert_called_once_with(
             'kiwiBuild',
             [
                 'target',
@@ -33,10 +33,10 @@ class TestKiwiHub(unittest.TestCase):
         )
 
     def test_nonexistent_target(self):
-        kojihub.get_build_target.side_effect = koji.GenericError
+        self.get_build_target.side_effect = koji.GenericError
         with self.assertRaises(koji.GenericError):
             kiwi.kiwiBuild('target', ['arch1', 'arch2'], 'desc_url', 'desc_path')
-        kojihub.get_build_target.assert_called_once_with('target', strict=True)
+        self.get_build_target.assert_called_once_with('target', strict=True)
 
     def test_invalid_arches(self):
         for arch_set in ['arch1,arch2', 'ěšč']:
@@ -69,7 +69,7 @@ class TestKiwiHub(unittest.TestCase):
             version='version',
             repo_releasever='relver'
         )
-        kojihub.make_task.assert_called_once_with(
+        self.make_task.assert_called_once_with(
             'kiwiBuild',
             [
                 'target',
