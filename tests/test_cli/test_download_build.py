@@ -260,6 +260,33 @@ Note: scratch builds do not have build entries. Use download-task for those
             exit_code=1
         )
 
+    @mock.patch('sys.stderr', new_callable=StringIO)
+    @mock.patch('koji.buildLabel')
+    def test_download_build_without_all_rpms_with_arches_nofail(self, build_label, stderr):
+        build_id = '1'
+        arches = ['testarch', 'testarch2']
+        build_label.return_value = self.b_label
+        self.session.getRPM.return_value = self.getrpminfo
+        self.session.getBuild.return_value = self.build_templ
+        self.session.listRPMs.return_value = []
+        expected = 'No %s or %s packages available for %s\n' % (arches[0], arches[1], self.b_label)
+        rv = anon_handle_download_build(
+            self.options,
+            self.session,
+            [
+                build_id,
+                '--arch',
+                arches[0],
+                '--arch',
+                arches[1],
+                '--key',
+                self.sigkey,
+                '--nofailarch'
+            ]
+        )
+        self.assertEqual(rv, None)
+        self.assert_console_message(stderr, expected)
+
     @mock.patch('koji.buildLabel')
     def test_download_build_without_all_rpms(self, build_label):
         build_id = '1'
@@ -303,5 +330,7 @@ Options:
                         packages not found
   --topurl=URL          URL under which Koji files are accessible
   --noprogress          Do not display progress meter
+  --nofailarch          Do not fail if package not available for specified
+                        arch(es)
   -q, --quiet           Suppress output
 """ % self.progname)
