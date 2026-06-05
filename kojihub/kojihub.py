@@ -10378,6 +10378,21 @@ class FromTagTest(TagTest):
         return get_tag(tag, strict=False)
 
 
+class TagSubtaskTest(koji.policy.BaseSimpleTest):
+    '''True if tag operation is triggered by a tagBuild subtask
+
+    When this is true, it means the tag operation is part of a builder workflow.
+    E.g. tagging at the end of a build task
+    This can be used to avoid breaking build target workflows when crafting
+    strict tag policies.
+    '''
+
+    name = 'by_tag_subtask'
+
+    def run(self, data):
+        return bool(data.get('by_tag_subtask'))
+
+
 class HasTagTest(koji.policy.BaseSimpleTest):
     """Check to see if build (currently) has a given tag"""
     name = 'hastag'
@@ -16227,6 +16242,7 @@ class HostExports(object):
         host.verify()
         task = Task(task_id)
         task.assertHost(host.id)
+        taskinfo = task.getInfo(strict=True)
         build = get_build(build, strict=True)
         pkg_id = build['package_id']
         tag_id = get_tag(tag, strict=True)['id']
@@ -16235,6 +16251,7 @@ class HostExports(object):
             fromtag = get_tag(fromtag, strict=True)['name']
         policy_data = {'tag': tag, 'build': build, 'fromtag': fromtag}
         policy_data['user_id'] = user_id
+        policy_data['by_tag_subtask'] = taskinfo['parent'] is not None
         if fromtag is None:
             policy_data['operation'] = 'tag'
         else:

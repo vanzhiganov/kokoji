@@ -55,6 +55,17 @@ class TestBasicTests(unittest.TestCase):
         data = {}
         self.assertFalse(obj.run(data))
 
+    def test_by_tag_subtask_test(self):
+        obj = kojihub.kojihub.TagSubtaskTest('by_tag_subtask')
+        data = {'by_tag_subtask': True}
+        self.assertTrue(obj.run(data))
+        data = {'by_tag_subtask': False}
+        self.assertFalse(obj.run(data))
+        data = {'by_tag_subtask': None}
+        self.assertFalse(obj.run(data))
+        data = {}
+        self.assertFalse(obj.run(data))
+
 
 class TestPolicyGetUser(unittest.TestCase):
 
