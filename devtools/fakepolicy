@@ -604,6 +604,26 @@ def do_mocks(session, plugins):
 
     patchall('Task', FakeTask)
 
+    # handle BuildRoot.getList
+    class FakeBuildRoot:
+
+        def __init__(self, id):
+            # we require the id value
+            self.load(id)
+
+        def load(self, id):
+            data = session.getBuildroot(id)
+            self.id = id
+            self.data = data
+
+        def getList(self):
+            data = session.listRPMs(componentBuildrootID=self.id)
+            for row in data:
+                row['rpm_id'] = row['id']
+            return data
+
+    patchall('BuildRoot', FakeBuildRoot)
+
 
 if __name__ == '__main__':
     main()
