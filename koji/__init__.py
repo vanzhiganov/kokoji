@@ -3676,6 +3676,8 @@ class MultiCallSession(object):
         else:
             batches = [calls]
         results = []
+        if self._session.multicall:
+            raise MultiCallNotReady('Cannot evaluate multicall session during a legacy multicall')
         for calls in batches:
             args = ([c.format() for c in calls],)
             _results = self._session._callMethod('multiCall', args, {})
