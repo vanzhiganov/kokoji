@@ -245,7 +245,7 @@ examples in the existing client code. Some examples in the cli include:
 
 **Using MultiCallSession**
 
-Koji tracks individual muticalls for a session with a ``MultiCallSession``
+Koji tracks individual multicalls for a session with a ``MultiCallSession``
 object. To create one, call your session's ``multicall()`` method. Use this
 object like a session, but it will store calls rather than sending
 immediately. To execute the calls, call the ``call_all()`` method.

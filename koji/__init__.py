@@ -3235,6 +3235,7 @@ class ClientSession(object):
     def _callMethod(self, name, args, kwargs=None, retry=True):
         """Make a call to the hub with retries and other niceties"""
         if self.multicall:
+            # legacy multicall pathway
             if kwargs is None:
                 kwargs = {}
             args = encode_args(*args, **kwargs)
@@ -3311,39 +3312,11 @@ class ClientSession(object):
             # not reached
 
     def multiCall(self, strict=False, batch=None):
-        """Execute a prepared multicall
+        """Legacy multicall implementation
 
-        In a multicall, a number of calls are combined into a single RPC call
-        and handled by the server in a batch. This can improve throughput.
-
-        The server handles a multicall as a single database transaction (though
-        see the note about the batch option below).
-
-        To prepare a multicall:
-          1. set the multicall attribute to True
-          2. issue one or more calls in the normal fashion
-
-        When multicall is True, the call parameters are stored rather than
-        passed to the server. Each call will return the special value
-        MultiCallInProgress, since the return is not yet known.
-
-        This method executes the prepared multicall, resets the multicall
-        attribute to False (so subsequent calls will work normally), and
-        returns the results of the calls as a list.
-
-        The result list will contain one element for each call added to the
-        multicall, in the order it was added. Each element will be either:
-          - a one-element list containing the result of the method call
-          - a map containing "faultCode" and "faultString" keys, describing
-            the error that occurred during the call.
-
-        If the strict option is set to True, then this call will raise the
-        first error it encounters, if any.
-
-        If the batch option is set to a number greater than zero, the calls
-        will be spread across multiple multicall batches of at most this
-        number. Note that each such batch will be a separate database
-        transaction.
+        This function handles the original, pre-1.18 multicall method.
+        Please use the new method as described in the docs
+        See docs/source/writing_koji_code.rst
         """
         if not self.multicall:
             raise GenericError(
@@ -3703,6 +3676,8 @@ class MultiCallSession(object):
         else:
             batches = [calls]
         results = []
+        if self._session.multicall:
+            raise MultiCallNotReady('Cannot evaluate multicall session during a legacy multicall')
         for calls in batches:
             args = ([c.format() for c in calls],)
             _results = self._session._callMethod('multiCall', args, {})
