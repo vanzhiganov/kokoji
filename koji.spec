@@ -97,7 +97,7 @@
 %define release %{baserelease}
 %endif
 Name: koji
-Version: 1.36.0
+Version: 1.36.1
 Release: %{release}%{?dist}
 License: LGPL-2.1-only and GPL-2.0-or-later
 # the included arch lib from yum's rpmUtils is GPLv2+
@@ -696,6 +696,9 @@ rm -rf $RPM_BUILD_ROOT
 %endif
 
 %changelog
+* Wed Jul  8 2026 Mike McLean <mikem at redhat.com> - 1.36.1-1
+- Koji 1.36.1 release
+
 * Tue Feb 17 2026 Mike McLean <mikem at redhat.com> - 1.36.0-1
 - PR#4446: rpm v6 support
 - PR#4472: AllowDraftComponents hub option
