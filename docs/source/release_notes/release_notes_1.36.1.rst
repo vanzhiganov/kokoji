@@ -37,6 +37,14 @@ See also: :doc:`../migrations/migrating_to_1.36`
 This fixes issues with session renewal in 1.36.
 
 
+**Allow restarted tasks to recycle their existing draft builds**
+
+| PR: https://forge.fedoraproject.org/koji/koji/pulls/4587
+
+This fixes an issue where restarted tasks could leave lingering duplicate
+draft builds in the BUILDING state
+
+
 **Make templates compatible for jinja 2.10**
 
 | PR: https://forge.fedoraproject.org/koji/koji/pulls/4563
@@ -90,7 +98,8 @@ This does a better job of normalizing the scm path
 
 This hub policy test is true if a tag operation is triggered by a tagBuild subtask.
 
-When this is true, it means the tag operation is part of a builder workflow. E.g. tagging at the end of a build task
+When this is true, it means the tag operation is part of a builder workflow,
+e.g. tagging at the end of a build task.
 This can be used to avoid breaking build target workflows when crafting strict tag policies.
 
 See also: :doc:`../defining_hub_policies`

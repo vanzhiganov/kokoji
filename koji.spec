@@ -696,7 +696,7 @@ rm -rf $RPM_BUILD_ROOT
 %endif
 
 %changelog
-* Wed Jun 24 2026 Mike McLean <mikem at redhat.com> - 1.36.1-1
+* Wed Jul  8 2026 Mike McLean <mikem at redhat.com> - 1.36.1-1
 - Koji 1.36.1 release
 
 * Tue Feb 17 2026 Mike McLean <mikem at redhat.com> - 1.36.0-1
