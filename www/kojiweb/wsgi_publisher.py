@@ -90,6 +90,8 @@ class Dispatcher(object):
 
         ['LoginDisabled', 'boolean', False],
 
+        ['AllowRegistration', 'boolean', False],
+
         ['LibPath', 'string', '/usr/share/koji-web/lib'],
 
         ['LogLevel', 'string', 'WARNING'],
@@ -152,13 +154,15 @@ class Dispatcher(object):
                 opts[name] = default
         opts['Secret'] = koji.util.HiddenValue(opts['Secret'])
 
-        if opts['WebAuthType'] not in (None, 'gssapi', 'ssl'):
+        if opts['WebAuthType'] not in (None, 'password', 'gssapi', 'ssl'):
             raise koji.ConfigurationError(f"Invalid value {opts['WebAuthType']} for "
-                                          "WebAuthType (ssl/gssapi)")
+                                          "WebAuthType (password/ssl/gssapi)")
         if opts['WebAuthType'] == 'gssapi':
             opts['WebAuthType'] = koji.AUTHTYPES['GSSAPI']
         elif opts['WebAuthType'] == 'ssl':
             opts['WebAuthType'] = koji.AUTHTYPES['SSL']
+        elif opts['WebAuthType'] == 'password':
+            opts['WebAuthType'] = koji.AUTHTYPES['NORMAL']
         # if there is no explicit request, use same authtype as web has
         elif opts['WebPrincipal']:
             opts['WebAuthType'] = koji.AUTHTYPES['GSSAPI']

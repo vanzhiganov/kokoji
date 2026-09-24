@@ -79,6 +79,9 @@ $localnav
           #if $currentUser
           $greeting(), <a href="userinfo?userID=$currentUser.id">$currentUser.name</a> | <a href="logout">logout</a>
           #else
+          #if $AllowRegistration
+          <a href="register">register</a> |
+          #end if
           <a href="login">login</a>
           #end if
           #end if

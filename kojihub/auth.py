@@ -676,6 +676,76 @@ class Session(object):
 
         return user_id
 
+    def setPassword(self, name, password):
+        """Set the password for a user.
+
+        :param str name: username or user_id
+        :param str password: new password (plaintext)
+        """
+        if isinstance(name, six.integer_types):
+            clauses = ['id = %(name)i']
+        else:
+            clauses = ['name = %(name)s']
+        query = QueryProcessor(tables=['users'], columns=['id'], clauses=clauses,
+                               values={'name': name})
+        user_id = query.singleValue(strict=True)
+        if not password or not isinstance(password, str):
+            raise koji.GenericError('password must be a non-empty string')
+        update = UpdateProcessor('users', clauses=['id = %(user_id)i'],
+                                 values={'user_id': user_id})
+        update.set(password=password)
+        update.execute()
+        context.cnx.commit()
+
+    def changePassword(self, old_password, new_password):
+        """Change the password for the current logged-in user.
+
+        :param str old_password: current password for verification
+        :param str new_password: new password to set
+        """
+        if not self.logged_in:
+            raise koji.AuthError("Not logged in")
+        if not isinstance(old_password, str) or not old_password:
+            raise koji.AuthError('invalid old password')
+        if not isinstance(new_password, str) or not new_password:
+            raise koji.GenericError('new password must be a non-empty string')
+
+        # verify old password
+        query = QueryProcessor(tables=['users'], columns=['id'],
+                               clauses=['id = %(user_id)i', 'password = %(old_password)s'],
+                               values={'user_id': self.user_id, 'old_password': old_password})
+        if not query.singleValue(strict=False):
+            raise koji.AuthError('invalid old password')
+
+        update = UpdateProcessor('users', clauses=['id = %(user_id)i'],
+                                 values={'user_id': self.user_id})
+        update.set(password=new_password)
+        update.execute()
+        context.cnx.commit()
+
+    def registerUser(self, username, password):
+        """Register a new user with a password.
+
+        :param str username: desired username
+        :param str password: password for the new user
+        :returns: user_id of the created user
+        """
+        if not username or not isinstance(username, str):
+            raise koji.GenericError('username must be a non-empty string')
+        if not password or not isinstance(password, str):
+            raise koji.GenericError('password must be a non-empty string')
+        from .kojihub import verify_name_user
+        verify_name_user(name=username)
+        # check for existing user (avoid circular import of get_user)
+        query = QueryProcessor(tables=['users'], columns=['id'],
+                               clauses=['name = %(username)s'],
+                               values={'username': username})
+        if query.singleValue(strict=False):
+            raise koji.GenericError('user already exists: %s' % username)
+        user_id = self.createUser(username)
+        self.setPassword(username, password)
+        return user_id
+
     def setKrbPrincipal(self, name, krb_principal, krb_princ_check=True):
         if krb_princ_check:
             self.checkKrbPrincipal(krb_principal)
@@ -893,3 +963,22 @@ def exclusiveSession(*args, **opts):
 def sharedSession():
     """Drop out of exclusive mode"""
     return context.session.makeShared()
+
+
+def registerUser(username, password):
+    """Register a new user with a password (public, no admin required).
+
+    :param str username: desired username
+    :param str password: password for the new user
+    :returns int: user_id of the created user
+    """
+    return context.session.registerUser(username, password)
+
+
+def changePassword(old_password, new_password):
+    """Change the password for the current logged-in user.
+
+    :param str old_password: current password for verification
+    :param str new_password: new password to set
+    """
+    return context.session.changePassword(old_password, new_password)

@@ -1,0 +1,85 @@
+services:
+  db:
+    build:
+      context: ..
+      dockerfile: containers/db/Dockerfile
+    image: koji-db:latest
+    container_name: koji-db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-koji}
+      POSTGRES_USER: ${POSTGRES_USER:-koji}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-koji}
+    volumes:
+      - koji-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-koji} -d ${POSTGRES_DB:-koji}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  hub:
+    build:
+      context: ..
+      dockerfile: containers/hub/Dockerfile
+    image: koji-hub:latest
+    container_name: koji-hub
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: ${POSTGRES_HOST:-db}
+      DB_NAME: ${POSTGRES_DB:-koji}
+      DB_USER: ${POSTGRES_USER:-koji}
+      DB_PASS: ${POSTGRES_PASSWORD:-koji}
+      DB_PORT: ${POSTGRES_PORT:-5432}
+    volumes:
+      - koji-storage:/mnt/koji
+    ports:
+      - "80:80"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ..
+      dockerfile: containers/web/Dockerfile
+    image: koji-web:latest
+    container_name: koji-web
+    depends_on:
+      - hub
+    environment:
+      HUB_URL: ${HUB_URL:-http://hub/kojihub}
+      FILES_URL: ${FILES_URL:-http://hub/kojifiles}
+      WEB_SECRET: ${WEB_SECRET:-change-me-secret}
+      ALLOW_REGISTRATION: ${ALLOW_REGISTRATION:-On}
+    volumes:
+      - koji-storage:/mnt/koji:ro
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+
+  kojira:
+    build:
+      context: ..
+      dockerfile: containers/kojira/Dockerfile
+    image: koji-kojira:latest
+    container_name: koji-kojira
+    depends_on:
+      - hub
+    environment:
+      KOJIRA_SERVER: ${HUB_URL:-http://hub/kojihub}
+      KOJIRA_TOPDIR: /mnt/koji
+      KOJIRA_USER: ${KOJIRA_USER:-kojira}
+      KOJIRA_PASSWORD: ${KOJIRA_PASSWORD:-kojira}
+    volumes:
+      - koji-storage:/mnt/koji
+    restart: unless-stopped
+
+volumes:
+  koji-db-data:
+  koji-storage:

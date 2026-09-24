@@ -897,6 +897,8 @@ def get_registry(opts, plugins):
     registry.register_function(auth.logoutChild)
     registry.register_function(auth.exclusiveSession)
     registry.register_function(auth.sharedSession)
+    registry.register_function(auth.registerUser)
+    registry.register_function(auth.changePassword)
     for name in opts.get('Plugins', '').split():
         plugin = plugins.get(name)
         if not plugin:

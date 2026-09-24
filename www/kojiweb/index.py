@@ -166,7 +166,11 @@ def _assertLogin(environ):
     if 'koji.currentLogin' not in environ or 'koji.currentUser' not in environ:
         raise Exception('_getServer() must be called before _assertLogin()')
     elif environ['koji.currentLogin'] and environ['koji.currentUser']:
-        if options['WebCert']:
+        if options['WebAuthType'] == koji.AUTHTYPES['NORMAL']:
+            # password auth: identify via the signed cookie; the hub
+            # session was already established in _getServer during login
+            pass
+        elif options['WebCert']:
             if not _sslLogin(environ, session, environ['koji.currentLogin']):
                 raise koji.AuthError('could not login %s via SSL' % environ['koji.currentLogin'])
         elif options['WebPrincipal']:
@@ -296,6 +300,9 @@ def login(environ, page=None):
                 'presenting this page')
 
         username = principal
+    elif options['WebAuthType'] == koji.AUTHTYPES['NORMAL']:
+        ## Username/password authentication via a web form
+        return _password_login(environ, page)
     else:
         raise koji.AuthError(
             'configuration error: set WebAuthType or on of WebPrincipal/WebCert options')
@@ -319,6 +326,93 @@ def login(environ, page=None):
     _setUserCookie(environ, username)
     # To protect the session cookie, we must forceSSL
     _redirectBack(environ, page, forceSSL=True)
+
+
+def _password_login(environ, page=None):
+    """Handle username/password login via a web form.
+
+    Requires the WebAuthType = password configuration option.
+    """
+    session = environ['koji.session']
+    options = environ['koji.options']
+
+    values = _initValues(environ, title='login', pageID='login')
+    values['AllowRegistration'] = options.get('AllowRegistration', False)
+    values['loginError'] = ''
+    values['page'] = page or ''
+    environ['koji.values'] = values
+
+    form = environ['koji.form']
+    username = form.getfirst('username', '')
+    password = form.getfirst('password', '')
+    page = form.getfirst('page', page)
+
+    if not username and not password:
+        # GET request - just show the form
+        return _genHTML(environ, 'login.chtml')
+
+    if not username or not password:
+        values['loginError'] = 'Please provide both a username and password'
+        return _genHTML(environ, 'login.chtml')
+
+    try:
+        session.opts['user'] = username
+        session.opts['password'] = password
+        session.login()
+    except koji.AuthError as e:
+        authlogger.info('Failed login attempt for user %s: %s', username, e)
+        values['loginError'] = 'Invalid username or password'
+        return _genHTML(environ, 'login.chtml')
+
+    _setUserCookie(environ, username)
+    authlogger.info('Successful password authentication by %s', username)
+    _redirectBack(environ, page, forceSSL=True)
+
+
+def register(environ, page=None):
+    """Handle new user registration via a web form.
+
+    Requires the AllowRegistration = True configuration option.
+    """
+    session = _getServer(environ)
+    options = environ['koji.options']
+
+    if not options.get('AllowRegistration', False):
+        raise koji.ActionNotAllowed('registration is disabled on this server')
+
+    values = _initValues(environ, title='register', pageID='register')
+    values['registerError'] = ''
+    values['registerInfo'] = ''
+    environ['koji.values'] = values
+
+    form = environ['koji.form']
+    username = form.getfirst('username', '')
+    password = form.getfirst('password', '')
+    confirm_password = form.getfirst('confirm_password', '')
+
+    if not username and not password:
+        # GET request - just show the form
+        return _genHTML(environ, 'register.chtml')
+
+    if not username:
+        values['registerError'] = 'Please provide a username'
+        return _genHTML(environ, 'register.chtml')
+    if not password:
+        values['registerError'] = 'Please provide a password'
+        return _genHTML(environ, 'register.chtml')
+    if password != confirm_password:
+        values['registerError'] = 'Passwords do not match'
+        return _genHTML(environ, 'register.chtml')
+
+    try:
+        session.registerUser(username, password)
+    except (koji.GenericError, koji.AuthError) as e:
+        values['registerError'] = str(e)
+        return _genHTML(environ, 'register.chtml')
+
+    values['registerInfo'] = 'Account %s created. You can now log in.' % username
+    authlogger.info('New user registered: %s', username)
+    return _genHTML(environ, 'register.chtml')
 
 
 def logout(environ, page=None):
