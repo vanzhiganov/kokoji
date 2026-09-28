@@ -1,6 +1,9 @@
 # Koji Repository Administrator (kojira) image.
 # Extends the base image which installs the kojira script.
 FROM koji-base:latest
+# To build against a base published to a registry instead, swap the line above
+# for: FROM git.org.ru/platformos/koji-base:latest
+# and push containers/base separately: docker compose build base
 
 USER root
 

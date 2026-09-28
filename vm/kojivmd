@@ -164,10 +164,6 @@ def get_options():
                 'portbase': 7000,
                 'smtphost': 'example.com',
                 'from_addr': 'Koji Build System <buildsys@example.com>',
-                'krb_principal': None,
-                'host_principal_format': 'compile/%s@EXAMPLE.COM',
-                'keytab': '/etc/kojivmd/kojivmd.keytab',
-                'ccache': '/var/tmp/kojivmd.ccache',
                 'server': None,
                 'user': None,
                 'password': None,
@@ -1205,12 +1201,7 @@ if __name__ == "__main__":
         except requests.exceptions.ConnectionError:
             quit("Error: Unable to connect to server %s" % (options.server))
     else:
-        krb_principal = options.krb_principal
-        if krb_principal is None:
-            krb_principal = options.host_principal_format % socket.getfqdn()
-        session.gssapi_login(principal=krb_principal,
-                             keytab=options.keytab,
-                             ccache=options.ccache)
+        quit("No username/password/certificate supplied")
     # make session exclusive
     try:
         session.exclusiveSession(force=options.force_lock)

@@ -39,7 +39,6 @@ import re
 import shutil
 import signal
 import smtplib
-import socket
 import subprocess
 import sys
 import time
@@ -92,16 +91,6 @@ from koji.util import (
     parseStatus,
     to_list,
 )
-
-try:
-    import requests_gssapi as reqgssapi
-    Krb5Error = reqgssapi.exceptions.RequestException
-except ImportError:  # pragma: no cover
-    try:
-        import requests_kerberos as reqgssapi
-        Krb5Error = reqgssapi.exceptions.RequestException
-    except ImportError:  # pragma: no cover
-        reqgssapi = None
 
 # imports for LiveCD, LiveMedia, and Appliance handler
 try:
@@ -6806,10 +6795,6 @@ def get_options():
                 'smtp_user': None,
                 'smtp_pass': None,
                 'from_addr': 'Koji Build System <buildsys@example.com>',
-                'krb_principal': None,
-                'host_principal_format': 'compile/%s@EXAMPLE.COM',
-                'keytab': '/etc/kojid/kojid.keytab',
-                'ccache': '/var/tmp/kojid.ccache',
                 'server': None,
                 'user': None,
                 'password': None,
@@ -6967,24 +6952,8 @@ if __name__ == "__main__":
             quit("Error: Unable to log in. Bad credentials?")
         except requests.exceptions.ConnectionError:
             quit("Error: Unable to connect to server %s" % (options.server))
-    elif reqgssapi:
-        krb_principal = options.krb_principal
-        if krb_principal is None:
-            krb_principal = options.host_principal_format % socket.getfqdn()
-        try:
-            # Check ccache is not empty or authentication will fail
-            if os.path.exists(options.ccache) and os.stat(options.ccache).st_size == 0:
-                os.remove(options.ccache)
-
-            glob_session.gssapi_login(principal=krb_principal,
-                                      keytab=options.keytab,
-                                      ccache=options.ccache)
-        except Krb5Error as e:
-            quit("Kerberos authentication failed: %s" % e.args)
-        except socket.error as e:
-            quit("Could not connect to Kerberos authentication service: '%s'" % e.args[1])
     else:
-        quit("No username/password/certificate supplied and Kerberos missing or not configured")
+        quit("No username/password/certificate supplied")
     # make session exclusive
     try:
         glob_session.exclusiveSession(force=options.force_lock)

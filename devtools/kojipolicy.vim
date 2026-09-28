@@ -32,7 +32,7 @@ syn keyword kojiPolicyTest match_any match_all sigkey
 syn keyword kojiPolicyAction allow deny use yes no
 
 syn keyword kojiPolicyPolicy build_from_scm build_from_srpm build_from_repo_id
-syn keyword kojiPolicyPolicy package_list channel volume prep_kerberos sidetag
+syn keyword kojiPolicyPolicy package_list channel volume sidetag
 syn keyword kojiPolicyPolicy priority scm cg_import
 
 syn keyword kojiPolicyTodo contained TODO FIXME XXX

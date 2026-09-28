@@ -1,6 +1,9 @@
 # Koji Hub image.
 # Runs the kojihub XMLRPC interface under httpd/mod_wsgi.
 FROM koji-base:latest
+# To build against a base published to a registry instead, swap the line above
+# for: FROM git.org.ru/platformos/koji-base:latest
+# and push containers/base separately: docker compose build base
 
 USER root
 

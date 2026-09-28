@@ -28,8 +28,6 @@ def get_options():
     parser = optparse.OptionParser(usage="%prog [options]")
     parser.add_option("-c", "--config", metavar="FILE", help="use alternate config file")
     parser.add_option("-s", "--server", help="url of koji XMLRPC server")
-    parser.add_option("--keytab", help="specify a Kerberos keytab to use")
-    parser.add_option("--principal", help="specify a Kerberos principal to use")
     parser.add_option("--runas", metavar="USER",
                       help="run as the specified user (requires special privileges)")
     parser.add_option("--user", help="specify user")
@@ -79,8 +77,6 @@ def get_options():
         # List of values read from config file to update default parser values
         cfgmap = [
             # name, alias, type
-            ['keytab', None, 'string'],
-            ['principal', None, 'string'],
             ['runas', None, 'string'],
             ['user', None, 'string'],
             ['password', None, 'string'],
@@ -141,22 +137,6 @@ def activate_session(session):
     elif options.user:
         # authenticate using user/password
         session.login()
-    elif options.keytab and options.principal:
-        try:
-            if options.keytab and options.principal:
-                if not isinstance(options.keytab, str):
-                    raise koji.ParameterError('Invalid type of keytab: %s' % type(options.keytab))
-                if not isinstance(options.principal, str):
-                    raise koji.ParameterError('Invalid type of principal: %s'
-                                              % type(options.principal))
-                session.gssapi_login(
-                    principal=options.principal,
-                    keytab=options.keytab,
-                    proxyuser=options.runas)
-            else:
-                session.gssapi_login(proxyuser=options.runas)
-        except Exception as e:
-            error("GSSAPI authentication failed: %s (%s)" % (e.args[1], e.args[0]))
     if not options.noauth and not session.logged_in:
         error("unable to log in, no authentication methods available")
     ensure_connection(session)

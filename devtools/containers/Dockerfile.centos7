@@ -5,7 +5,6 @@ RUN \
     dnf \
     dnf-plugins-core \
     gcc \
-    krb5-devel \
     libffi-devel \
     python-devel \
     python-librepo \

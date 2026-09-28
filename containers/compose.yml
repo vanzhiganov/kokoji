@@ -1,4 +1,16 @@
 services:
+  # Build-only helper. Every other service extends this image via
+  # `FROM koji-base:latest`, so it has to exist locally before they can build.
+  # Compose does not order builds from depends_on, so build it explicitly:
+  #   docker compose build base
+  base:
+    build:
+      context: ..
+      dockerfile: containers/base/Dockerfile
+    image: koji-base:latest
+    command: ["true"]
+    restart: "no"
+
   db:
     build:
       context: ..
@@ -37,6 +49,15 @@ services:
       - koji-storage:/mnt/koji
     ports:
       - "80:80"
+    healthcheck:
+      # Deliberately not /kojihub: the XML-RPC app answers 405 to GET
+      # (kojihub/kojixmlrpc.py rejects non-POST), so that would fail forever.
+      # /kojifiles is a plain Apache alias over the shared volume.
+      test: ["CMD-SHELL", "curl -sf http://localhost/kojifiles/ >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
     logging:
       driver: json-file
       options:
@@ -51,7 +72,8 @@ services:
     image: koji-web:latest
     container_name: koji-web
     depends_on:
-      - hub
+      hub:
+        condition: service_healthy
     environment:
       HUB_URL: ${HUB_URL:-http://hub/kojihub}
       FILES_URL: ${FILES_URL:-http://hub/kojifiles}
@@ -61,6 +83,12 @@ services:
       - koji-storage:/mnt/koji:ro
     ports:
       - "8080:80"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost/koji/ >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
     restart: unless-stopped
 
   kojira:
@@ -70,7 +98,8 @@ services:
     image: koji-kojira:latest
     container_name: koji-kojira
     depends_on:
-      - hub
+      hub:
+        condition: service_healthy
     environment:
       KOJIRA_SERVER: ${HUB_URL:-http://hub/kojihub}
       KOJIRA_TOPDIR: /mnt/koji
