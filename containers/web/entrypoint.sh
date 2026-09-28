@@ -32,6 +32,12 @@ set_opt('KojiHubURL', os.environ.get('HUB_URL', 'http://hub/kojihub'))
 set_opt('KojiFilesURL', os.environ.get('FILES_URL', 'http://hub/kojifiles'))
 set_opt('Secret', os.environ.get('WEB_SECRET', 'change-me-secret'))
 
+# LogLevel is passed through verbatim: it accepts either a bare level name or
+# a series of "logger:LEVEL" pairs, so it is not validated here.
+log_level = os.environ.get('LOG_LEVEL')
+if log_level:
+    set_opt('LogLevel', log_level)
+
 # Allow toggling self-registration
 allow_reg = os.environ.get('ALLOW_REGISTRATION', 'On')
 set_opt('AllowRegistration', 'On' if allow_reg == 'On' else 'Off')
@@ -40,7 +46,7 @@ with open(CONF, 'w') as f:
     parser.write(f)
 
 print('kojiweb config:')
-for key in ('KojiHubURL', 'KojiFilesURL', 'AllowRegistration'):
+for key in ('KojiHubURL', 'KojiFilesURL', 'AllowRegistration', 'LogLevel'):
     print('  %s = %s' % (key, parser.get('web', key)))
 PYEOF
 

@@ -128,7 +128,10 @@ class Dispatcher(object):
         """
         cf = environ.get('koji.web.ConfigFile', '/etc/kojiweb/web.conf')
         cfdir = environ.get('koji.web.ConfigDir', '/etc/kojiweb/web.conf.d')
-        config = koji.read_config_files([cfdir, (cf, True)])
+        # raw=True: the hub does the same (see kojixmlrpc.py). Without it,
+        # configparser applies %-interpolation and any LogFormat containing
+        # %(asctime)s-style fields raises InterpolationMissingOptionError.
+        config = koji.read_config_files([cfdir, (cf, True)], raw=True)
 
         opts = {}
         for name, dtype, default in self.cfgmap:

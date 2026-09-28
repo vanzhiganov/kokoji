@@ -79,6 +79,8 @@ services:
       FILES_URL: ${FILES_URL:-http://hub/kojifiles}
       WEB_SECRET: ${WEB_SECRET:-change-me-secret}
       ALLOW_REGISTRATION: ${ALLOW_REGISTRATION:-On}
+      # Bare level name, or "logger:LEVEL" pairs, e.g. "WARNING koji.auth:INFO"
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
     volumes:
       - koji-storage:/mnt/koji:ro
     ports:
