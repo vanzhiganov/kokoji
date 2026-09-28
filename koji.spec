@@ -131,7 +131,6 @@ Requires: python2-rpm
 Requires: rpm-python
 %endif
 Requires: python-requests
-Requires: python-requests-gssapi
 Requires: python-dateutil
 Requires: python-six
 Requires: python-defusedxml
@@ -155,11 +154,6 @@ Requires: python%{python3_pkgversion}-rpm
 Requires: rpm-python%{python3_pkgversion}
 %endif
 Requires: python%{python3_pkgversion}-requests
-%if 0%{?fedora} >= 32 || 0%{?rhel} >= 8
-Requires: python%{python3_pkgversion}-requests-gssapi > 1.2.1
-%else
-Requires: python%{python3_pkgversion}-requests-kerberos
-%endif
 Requires: python%{python3_pkgversion}-dateutil
 Requires: python%{python3_pkgversion}-six
 Requires: python%{python3_pkgversion}-defusedxml
@@ -218,9 +212,6 @@ Group: Applications/Internet
 License: LGPL-2.1-only
 Requires: httpd
 Requires: python%{python3_pkgversion}-mod_wsgi
-%if 0%{?fedora} || 0%{?rhel} >= 7
-Requires: mod_auth_gssapi
-%endif
 Requires: python%{python3_pkgversion}-psycopg2
 Requires: python%{python3_pkgversion}-%{name} = %{version}-%{release}
 # py2 xor py3
@@ -357,7 +348,6 @@ License: LGPL-2.1-only
 %{?python_provide:%python_provide python%{python3_pkgversion}-%{name}-web}
 Requires: httpd
 Requires: python%{python3_pkgversion}-mod_wsgi
-Requires: mod_auth_gssapi
 Requires: python%{python3_pkgversion}-psycopg2
 Requires: python%{python3_pkgversion}-cheetah
 Requires: python%{python3_pkgversion}-%{name} = %{version}-%{release}

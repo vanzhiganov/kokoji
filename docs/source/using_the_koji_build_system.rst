@@ -28,8 +28,8 @@ fedora-packager provides useful scripts to help maintain and setup your
 koji environment. Additionally, it includes dependencies on the Koji
 CLI, so it will be installed when you install ``fedora-packager``. The
 command is called ``koji`` and is included in the main koji package. By
-default the koji tool authenticates to the central server using
-Kerberos. However SSL and username/password authentications are
+default the koji tool authenticates to the central server using an SSL
+client certificate. However username/password authentication is also
 available. You will need to have a valid authentication token to use
 many features. However, many of the read-only commands will work without
 authentication.

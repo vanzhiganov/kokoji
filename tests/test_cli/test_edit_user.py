@@ -36,12 +36,9 @@ class TestEditUser(utils.CliTestCase):
     def test_handle_edit_user(self, stdout):
         args = [self.user]
         args.append('--rename=' + self.rename)
-        args.append('--add-krb=addedkrb')
-        args.append('--remove-krb=removedkrb')
-        args.append('--edit-krb=oldkrb=newkrb')
 
         # Run it and check immediate output
-        # args: user --rename=user --krb=krb
+        # args: user --rename=user2
         # expected: success
         rv = handle_edit_user(self.options, self.session, args)
         actual = stdout.getvalue()
@@ -49,10 +46,7 @@ class TestEditUser(utils.CliTestCase):
         self.assertMultiLineEqual(actual, expected)
         # Finally, assert that things were called as we expected.
         self.activate_session_mock.assert_called_once_with(self.session, self.options)
-        self.session.editUser.assert_called_once_with(self.user, self.rename,
-                                                      [{'new': 'newkrb', 'old': 'oldkrb'},
-                                                       {'new': 'addedkrb', 'old': None},
-                                                       {'new': None, 'old': 'removedkrb'}])
+        self.session.editUser.assert_called_once_with(self.user, self.rename)
         self.assertEqual(rv, None)
 
     def test_handle_edit_user_help(self):
@@ -65,11 +59,8 @@ class TestEditUser(utils.CliTestCase):
 (Specify the --help global option for a list of other help options)
 
 Options:
-  -h, --help          show this help message and exit
-  --rename=RENAME     Rename the user
-  --edit-krb=OLD=NEW  Change kerberos principal of the user
-  --add-krb=KRB       Add kerberos principal of the user
-  --remove-krb=KRB    Remove kerberos principal of the user
+  -h, --help       show this help message and exit
+  --rename=RENAME  Rename the user
 """ % self.progname)
         # Finally, assert that things were called as we expected.
         self.activate_session_mock.assert_not_called()

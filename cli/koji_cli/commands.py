@@ -189,8 +189,6 @@ def handle_add_host(goptions, session, args):
     "[admin] Add a host"
     usage = "usage: %prog add-host [options] <hostname> <arch> [<arch> ...]"
     parser = OptionParser(usage=get_usage_str(usage))
-    parser.add_option("--krb-principal",
-                      help="set a non-default kerberos principal for the host")
     parser.add_option("--force", default=False, action="store_true",
                       help="if existing used is a regular user, convert it to a host")
     (options, args) = parser.parse_args(args)
@@ -202,10 +200,7 @@ def handle_add_host(goptions, session, args):
     if id:
         error("%s is already in the database" % host)
     else:
-        kwargs = {'force': options.force}
-        if options.krb_principal is not None:
-            kwargs['krb_principal'] = options.krb_principal
-        id = session.addHost(host, args[1:], **kwargs)
+        id = session.addHost(host, args[1:], force=options.force)
         print("%s added: id %d" % (host, id))
 
 
@@ -2232,7 +2227,6 @@ def handle_add_user(goptions, session, args):
     "[admin] Add a user"
     usage = "usage: %prog add-user <username> [options]"
     parser = OptionParser(usage=get_usage_str(usage))
-    parser.add_option("--principal", help="The Kerberos principal for this user")
     parser.add_option("--disable", help="Prohibit logins by this user", action="store_true")
     (options, args) = parser.parse_args(args)
     if len(args) < 1:
@@ -2245,7 +2239,7 @@ def handle_add_user(goptions, session, args):
     else:
         status = koji.USER_STATUS['NORMAL']
     activate_session(session, goptions)
-    user_id = session.createUser(username, status=status, krb_principal=options.principal)
+    user_id = session.createUser(username, status=status)
     print("Added user %s (%i)" % (username, user_id))
 
 
@@ -2282,12 +2276,6 @@ def handle_edit_user(goptions, session, args):
     usage = "usage: %prog edit-user <username> [options]"
     parser = OptionParser(usage=get_usage_str(usage))
     parser.add_option("--rename", help="Rename the user")
-    parser.add_option("--edit-krb", action="append", default=[], metavar="OLD=NEW",
-                      help="Change kerberos principal of the user")
-    parser.add_option("--add-krb", action="append", default=[], metavar="KRB",
-                      help="Add kerberos principal of the user")
-    parser.add_option("--remove-krb", action="append", default=[], metavar="KRB",
-                      help="Remove kerberos principal of the user")
     (options, args) = parser.parse_args(args)
     if len(args) < 1:
         parser.error("You must specify the username of the user to edit")
@@ -2295,15 +2283,7 @@ def handle_edit_user(goptions, session, args):
         parser.error("This command only accepts one argument (username)")
     activate_session(session, goptions)
     user = args[0]
-    princ_mappings = []
-    for p in options.edit_krb:
-        old, new = p.split('=', 1)
-        princ_mappings.append({'old': arg_filter(old), 'new': arg_filter(new)})
-    for a in options.add_krb:
-        princ_mappings.append({'old': None, 'new': arg_filter(a)})
-    for r in options.remove_krb:
-        princ_mappings.append({'old': arg_filter(r), 'new': None})
-    session.editUser(user, options.rename, princ_mappings)
+    session.editUser(user, options.rename)
 
 
 def handle_list_signed(goptions, session, args):
@@ -7846,10 +7826,6 @@ def handle_moshimoshi(options, session, args):
     authtype = u.get('authtype', getattr(session, 'authtype', None))
     if authtype == koji.AUTHTYPES['NORMAL']:
         print("Authenticated via password")
-    elif authtype == koji.AUTHTYPES['GSSAPI']:
-        print("Authenticated via GSSAPI")
-    elif authtype == koji.AUTHTYPES['KERBEROS']:
-        print("Authenticated via Kerberos principal %s" % session.krb_principal)
     elif authtype == koji.AUTHTYPES['SSL']:
         print("Authenticated via client certificate %s" % options.cert)
 
@@ -8178,10 +8154,6 @@ def anon_handle_userinfo(goptions, session, args):
     for userinfo, (perms, pkgs, tasks, builds) in zip(user_infos, calls):
         print("User name: %s" % userinfo['name'])
         print("User ID: %d" % userinfo['id'])
-        if 'krb_principals' in userinfo:
-            print("krb principals:")
-            for krb in userinfo['krb_principals']:
-                print("  %s" % krb)
         if perms.result:
             print("Permissions:")
             for perm in perms.result:

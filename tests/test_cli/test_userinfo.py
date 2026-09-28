@@ -20,7 +20,6 @@ class TestUserinfo(utils.CliTestCase):
 
         self.user = 'test-user'
         self.user_info = {'id': 1,
-                          'krb_principals': ['test-principal'],
                           'name': self.user,
                           'status': 0,
                           'groups': ['group1', 'group2'],
@@ -64,8 +63,6 @@ class TestUserinfo(utils.CliTestCase):
     def test_userinfo(self, ensure_connection, stdout):
         expected = """User name: test-user
 User ID: 1
-krb principals:
-  test-principal
 Permissions:
   admin
   tag

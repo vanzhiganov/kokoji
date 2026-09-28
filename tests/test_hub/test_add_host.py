@@ -47,7 +47,6 @@ class TestAddHost(unittest.TestCase):
         # start with "assert"
         self.context_db.session.assertLogin = mock.MagicMock()
         self.context.session.assertPerm = mock.MagicMock()
-        self.context.opts = {'HostPrincipalFormat': '-%s-'}
         self.exports = kojihub.RootExports()
         self.verify_host_name = mock.patch('kojihub.kojihub.verify_host_name').start()
         self.verify_name_user = mock.patch('kojihub.kojihub.verify_name_user').start()
@@ -82,7 +81,7 @@ class TestAddHost(unittest.TestCase):
         self.context.session.assertPerm.assert_called_once_with('host')
         self.get_host.assert_called_once_with('hostname')
         self.context.session.createUser.assert_called_once_with(
-            'hostname', usertype=koji.USERTYPES['HOST'], krb_principal='-hostname-')
+            'hostname', usertype=koji.USERTYPES['HOST'])
         self.nextval.assert_called_once_with('host_id_seq')
         self.assertEqual(len(self.queries), 1)
         query = self.queries[0]
@@ -180,24 +179,3 @@ class TestAddHost(unittest.TestCase):
         self.verify_host_name.side_effect = koji.GenericError
         with self.assertRaises(koji.GenericError):
             self.exports.addHost(hostname, ['i386', 'x86_64'], force=True)
-
-    def test_add_host_krbprincipal_wrong_type(self):
-        krb_principal = ['test-krb']
-        self.verify_host_name.return_value = None
-        self.get_host.return_value = {}
-        self.QueryProcessor.return_value = 333
-        self.verify_name_user.side_effect = koji.GenericError
-        with self.assertRaises(koji.GenericError):
-            self.exports.addHost('hostname', ['i386', 'x86_64'], krb_principal=krb_principal)
-
-        self.context.session.assertPerm.assert_called_once_with('host')
-        self.get_host.assert_called_once_with('hostname')
-        self.context.session.createUser.assert_not_called()
-        self.verify_host_name.assert_called_once_with('hostname')
-        self.nextval.assert_not_called()
-        self.assertEqual(len(self.queries), 1)
-        query = self.queries[0]
-        self.assertEqual(query.tables, ['channels'])
-        self.assertEqual(query.joins, None)
-        self.assertEqual(set(query.columns), set(['id']))
-        self.assertEqual(set(query.clauses), set(["name = 'default'"]))

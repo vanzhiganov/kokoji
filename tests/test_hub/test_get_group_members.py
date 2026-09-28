@@ -34,9 +34,7 @@ class TestGetGroupMembers(DBQueryTestCase):
         self.assertEqual(len(self.queries), 1)
         query = self.queries[0]
         self.assertEqual(query.tables, ['user_groups'])
-        self.assertEqual(query.joins, ['JOIN users ON user_groups.user_id = users.id',
-                                       'LEFT JOIN user_krb_principals'
-                                       ' ON users.id = user_krb_principals.user_id'])
+        self.assertEqual(query.joins, ['JOIN users ON user_groups.user_id = users.id'])
         self.assertEqual(query.clauses, ['(active = TRUE)', 'group_id = %(group_id)i'])
         self.assertEqual(query.values, {'group_id': 23})
-        self.assertEqual(query.columns, ['id', 'array_agg(krb_principal)', 'name', 'usertype'])
+        self.assertEqual(query.columns, ['id', 'name', 'usertype'])

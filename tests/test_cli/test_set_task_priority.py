@@ -73,8 +73,6 @@ class TestSetTaskPriority(utils.CliTestCase):
         self.session.getLoggedInUser.return_value = {
             'authtype': 2,
             'id': 1,
-            'krb_principal': None,
-            'krb_principals': [],
             'name': 'testuser',
             'status': 0,
             'usertype': 0

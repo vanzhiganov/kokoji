@@ -25,7 +25,7 @@ class TestListBuilds(utils.CliTestCase):
         os.environ['TZ'] = 'UTC'
         time.tzset()
         self.user_info = {'id': 1, 'name': 'kojiadmin', 'status': 0, 'usertype': 0,
-                          'krb_principals': []}
+                          }
         self.owner = 'kojiadmin'
         self.error_format = """Usage: %s list-builds [options]
 (Specify the --help global option for a list of other help options)

@@ -27,7 +27,6 @@ class TestAddHostToChannel(unittest.TestCase):
         self.context.session.assertPerm = mock.MagicMock()
         self.context_db.event_id = 42
         self.context_db.session.user_id = 23
-        self.context.opts = {'HostPrincipalFormat': '-%s-'}
         self.exports = kojihub.RootExports()
         self.get_channel = mock.patch('kojihub.kojihub.get_channel').start()
         self.list_channels = mock.patch('kojihub.kojihub.list_channels').start()

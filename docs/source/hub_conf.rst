@@ -110,7 +110,7 @@ General authentication options
 
       Default: ``True``
 
-      Whether or not to automatically create a new user from valid ssl or gssapi credentials.
+      Whether or not to automatically create a new user from valid ssl credentials.
 
    SessionRenewalTimeout
       Type: integer
@@ -120,47 +120,10 @@ General authentication options
       The number of minutes before sessions are required to re-authenticate.
       Set to 0 for no timeout.
 
-GSSAPI authentication options
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-The following options control aspects of authentication when using ``mod_auth_gssapi``.
+Authentication session options
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. glossary::
-   ProxyPrincipals
-      Type: string
-
-      Default: ``None``
-
-      A comma separated list of principals that are allowed to perform proxy authentication.
-      This ability is only intended for kojiweb.
-
-   HostPrincipalFormat
-      Type: string
-
-      Default: ``None``
-
-      This format string is used to set the principal when adding new hosts.
-      The ``%s`` is expanded to the hostname.
-      If a specific principal is given to the ``add-host`` command then this option
-      is not used.
-
-   AllowedKrbRealms
-      Type: string
-
-      Default: ``*``
-
-      Allowed Kerberos Realms. The default value "*" indicates any Realm is allowed.
-      This is a comma separated list.
-
-   DisableGSSAPIProxyDNFallback
-      Type: boolean
-
-      Default: ``False``
-
-      If True, enables backwards compatible behavior in the handling of the ``ProxyDNs``
-      option.
-      The default value of False is recommended.
-
    DisableURLSessions
       Type: boolean
 
@@ -172,7 +135,6 @@ The following options control aspects of authentication when using ``mod_auth_gs
       encouraged to set it to ``True`` as soon as possible when no older clients are
       using the hub. (Added in 1.30, will be removed in 1.34)
 
-Enabling gssapi auth also requires settings in the httpd config.
 
 SSL client certificate auth configuration
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -515,7 +477,6 @@ Group internal names is currently used for:
  - external repo
  - group
  - host
- - kerberos
  - permission
  - tag
  - target
@@ -549,9 +510,9 @@ Host names are listed in both groups because hosts always have an associated use
 
       Default: ``^[A-Za-z0-9/_.@-]+$``
 
-      Set regex for verify a user name and kerberos. User name and kerberos have
-      in default set up allowed '@' and '/' chars on top of basic name regex
-      for internal names. When regex string is empty, verifying is disabled.
+      Set regex for verify a user name. User names have in default set up allowed
+      '@' and '/' chars on top of basic name regex for internal names.
+      When regex string is empty, verifying is disabled.
 
 Default checksums types
 ^^^^^^^^^^^^^^^^^^^^^^^

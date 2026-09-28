@@ -78,13 +78,6 @@ __version__ = _version.__version__
 __version_info__ = _version.__version_info__
 
 try:
-    import requests_gssapi as reqgssapi
-except ImportError:  # pragma: no cover
-    try:
-        import requests_kerberos as reqgssapi
-    except ImportError:  # pragma: no cover
-        reqgssapi = None
-try:
     import rpm
 except ImportError:
     rpm = None
@@ -218,11 +211,12 @@ USER_STATUS = Enum((
 
 # authtype values
 # normal == username/password
+# NOTE: 'KERBEROS' and 'GSSAPI' were removed, which renumbers 'SSL' from 2 to 1.
+# Sessions created before the removal may carry a stale authtype value; see
+# schemas/schema-upgrade-1.35-1.36.sql.
 AUTHTYPES = Enum((
     'NORMAL',
-    'KERBEROS',
     'SSL',
-    'GSSAPI',
 ))
 
 
@@ -434,11 +428,6 @@ class ConfigurationError(GenericError):
 class LiveMediaError(GenericError):
     """Raised when LiveMedia Image creation fails"""
     faultCode = 1022
-
-
-class GSSAPIAuthError(AuthError):
-    """Raised when GSSAPI issue in authentication"""
-    faultCode = 1023
 
 
 class NameValidationError(GenericError):
@@ -2714,121 +2703,6 @@ class ClientSession(object):
         "Create a subsession"
         sinfo = self.callMethod('subsession')
         return type(self)(self.baseurl, opts=self.opts, sinfo=sinfo, auth_method=self.auth_method)
-
-    def gssapi_login(self, principal=None, keytab=None, ccache=None,
-                     proxyuser=None, proxyauthtype=None, renew=False):
-        """
-        GSSAPI/Kerberos login method
-
-        :param str principal: Kerberos principal
-        :param str keytab: path to keytab file
-        :param str ccache: path to ccache file/dir
-        :param str proxyuser: name of proxied user (e.g. forwarding by web ui)
-        :param int proxyauthtype: AUTHTYPE used by proxied user (can be different from ours)
-        :returns bool True: success or raises exception
-        """
-        if not reqgssapi:
-            raise PythonImportError(
-                "Please install python-requests-gssapi to use GSSAPI."
-            )
-        # store calling parameters
-        self.auth_method = {
-            'method': 'gssapi_login',
-            'kwargs': {
-                'principal': principal, 'keytab': keytab, 'ccache': ccache, 'proxyuser': proxyuser,
-                'proxyauthtype': proxyauthtype
-            }
-        }
-        # force https
-        old_baseurl = self.baseurl
-        uri = six.moves.urllib.parse.urlsplit(self.baseurl)
-        if uri[0] != 'https':
-            self.baseurl = 'https://%s%s' % (uri[1], uri[2])
-
-        # Force a new session
-        self.new_session()
-
-        sinfo = None
-        old_env = {}
-        old_opts = self.opts
-        self.opts = old_opts.copy()
-        e_str = None
-        try:
-            # temporary timeout value during login
-            self.opts['timeout'] = self.opts.get('auth_timeout',
-                                                 DEFAULT_AUTH_TIMEOUT)
-            kwargs = {}
-            if keytab:
-                old_env['KRB5_CLIENT_KTNAME'] = os.environ.get('KRB5_CLIENT_KTNAME')
-                os.environ['KRB5_CLIENT_KTNAME'] = keytab
-            if ccache:
-                old_env['KRB5CCNAME'] = os.environ.get('KRB5CCNAME')
-                os.environ['KRB5CCNAME'] = ccache
-            if principal:
-                if re.match(r'0[.][1-8]\b', reqgssapi.__version__):
-                    raise PythonImportError(
-                        'python-requests-gssapi >= 0.9.0 required for '
-                        'keytab auth'
-                    )
-                else:
-                    kwargs['principal'] = principal
-            self.opts['auth'] = reqgssapi.HTTPKerberosAuth(**kwargs)
-            try:
-                # Depending on the server configuration, we might not be able to
-                # connect without client certificate, which means that the conn
-                # will fail with a handshake failure, which is retried by default.
-                # For this case we're now using retry=False and test errors for
-                # this exact usecase.
-                kwargs = {'proxyuser': proxyuser}
-                if renew:
-                    kwargs['renew'] = True
-                    kwargs['exclusive'] = self.exclusive
-                if proxyauthtype is not None:
-                    kwargs['proxyauthtype'] = proxyauthtype
-                for tries in range(self.opts.get('max_retries', 30)):
-                    try:
-                        sinfo = self._callMethod('sslLogin', [], kwargs, retry=False)
-                        break
-                    except Exception as ex:
-                        # retry on requests.exceptions.ConnectionError
-                        # die on:
-                        #   - any non-connection related error (http code, etc.)
-                        #   - requests.exceptions.SSLError - CA-mismatch, etc. - die on all SSL
-                        #                                    related errors
-                        if (not is_conn_error(ex) or isinstance(ex, requests.exceptions.SSLError)):
-                            raise
-                        # logging similar to normal retry
-                        if self.logger.isEnabledFor(logging.DEBUG):
-                            tb_str = ''.join(traceback.format_exception(*sys.exc_info()))
-                            self.logger.debug(tb_str)
-                        self.logger.info("Try #%s for call %s (sslLogin) failed: %s",
-                                         tries, self.callnum, ex)
-                        time.sleep(self.opts.get('retry_interval', 20))
-            except Exception as e:
-                e_str = ''.join(traceback.format_exception_only(type(e), e)).strip('\n')
-                e_str = '(gssapi auth failed: %s)\n' % e_str
-                e_str += 'Use following documentation to debug kerberos/gssapi auth issues. ' \
-                         'https://docs.pagure.org/koji/kerberos_gssapi_debug/'
-                self.logger.error(e_str)
-                # Auth with https didn't work. Restore for the next attempt.
-                self.baseurl = old_baseurl
-        finally:
-            self.opts = old_opts
-            for key in old_env:
-                if old_env[key] is None:
-                    del os.environ[key]
-                else:
-                    os.environ[key] = old_env[key]
-        if not sinfo:
-            err = 'unable to obtain a session'
-            if e_str:
-                err += ' %s' % e_str
-            raise GSSAPIAuthError(err)
-
-        self.setSession(sinfo)
-
-        self.authtype = AUTHTYPES['GSSAPI']
-        return True
 
     def ssl_login(self, cert=None, ca=None, serverca=None, proxyuser=None, proxyauthtype=None,
                   renew=False):

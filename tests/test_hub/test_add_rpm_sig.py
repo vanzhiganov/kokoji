@@ -36,7 +36,6 @@ class TestAddRPMSig(unittest.TestCase):
         # start with "assert"
         self.context.session.assertLogin = mock.MagicMock()
         self.context.session.assertPerm = mock.MagicMock()
-        self.context.opts = {'HostPrincipalFormat': '-%s-'}
         self.exports = kojihub.RootExports()
         self.data_path = os.path.abspath("tests/test_hub/data/rpms")
 

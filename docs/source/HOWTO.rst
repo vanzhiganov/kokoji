@@ -25,7 +25,7 @@ the following features in mind:
 
 **Usability**
 
--  Web interface with Kerberos authentication
+-  Web interface with SSL client certificate authentication
 -  Thin, portable client
 -  Users can create local buildroots
 
@@ -57,18 +57,13 @@ Those with admin privileges will find additional actions, such as:
 -  Create/Edit/Delete a target
 -  Enable/Disable a build host
 
-The web site utilizes Kerberos authentication. In order to log in you
-will need a valid Kerberos ticket and your web browser will need to be
-configured to send the Kerberos information to the server.
+The web site can authenticate you either with an SSL client certificate or
+with a username and password. To use a client certificate, your browser
+needs to be configured to present it to the server; most browsers do
+this automatically once the certificate and its CA are installed in your
+system trust store.
 
-In Firefox, you will need to use the about:config page to set
-a Kerberos parameter. Use the search term 'negotiate' to filter the list.
-Change network.negotiate-auth.trusted-uris to the domain you want to
-authenticate against, e.g .example.com. You can leave
-network.negotiate-auth.delegation-uris blank, as it enables Kerberos
-ticket passing, which is not required.
-
-In order to obtain a Kerberos ticket, use the kinit command.
+To use a password, just follow the login link on the front page.
 
 Installing the Koji cli
 -----------------------
@@ -76,9 +71,10 @@ Installing the Koji cli
 There is a single point of entry for most operations. The command is
 called 'koji' and is included in the main koji package.
 
-The koji tool authenticates to the central server using Kerberos, so you
-will need to have a valid Kerberos ticket to use many features. However,
-many of the read-only commands will work without authentication.
+The koji tool authenticates to the central server using an SSL client
+certificate or a username and password, so you will need valid
+credentials to use many features. However, many of the read-only
+commands will work without authentication.
 
 Building a package
 ------------------

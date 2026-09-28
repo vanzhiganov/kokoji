@@ -25,8 +25,8 @@ class TestGetOptions(unittest.TestCase):
                             'max_retries': 30, 'retry_interval': 20, 'anon_retry': False,
                             'offline_retry': False, 'offline_retry_interval': 20,
                             'timeout': 50000, 'auth_timeout': 60, 'use_fast_upload': True,
-                            'upload_blocksize': 1048576, 'poll_interval': 6, 'principal': None,
-                            'keytab': None, 'cert': None, 'serverca': None, 'no_ssl_verify': False,
+                            'upload_blocksize': 1048576, 'poll_interval': 6,
+                            'cert': None, 'serverca': None, 'no_ssl_verify': False,
                             'authtype': None, 'debug': False, 'debug_xmlrpc': False, 'pyver': None,
                             'plugin_paths': None, 'force_auth': False, 'config': 'path/to/config'}
         self.expanduser_values = ['path/topdir', 'cert.crt', 'serverca.crt']
@@ -45,13 +45,12 @@ class TestGetOptions(unittest.TestCase):
         self.read_config.return_value = self.config_dict
         self.expanduser.side_effect = self.expanduser_values
         options = ['--user', 'kojiadmin', '--password', 'testpass', '--profile', 'brew',
-                   '--config', 'path/to/config', '--principal', 'testuser@kerberos.org',
+                   '--config', 'path/to/config',
                    '--runas', 'testuser2', '--noauth', '--plugin-paths', 'path/to/plugins',
-                   '--force-auth', '--authtype', 'kerberos', '--debug', '--debug-xmlrpc',
+                   '--force-auth', '--authtype', 'ssl', '--debug', '--debug-xmlrpc',
                    '--quiet', '--skip-main', '--server', 'https://serverkoji.com/kojihub',
                    '--topdir', 'path/topdir', '--weburl', 'http://serverkoji.com/koji',
-                   '--topurl', 'http://serverkoji.com/kojifiles', '--help-commands',
-                   '--keytab', 'testkeytab']
+                   '--topurl', 'http://serverkoji.com/kojifiles', '--help-commands']
         orig = optparse.OptionParser
 
         def gargs(self, args):
@@ -65,12 +64,11 @@ class TestGetOptions(unittest.TestCase):
         self.assertEqual(opts.password, 'testpass')
         self.assertEqual(opts.profile, 'brew')
         self.assertEqual(opts.config, 'path/to/config')
-        self.assertEqual(opts.principal, 'testuser@kerberos.org')
         self.assertEqual(opts.runas, 'testuser2')
         self.assertEqual(opts.noauth, True)
         self.assertEqual(opts.force_auth, True)
         self.assertEqual(opts.plugin_paths, 'path/to/plugins')
-        self.assertEqual(opts.authtype, 'kerberos')
+        self.assertEqual(opts.authtype, 'ssl')
         self.assertEqual(opts.debug, True)
         self.assertEqual(opts.debug_xmlrpc, True)
         self.assertEqual(opts.quiet, True)
@@ -80,7 +78,6 @@ class TestGetOptions(unittest.TestCase):
         self.assertEqual(opts.weburl, 'http://serverkoji.com/koji')
         self.assertEqual(opts.topurl, 'http://serverkoji.com/kojifiles')
         self.assertEqual(opts.help_commands, True)
-        self.assertEqual(opts.keytab, 'testkeytab')
         self.load_plugins.assert_called_once_with('path/to/plugins')
 
     def test_get_options_shorten(self):

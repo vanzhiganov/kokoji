@@ -277,22 +277,6 @@ Notification Options
    smtphost=example.com
       The mail host to use for sending email notifications.
 
-Kerberos Options
-^^^^^^^^^^^^^^^^
-The following options control Kerberos authentication:
-
-.. glossary::
-   ccache=/var/tmp/kojid.ccache
-      Credentials cache used for krbV login.
-
-   host_principal_format=compile/\%s\@EXAMPLE.COM
-      The format of the principal used by the build hosts.
-      The %s will be replaced by the FQDN of the host.
-
-   keytab=/etc/kojid/kojid.keytab
-      Location of the keytab.
-
-
 SSL Options
 ^^^^^^^^^^^
 The following options control SSL authentication:
@@ -316,7 +300,7 @@ Insecure Authentication Options
 
 These options are only intended for simple development environments
 and should never be used in production.
-Please use Kerberos or SSL authentication instead.
+Please use SSL authentication instead.
 
 .. glossary::
    user=None

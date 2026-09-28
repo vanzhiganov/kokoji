@@ -55,12 +55,6 @@ class TestVerifyUser(unittest.TestCase):
             kojihub.verify_name_user(name=1234)
         self.assertEqual(expected_error, str(cm.exception))
 
-    def test_verify_user_type_kerberos(self):
-        expected_error = "Kerberos principal should be string"
-        with self.assertRaises(koji.GenericError) as cm:
-            kojihub.verify_name_user(name='test-name', krb=1234)
-        self.assertEqual(expected_error, str(cm.exception))
-
     def test_verify_user_name_longer(self):
         name = 'test-user-longer'
         expected_error = "Name %s is too long. Max length is 15 characters" % name
@@ -68,25 +62,9 @@ class TestVerifyUser(unittest.TestCase):
             kojihub.verify_name_user(name=name)
         self.assertEqual(expected_error, str(cm.exception))
 
-    def test_verify_user_kerberos_longer(self):
-        name = 'test-user'
-        krb = 'testuser@kerberos-test.com'
-        expected_error = "Kerberos principal %s is too long. Max length is 15 characters" % krb
-        with self.assertRaises(koji.GenericError) as cm:
-            kojihub.verify_name_user(name=name, krb=krb)
-        self.assertEqual(expected_error, str(cm.exception))
-
     def test_verify_user_name_wrong_chars(self):
         name = 'test-name+@#'
         expected_error = "Name %s does not match RegexUserName value" % name
         with self.assertRaises(koji.GenericError) as cm:
             kojihub.verify_name_user(name=name)
-        self.assertEqual(expected_error, str(cm.exception))
-
-    def test_verify_user_kerberos_wrong_chars(self):
-        name = 'test-name'
-        krb = 'user+@test.com'
-        expected_error = "Kerberos principal %s does not match RegexUserName value" % krb
-        with self.assertRaises(koji.GenericError) as cm:
-            kojihub.verify_name_user(name=name, krb=krb)
         self.assertEqual(expected_error, str(cm.exception))

@@ -23,7 +23,6 @@ from __future__ import absolute_import
 
 import logging
 import random
-import re
 import socket
 import string
 import time
@@ -34,7 +33,7 @@ import koji
 from koji.context import context
 from koji.util import to_list
 
-from .db import DeleteProcessor, InsertProcessor, QueryProcessor, UpdateProcessor, nextval
+from .db import InsertProcessor, QueryProcessor, UpdateProcessor, nextval
 
 
 # 1 - load session if provided
@@ -343,9 +342,8 @@ class Session(object):
         remote_ip = context.environ['REMOTE_ADDR']
         # XXX - REMOTE_ADDR not promised by wsgi spec
 
-        # it appears that calling setports() with *any* value results in authentication
-        # failing with "Incorrect net address", so return 0 (which prevents
-        # python-krbV from calling setports())
+        # We no longer record ports, and returning 0 here keeps the tuple shape
+        # that callers expect.
         local_port = 0
         remote_port = 0
 
@@ -357,9 +355,9 @@ class Session(object):
         allowed in the configuration file then connection is allowed to login as
         that user. By default we assume that proxyuser is coming via same
         authentication mechanism but proxyauthtype can be set to koji.AUTHTYPE['*']
-        value for different handling. Typical case is proxying kerberos user via
-        web ui which itself is authenticated via SSL certificate. (See kojiweb
-        for usage).
+        value for different handling. Typical case is a web ui which is itself
+        authenticated via an SSL certificate and proxies the user it
+        authenticated. (See kojiweb for usage).
 
         proxyauthtype is working only if AllowProxyAuthType option is set to
         'On' in the hub.conf
@@ -367,34 +365,21 @@ class Session(object):
         if self.logged_in:
             raise koji.AuthError("Already logged in")
 
-        # we use REMOTE_USER to identify user
-        if context.environ.get('REMOTE_USER'):
-            # it is kerberos principal rather than user's name.
-            username = context.environ.get('REMOTE_USER')
-            client_dn = username
-            authtype = koji.AUTHTYPES['GSSAPI']
-        else:
-            if context.environ.get('SSL_CLIENT_VERIFY') != 'SUCCESS':
-                raise koji.AuthError('could not verify client: %s' %
-                                     context.environ.get('SSL_CLIENT_VERIFY'))
+        if context.environ.get('SSL_CLIENT_VERIFY') != 'SUCCESS':
+            raise koji.AuthError('could not verify client: %s' %
+                                 context.environ.get('SSL_CLIENT_VERIFY'))
 
-            name_dn_component = context.opts.get('DNUsernameComponent', 'CN')
-            username = context.environ.get('SSL_CLIENT_S_DN_%s' % name_dn_component)
-            if not username:
-                raise koji.AuthError(
-                    'unable to get user information (%s) from client certificate' %
-                    name_dn_component)
-            client_dn = context.environ.get('SSL_CLIENT_S_DN')
-            authtype = koji.AUTHTYPES['SSL']
+        name_dn_component = context.opts.get('DNUsernameComponent', 'CN')
+        username = context.environ.get('SSL_CLIENT_S_DN_%s' % name_dn_component)
+        if not username:
+            raise koji.AuthError(
+                'unable to get user information (%s) from client certificate' %
+                name_dn_component)
+        client_dn = context.environ.get('SSL_CLIENT_S_DN')
+        authtype = koji.AUTHTYPES['SSL']
 
         if proxyuser:
-            if authtype == koji.AUTHTYPES['GSSAPI']:
-                delimiter = ','
-                proxy_opt = 'ProxyPrincipals'
-            else:
-                delimiter = '|'
-                proxy_opt = 'ProxyDNs'
-            proxy_dns = [dn.strip() for dn in context.opts.get(proxy_opt, '').split(delimiter)]
+            proxy_dns = [dn.strip() for dn in context.opts.get('ProxyDNs', '').split('|')]
 
             if client_dn in proxy_dns:
                 # the user authorized to login other users
@@ -407,21 +392,15 @@ class Session(object):
                 if not context.opts['AllowProxyAuthType'] and authtype != proxyauthtype:
                     raise koji.AuthError("Proxy must use same auth mechanism as hub (behaviour "
                                          "can be overriden via AllowProxyAuthType hub option)")
-                if proxyauthtype not in (koji.AUTHTYPES['GSSAPI'], koji.AUTHTYPES['SSL']):
+                if proxyauthtype != koji.AUTHTYPES['SSL']:
                     raise koji.AuthError(
                         "Proxied authtype %s is not valid for sslLogin" % proxyauthtype)
                 authtype = proxyauthtype
 
-        if authtype == koji.AUTHTYPES['GSSAPI'] and '@' in username:
-            user_id = self.getUserIdFromKerberos(username)
-        else:
-            user_id = self.getUserId(username)
+        user_id = self.getUserId(username)
         if not user_id:
             if context.opts.get('LoginCreatesUser'):
-                if authtype == koji.AUTHTYPES['GSSAPI'] and '@' in username:
-                    user_id = self.createUserFromKerberos(username)
-                else:
-                    user_id = self.createUser(username)
+                user_id = self.createUser(username)
             else:
                 raise koji.AuthError('Unknown user: %s' % username)
 
@@ -628,19 +607,7 @@ class Session(object):
                                values={'username': username})
         return query.singleValue(strict=False)
 
-    def getUserIdFromKerberos(self, krb_principal):
-        """Return the user ID associated with a particular Kerberos principal.
-        If no user with the given princpal if found, return None."""
-        self.checkKrbPrincipal(krb_principal)
-        query = QueryProcessor(tables=['users'], columns=['id'],
-                               joins=['user_krb_principals ON '
-                                      'users.id = user_krb_principals.user_id'],
-                               clauses=['krb_principal = %(krb_principal)s'],
-                               values={'krb_principal': krb_principal})
-        return query.singleValue(strict=False)
-
-    def createUser(self, name, usertype=None, status=None, krb_principal=None,
-                   krb_princ_check=True):
+    def createUser(self, name, usertype=None, status=None):
         """
         Create a new user, using the provided values.
         Return the user_id of the newly-created user.
@@ -658,20 +625,12 @@ class Session(object):
         elif not koji.USER_STATUS.get(status):
             raise koji.GenericError('invalid status: %s' % status)
 
-        # check if krb_principal is allowed
-        if krb_princ_check:
-            self.checkKrbPrincipal(krb_principal)
-
         user_id = nextval('users_id_seq')
 
         insert = InsertProcessor('users',
                                  data={'id': user_id, 'name': name, 'usertype': usertype,
                                        'status': status})
         insert.execute()
-        if krb_principal:
-            insert = InsertProcessor('user_krb_principals',
-                                     data={'user_id': user_id, 'krb_principal': krb_principal})
-            insert.execute()
         context.cnx.commit()
 
         return user_id
@@ -745,94 +704,6 @@ class Session(object):
         user_id = self.createUser(username)
         self.setPassword(username, password)
         return user_id
-
-    def setKrbPrincipal(self, name, krb_principal, krb_princ_check=True):
-        if krb_princ_check:
-            self.checkKrbPrincipal(krb_principal)
-        if isinstance(name, six.integer_types):
-            clauses = ['id = %(name)i']
-        else:
-            clauses = ['name = %(name)s']
-        query = QueryProcessor(tables=['users'], columns=['id'], clauses=clauses,
-                               values={'name': name})
-        user_id = query.singleValue(strict=False)
-        if not user_id:
-            context.cnx.rollback()
-            raise koji.AuthError('No such user: %s' % name)
-        insert = InsertProcessor('user_krb_principals',
-                                 data={'user_id': user_id, 'krb_principal': krb_principal})
-        insert.execute()
-        context.cnx.commit()
-        return user_id
-
-    def removeKrbPrincipal(self, name, krb_principal):
-        clauses = ['krb_principal = %(krb_principal)s']
-        if isinstance(name, six.integer_types):
-            clauses.extend(['id = %(name)i'])
-        else:
-            clauses.extend(['name = %(name)s'])
-        query = QueryProcessor(tables=['users'], columns=['id'],
-                               joins=['user_krb_principals '
-                                      'ON users.id = user_krb_principals.user_id'],
-                               clauses=clauses,
-                               values={'krb_principal': krb_principal, 'name': name})
-        user_id = query.singleValue(strict=False)
-        if not user_id:
-            context.cnx.rollback()
-            raise koji.AuthError(
-                'cannot remove Kerberos Principal:'
-                ' %(krb_principal)s with user %(name)s' % locals())
-        cursor = context.cnx.cursor()
-        delete = DeleteProcessor(table='user_krb_principals',
-                                 clauses=['user_id = %(user_id)i',
-                                          'krb_principal = %(krb_principal)s'],
-                                 values={'user_id': user_id, 'krb_principal': krb_principal})
-        delete.execute()
-        context.cnx.commit()
-        return user_id
-
-    def createUserFromKerberos(self, krb_principal):
-        """Create a new user, based on the Kerberos principal.  Their
-        username will be everything before the "@" in the principal.
-        Return the ID of the newly created user."""
-        atidx = krb_principal.find('@')
-        if atidx == -1:
-            raise koji.AuthError('invalid Kerberos principal: %s' % krb_principal)
-        user_name = krb_principal[:atidx]
-
-        # check if user already exists
-        query = QueryProcessor(tables=['users'], columns=['id', 'krb_principal'],
-                               joins=['LEFT JOIN user_krb_principals ON '
-                                      'users.id = user_krb_principals.user_id'],
-                               clauses=['name = %(user_name)s'],
-                               values={'user_name': user_name})
-        r = query.execute()
-        if not r:
-            return self.createUser(user_name, krb_principal=krb_principal,
-                                   krb_princ_check=False)
-        else:
-            existing_user_krb_princs = [row['krb_principal'] for row in r]
-            if krb_principal in existing_user_krb_princs:
-                # do not set Kerberos principal if it already exists
-                return r[0]['id']
-            return self.setKrbPrincipal(user_name, krb_principal, krb_princ_check=False)
-
-    def checkKrbPrincipal(self, krb_principal):
-        """Check if the Kerberos principal is allowed"""
-        if krb_principal is None:
-            return
-        allowed_realms = context.opts.get('AllowedKrbRealms', '*')
-        if allowed_realms == '*':
-            return
-        allowed_realms = re.split(r'\s*,\s*', allowed_realms)
-        atidx = krb_principal.find('@')
-        if atidx == -1 or atidx == len(krb_principal) - 1:
-            raise koji.AuthError(
-                'invalid Kerberos principal: %s' % krb_principal)
-        realm = krb_principal[atidx + 1:]
-        if realm not in allowed_realms:
-            raise koji.AuthError(
-                "Kerberos principal's realm: %s is not allowed" % realm)
 
 
 def get_user_groups(user_id):

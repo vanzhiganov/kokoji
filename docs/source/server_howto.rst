@@ -12,8 +12,7 @@ individually, however, all services may **live** on the same resource.
 Knowledge Prerequisites
 =======================
 
-* Basic understanding of SSL and authentication via certificates and/or
-  Kerberos credentials
+* Basic understanding of SSL and authentication via certificates
 * Basic knowledge about creating a database in PostgreSQL and importing a schema
 * Working with psql
 * Basic knowledge about Apache configuration
@@ -58,22 +57,16 @@ have 02755 permission.
 
 Koji Authentication Selection
 =============================
-Koji primarily supports Kerberos and SSL Certificate authentication. For basic
+Koji supports SSL Certificate and plain user/pass authentication. For basic
 koji command line access, plain user/pass combinations are possible.  However,
-kojiweb does **not** support plain user/pass authentication and once either
-Kerberos or SSL Certificate authentication is enabled for kojiweb, the plain
-user/pass method will stop working entirely.  For this reason we encourage
-skipping the plain user/pass method altogether and properly configuring either
-Kerberos or SSL Certification authentication from the start.
+kojiweb does **not** support plain user/pass authentication and once SSL
+Certificate authentication is enabled for kojiweb, the plain user/pass method
+will stop working entirely.  For this reason we encourage skipping the plain
+user/pass method altogether and properly configuring SSL Certification
+authentication from the start.
 
 The decision on how to authenticate users will affect all other actions you
 take in setting up koji. For this reason it is a decision best made up front.
-
-For Kerberos authentication
-    a working Kerberos environment (the user is assumed to either already have
-    this or know how to set it up themselves, instructions for it are not
-    included here) and the Kerberos credentials of the initial admin user will
-    be necessary to bootstrap the user database.
 
 For SSL authentication
     SSL certificates for the xmlrpc server, for the various koji components,
@@ -307,59 +300,6 @@ CA and the kojiadmin user to ``~/.koji``:
     Copy /etc/koji.conf to ~/.koji/config if you wish to change the config on a
     per user basis.
 
-Setting up Kerberos for authentication
---------------------------------------
-
-The initial configuration of a kerberos service is outside the scope of this
-document, however there are a few specific things required by koji.
-
-DNS
-^^^
-
-The koji builders (kojid) use DNS to find the kerberos servers for any given
-realm.
-
-::
-
-    _kerberos._udp    IN SRV  10 100 88 kerberos.EXAMPLE.COM.
-
-The trailing dot denotes DNS root and is needed if FQDN is used.
-
-
-Principals and Keytabs
-^^^^^^^^^^^^^^^^^^^^^^
-
-It should be noted that in general you will need to use the fully qualified
-domain name of the hosts when generating the keytabs for services.
-
-You will need the following principals extracted to a keytab for a fully
-kerberized configuration, the requirement for a host key for the koji-hub is
-currently hard coded into the koji client.
-
-``host/kojihub@EXAMPLE.COM``
-    Used by the koji-hub server when communicating with the koji client
-
-``HTTP/kojiweb@EXAMPLE.COM``
-    Used by the koji-web server when performing a negotiated Kerberos
-    authentication with a web browser. This is a service principal for
-    Apache's mod_auth_gssapi.
-
-``koji/kojiweb@EXAMPLE.COM``
-    Used by the koji-web server during communications with the koji-hub. This
-    is a user principal that will authenticate koji-web to Kerberos as
-    "koji/kojiweb@EXAMPLE.COM". Koji-web will proxy the mod_auth_gssapi user
-    information to koji-hub (the ``ProxyPrincipals`` koji-hub config
-    option).
-
-``koji/kojira@EXAMPLE.COM``
-    Used by the kojira server during communications with the koji-hub
-
-``compile/builder1.example.com@EXAMPLE.COM``
-    Used on builder1 to communicate with the koji-hub. This
-    is a user principal that will authenticate koji-builder to Kerberos as
-    "compile/builder1.example.com@EXAMPLE.COM". Each builder host will have
-    its own unique Kerberos user principal to authenticate to the hub.
-
 PostgreSQL Server
 =================
 
@@ -583,29 +523,10 @@ Set User/Password Authentication
     koji@localhost$ psql
     koji=> insert into users (name, password, status, usertype) values ('admin-user-name', 'admin-password-in-plain-text', 0, 0);
 
-Kerberos authentication
-^^^^^^^^^^^^^^^^^^^^^^^
-
-The process is very similar to user/pass except you would replace the first
-insert above with this:
-
-::
-
-    root@localhost$ su - koji
-    koji@localhost$ psql <<EOF
-    with user_id as (
-    insert into users (name, status, usertype) values ('admin-user-name', 0, 0) returning id
-    )
-    insert into user_krb_principals (user_id, krb_principal) values (
-    (select id from user_id),
-    'admin@EXAMPLE');
-    EOF
-
 SSL Certificate authentication
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-There is no need for either a password or a Kerberos principal, so this will
-suffice:
+There is no need for a password, so this will suffice:
 
 ::
 
@@ -785,14 +706,6 @@ Authentication Configuration
 
 /etc/koji-hub/hub.conf
 ^^^^^^^^^^^^^^^^^^^^^^
-
-If using Kerberos, these settings need to be valid and inline with other
-services configurations.
-
-::
-
-    ProxyPrincipals = koji/kojiweb@EXAMPLE.COM
-    HostPrincipalFormat = compile/%s@EXAMPLE.COM
 
 If using SSL auth, these settings need to be valid and inline with other
 services configurations for kojiweb to allow logins.
@@ -985,11 +898,6 @@ override all these values. So, you can use e.g.
     KojiHubURL = https://koji-hub.example.com/kojihub
     KojiFilesURL = http://koji-filesystem.example.com/kojifiles
 
-    ## Kerberos authentication options
-    ; WebPrincipal = koji/web@EXAMPLE.COM
-    ; WebKeytab = /etc/httpd.keytab
-    ; WebCCache = /var/tmp/kojiweb.ccache
-
     ## SSL authentication options
     ; WebCert = /etc/pki/koji/koji-web.pem
     ; KojiHubCA = /etc/pki/koji/ca_cert.crt
@@ -1148,28 +1056,6 @@ certificates you generated at the beginning of the setup process.
 Every unique builder host must have its own unique keypair (PEM file) in
 ``/etc/kojid/``. If you generated the certificates on another host, move them
 to each builder.
-
-Authentication Configuration (Kerberos)
----------------------------------------
-
-/etc/kojid/kojid.conf
-^^^^^^^^^^^^^^^^^^^^^
-
-If using Kerberos, these settings need to be valid and inline with other
-services configurations.
-
-::
-
-    ; the username has to be the same as what you used with add-host
-    ;user =
-
-    host_principal_format=compile/%s@EXAMPLE.COM
-
-By default it will look for the Kerberos keytab in ``/etc/kojid/kojid.keytab``
-
-.. note::
-    Kojid will not attempt kerberos authentication to the koji-hub unless the
-    username field is commented out
 
 .. _scm-config:
 
@@ -1346,18 +1232,6 @@ Authentication Configuration
 
     ;certificate of the CA that issued the HTTP server certificate
     serverca = /etc/pki/koji/koji_ca_cert.crt
-
-**If using Kerberos,** these settings need to be valid.
-
-::
-
-    ;configuration for Kerberos authentication
-
-    ;the kerberos principal to use
-    ;principal = kojira@EXAMPLE.COM
-
-    ;location of the keytab
-    ;keytab = /etc/kojira/kojira.keytab
 
 ``/etc/sysconfig/kojira``
     The local user kojira runs as needs to be able to read and write to

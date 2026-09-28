@@ -1,8 +1,8 @@
 {
     "version": [
         1,
-        34,
-        0
+        35,
+        3
     ],
     "lib": {
         "koji": {
@@ -211,41 +211,11 @@
                         "varargs": null,
                         "varkw": null
                     },
-                    "gssapi_login": {
-                        "type": "<class 'function'>",
-                        "is_function": true,
-                        "desc": "(self, principal=None, keytab=None, ccache=None, proxyuser=None, proxyauthtype=None, renew=False)",
-                        "args": [
-                            {
-                                "name": "self"
-                            },
-                            {
-                                "name": "principal",
-                                "default": "None"
-                            },
-                            {
-                                "name": "keytab",
-                                "default": "None"
-                            },
-                            {
-                                "name": "ccache",
-                                "default": "None"
-                            },
-                            {
-                                "name": "proxyuser",
-                                "default": "None"
-                            },
-                            {
-                                "name": "proxyauthtype",
-                                "default": "None"
-                            },
-                            {
-                                "name": "renew",
-                                "default": "False"
-                            }
-                        ],
-                        "varargs": null,
-                        "varkw": null
+                    "hub_version": {
+                        "type": "<class 'property'>"
+                    },
+                    "hub_version_str": {
+                        "type": "<class 'property'>"
                     },
                     "login": {
                         "type": "<class 'function'>",
@@ -478,6 +448,10 @@
             "DRAFT_RELEASE_FORMAT": {
                 "type": "<class 'str'>"
             },
+            "DateTime": {
+                "type": "<class 'type'>",
+                "is_external": true
+            },
             "ENTITY_RE": {
                 "type": "<class 're.Pattern'>"
             },
@@ -638,15 +612,6 @@
                 "is_external": true
             },
             "FunctionDeprecated": {
-                "type": "<class 'type'>",
-                "is_class": true,
-                "members": {
-                    "faultCode": {
-                        "type": "<class 'int'>"
-                    }
-                }
-            },
-            "GSSAPIAuthError": {
                 "type": "<class 'type'>",
                 "is_class": true,
                 "members": {
@@ -1282,6 +1247,9 @@
                     "name": {
                         "type": "<class 'member_descriptor'>"
                     },
+                    "name_from": {
+                        "type": "<class 'member_descriptor'>"
+                    },
                     "path": {
                         "type": "<class 'member_descriptor'>"
                     }
@@ -1421,7 +1389,7 @@
                 }
             },
             "Retry": {
-                "type": "<class 'urllib3.util.retry._RetryMeta'>",
+                "type": "<class 'type'>",
                 "is_external": true
             },
             "RetryError": {
@@ -1603,11 +1571,11 @@
             },
             "arch": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "base64": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "buildLabel": {
                 "type": "<class 'function'>",
@@ -1699,7 +1667,7 @@
             },
             "context": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "convertFault": {
                 "type": "<class 'function'>",
@@ -1715,7 +1683,7 @@
             },
             "daemon": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "daemonize": {
                 "type": "<class 'function'>",
@@ -1727,11 +1695,11 @@
             },
             "datetime": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "dateutil": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "decode_args": {
                 "type": "<class 'function'>",
@@ -2143,7 +2111,7 @@
             },
             "hashlib": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "hex_string": {
                 "type": "<class 'function'>",
@@ -2159,11 +2127,11 @@
             },
             "importlib": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "io": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "is_conn_error": {
                 "type": "<class 'function'>",
@@ -2203,7 +2171,7 @@
             },
             "json": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "load_json": {
                 "type": "<class 'function'>",
@@ -2223,7 +2191,7 @@
             },
             "logging": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "make_groups_spec": {
                 "type": "<class 'function'>",
@@ -2307,11 +2275,11 @@
             },
             "optparse": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "os": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "parse_NVR": {
                 "type": "<class 'function'>",
@@ -2399,11 +2367,11 @@
             },
             "plugin": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "policy": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "pom_to_maven_info": {
                 "type": "<class 'function'>",
@@ -2423,7 +2391,7 @@
             },
             "random": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "range": {
                 "type": "<class 'type'>",
@@ -2448,7 +2416,7 @@
             },
             "re": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "read_config": {
                 "type": "<class 'function'>",
@@ -2509,10 +2477,6 @@
                 "varargs": null,
                 "varkw": null
             },
-            "reqgssapi": {
-                "type": "<class 'module'>",
-                "is_external": true
-            },
             "request_with_retry": {
                 "type": "<class 'function'>",
                 "is_function": true,
@@ -2540,7 +2504,7 @@
             },
             "requests": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "rip_rpm_hdr": {
                 "type": "<class 'function'>",
@@ -2568,7 +2532,7 @@
             },
             "rpm": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "rpm_hdr_size": {
                 "type": "<class 'function'>",
@@ -2592,7 +2556,7 @@
             },
             "rpmdiff": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "safe_xmlrpc_loads": {
                 "type": "<class 'function'>",
@@ -2608,15 +2572,15 @@
             },
             "server": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "six": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "socket": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "splice_rpm_sighdr": {
                 "type": "<class 'function'>",
@@ -2666,7 +2630,7 @@
             },
             "struct": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "sys": {
                 "type": "<class 'module'>",
@@ -2686,11 +2650,11 @@
             },
             "tasks": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "tempfile": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "time": {
                 "type": "<class 'module'>",
@@ -2698,31 +2662,31 @@
             },
             "traceback": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "util": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "warnings": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "weakref": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "xml": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "xmlrpc_client": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "xmlrpcplus": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "zip": {
                 "type": "<class 'type'>",
@@ -2844,7 +2808,7 @@
             },
             "ctypes": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "getArchList": {
                 "type": "<class 'function'>",
@@ -3018,11 +2982,11 @@
             },
             "os": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "rpm": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "score": {
                 "type": "<class 'function'>",
@@ -3038,7 +3002,7 @@
             },
             "struct": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             }
         },
         "koji.util": {
@@ -3260,6 +3224,296 @@
                     }
                 }
             },
+            "RepoWatcher": {
+                "type": "<class 'type'>",
+                "is_class": true,
+                "members": {
+                    "PAUSE": {
+                        "type": "<class 'int'>"
+                    },
+                    "TIMEOUT": {
+                        "type": "<class 'int'>"
+                    },
+                    "check_repo": {
+                        "type": "<class 'function'>",
+                        "is_function": true,
+                        "desc": "(self, repoinfo)",
+                        "args": [
+                            {
+                                "name": "self"
+                            },
+                            {
+                                "name": "repoinfo"
+                            }
+                        ],
+                        "varargs": null,
+                        "varkw": null
+                    },
+                    "check_timeout": {
+                        "type": "<class 'function'>",
+                        "is_function": true,
+                        "desc": "(self)",
+                        "args": [
+                            {
+                                "name": "self"
+                            }
+                        ],
+                        "varargs": null,
+                        "varkw": null
+                    },
+                    "getRepo": {
+                        "type": "<class 'function'>",
+                        "is_function": true,
+                        "desc": "(self)",
+                        "args": [
+                            {
+                                "name": "self"
+                            }
+                        ],
+                        "varargs": null,
+                        "varkw": null
+                    },
+                    "get_start": {
+                        "type": "<class 'function'>",
+                        "is_function": true,
+                        "desc": "(self)",
+                        "args": [
+                            {
+                                "name": "self"
+                            }
+                        ],
+                        "varargs": null,
+                        "varkw": null
+                    },
+                    "pause": {
+                        "type": "<class 'function'>",
+                        "is_function": true,
+                        "desc": "(self)",
+                        "args": [
+                            {
+                                "name": "self"
+                            }
+                        ],
+                        "varargs": null,
+                        "varkw": null
+                    },
+                    "request": {
+                        "type": "<class 'function'>",
+                        "is_function": true,
+                        "desc": "(self, min_event=None)",
+                        "args": [
+                            {
+                                "name": "self"
+                            },
+                            {
+                                "name": "min_event",
+                                "default": "None"
+                            }
+                        ],
+                        "varargs": null,
+                        "varkw": null
+                    },
+                    "task_args": {
+                        "type": "<class 'function'>",
+                        "is_function": true,
+                        "desc": "(self)",
+                        "args": [
+                            {
+                                "name": "self"
+                            }
+                        ],
+                        "varargs": null,
+                        "varkw": null
+                    },
+                    "wait_builds": {
+                        "type": "<class 'function'>",
+                        "is_function": true,
+                        "desc": "(self, builds)",
+                        "args": [
+                            {
+                                "name": "self"
+                            },
+                            {
+                                "name": "builds"
+                            }
+                        ],
+                        "varargs": null,
+                        "varkw": null
+                    },
+                    "wait_request": {
+                        "type": "<class 'function'>",
+                        "is_function": true,
+                        "desc": "(self, req)",
+                        "args": [
+                            {
+                                "name": "self"
+                            },
+                            {
+                                "name": "req"
+                            }
+                        ],
+                        "varargs": null,
+                        "varkw": null
+                    },
+                    "waitrepo": {
+                        "type": "<class 'function'>",
+                        "is_function": true,
+                        "desc": "(self, anon=False)",
+                        "args": [
+                            {
+                                "name": "self"
+                            },
+                            {
+                                "name": "anon",
+                                "default": "False"
+                            }
+                        ],
+                        "varargs": null,
+                        "varkw": null
+                    }
+                }
+            },
+            "SimpleProxyLogger": {
+                "type": "<class 'type'>",
+                "is_class": true,
+                "members": {
+                    "DEBUG": {
+                        "type": "<class 'int'>"
+                    },
+                    "ERROR": {
+                        "type": "<class 'int'>"
+                    },
+                    "INFO": {
+                        "type": "<class 'int'>"
+                    },
+                    "WARNING": {
+                        "type": "<class 'int'>"
+                    },
+                    "debug": {
+                        "type": "<class 'function'>",
+                        "is_function": true,
+                        "desc": "(self, msg, *args, **kwargs)",
+                        "args": [
+                            {
+                                "name": "self"
+                            },
+                            {
+                                "name": "msg"
+                            },
+                            {
+                                "name": "args"
+                            },
+                            {
+                                "name": "kwargs"
+                            }
+                        ],
+                        "varargs": "args",
+                        "varkw": "kwargs"
+                    },
+                    "error": {
+                        "type": "<class 'function'>",
+                        "is_function": true,
+                        "desc": "(self, msg, *args, **kwargs)",
+                        "args": [
+                            {
+                                "name": "self"
+                            },
+                            {
+                                "name": "msg"
+                            },
+                            {
+                                "name": "args"
+                            },
+                            {
+                                "name": "kwargs"
+                            }
+                        ],
+                        "varargs": "args",
+                        "varkw": "kwargs"
+                    },
+                    "info": {
+                        "type": "<class 'function'>",
+                        "is_function": true,
+                        "desc": "(self, msg, *args, **kwargs)",
+                        "args": [
+                            {
+                                "name": "self"
+                            },
+                            {
+                                "name": "msg"
+                            },
+                            {
+                                "name": "args"
+                            },
+                            {
+                                "name": "kwargs"
+                            }
+                        ],
+                        "varargs": "args",
+                        "varkw": "kwargs"
+                    },
+                    "log": {
+                        "type": "<class 'function'>",
+                        "is_function": true,
+                        "desc": "(self, level, msg, *args, **kwargs)",
+                        "args": [
+                            {
+                                "name": "self"
+                            },
+                            {
+                                "name": "level"
+                            },
+                            {
+                                "name": "msg"
+                            },
+                            {
+                                "name": "args"
+                            },
+                            {
+                                "name": "kwargs"
+                            }
+                        ],
+                        "varargs": "args",
+                        "varkw": "kwargs"
+                    },
+                    "send": {
+                        "type": "<class 'function'>",
+                        "is_function": true,
+                        "desc": "(filename, logger)",
+                        "args": [
+                            {
+                                "name": "filename"
+                            },
+                            {
+                                "name": "logger"
+                            }
+                        ],
+                        "varargs": null,
+                        "varkw": null
+                    },
+                    "warning": {
+                        "type": "<class 'function'>",
+                        "is_function": true,
+                        "desc": "(self, msg, *args, **kwargs)",
+                        "args": [
+                            {
+                                "name": "self"
+                            },
+                            {
+                                "name": "msg"
+                            },
+                            {
+                                "name": "args"
+                            },
+                            {
+                                "name": "kwargs"
+                            }
+                        ],
+                        "varargs": "args",
+                        "varkw": "kwargs"
+                    }
+                }
+            },
             "TIME_RE": {
                 "type": "<class 're.Pattern'>"
             },
@@ -3350,7 +3604,7 @@
             },
             "base64": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "base64decode": {
                 "type": "<class 'function'>",
@@ -3374,7 +3628,7 @@
             },
             "calendar": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "call_with_argcheck": {
                 "type": "<class 'function'>",
@@ -3434,7 +3688,7 @@
             },
             "datetime": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "decode_bytes": {
                 "type": "<class 'function'>",
@@ -3615,7 +3869,7 @@
             },
             "hashlib": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "isSuccess": {
                 "type": "<class 'function'>",
@@ -3644,9 +3898,13 @@
                 "varargs": "paths",
                 "varkw": null
             },
+            "json": {
+                "type": "<class 'module'>",
+                "is_module": true
+            },
             "koji": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "lazy_eval": {
                 "type": "<class 'function'>",
@@ -3691,7 +3949,7 @@
             },
             "logging": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "maven_opts": {
                 "type": "<class 'function'>",
@@ -3791,7 +4049,7 @@
             },
             "os": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "parseStatus": {
                 "type": "<class 'function'>",
@@ -3915,16 +4173,16 @@
             },
             "re": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "resource": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "rmtree": {
                 "type": "<class 'function'>",
                 "is_function": true,
-                "desc": "(path, logger=None)",
+                "desc": "(path, logger=None, background=False)",
                 "args": [
                     {
                         "name": "path"
@@ -3932,6 +4190,10 @@
                     {
                         "name": "logger",
                         "default": "None"
+                    },
+                    {
+                        "name": "background",
+                        "default": "False"
                     }
                 ],
                 "varargs": null,
@@ -3970,21 +4232,25 @@
             },
             "shutil": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "six": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "stat": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "struct": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "sys": {
+                "type": "<class 'module'>",
+                "is_module": true
+            },
+            "tempfile": {
                 "type": "<class 'module'>",
                 "is_module": true
             },
@@ -4018,7 +4284,7 @@
             },
             "warnings": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "wrapper_params": {
                 "type": "<class 'function'>",
@@ -4533,6 +4799,11 @@
                     }
                 }
             },
+            "RefuseTask": {
+                "type": "<class 'type'>",
+                "is_class": true,
+                "members": {}
+            },
             "RestartHostsTask": {
                 "type": "<class 'type'>",
                 "is_class": true,
@@ -4742,7 +5013,7 @@
                     "handler": {
                         "type": "<class 'function'>",
                         "is_function": true,
-                        "desc": "(self, tag, newer_than=None, nvrs=None)",
+                        "desc": "(self, tag, newer_than=None, nvrs=None, min_event=None)",
                         "args": [
                             {
                                 "name": "self"
@@ -4757,6 +5028,10 @@
                             {
                                 "name": "nvrs",
                                 "default": "None"
+                            },
+                            {
+                                "name": "min_event",
+                                "default": "None"
                             }
                         ],
                         "varargs": null,
@@ -4766,15 +5041,15 @@
             },
             "koji": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "logging": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "os": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "parse_task_params": {
                 "type": "<class 'function'>",
@@ -4793,11 +5068,11 @@
             },
             "pprint": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "random": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "range": {
                 "type": "<class 'type'>",
@@ -4854,11 +5129,11 @@
             },
             "signal": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "six": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "time": {
                 "type": "<class 'module'>",
@@ -4955,6 +5230,10 @@
                 "type": "<class 'type'>",
                 "is_external": true
             },
+            "defusedxmlrpc": {
+                "type": "<class 'module'>",
+                "is_module": true
+            },
             "dumps": {
                 "type": "<class 'function'>",
                 "is_function": true,
@@ -4997,19 +5276,23 @@
             },
             "re": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "six": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "types": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "xmlrpc_client": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
+            },
+            "xmlrpc_server": {
+                "type": "<class 'module'>",
+                "is_module": true
             }
         },
         "koji.plugin": {
@@ -5169,15 +5452,15 @@
             },
             "importlib": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "koji": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "logging": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "register_callback": {
                 "type": "<class 'function'>",
@@ -5214,7 +5497,7 @@
             },
             "six": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             },
             "sys": {
                 "type": "<class 'module'>",
@@ -5222,7 +5505,7 @@
             },
             "traceback": {
                 "type": "<class 'module'>",
-                "is_external": true
+                "is_module": true
             }
         }
     },
@@ -5386,17 +5669,13 @@
             "varkw": null
         },
         "addHost": {
-            "desc": "(hostname, arches, krb_principal=None, force=False)",
+            "desc": "(hostname, arches, force=False)",
             "args": [
                 {
                     "name": "hostname"
                 },
                 {
                     "name": "arches"
-                },
-                {
-                    "name": "krb_principal",
-                    "default": "None"
                 },
                 {
                     "name": "force",
@@ -5435,19 +5714,6 @@
                 },
                 {
                     "name": "data"
-                }
-            ],
-            "varargs": null,
-            "varkw": null
-        },
-        "addUserKrbPrincipal": {
-            "desc": "(user, krb_principal)",
-            "args": [
-                {
-                    "name": "user"
-                },
-                {
-                    "name": "krb_principal"
                 }
             ],
             "varargs": null,
@@ -5742,6 +6008,19 @@
             "varargs": null,
             "varkw": null
         },
+        "changePassword": {
+            "desc": "(old_password, new_password)",
+            "args": [
+                {
+                    "name": "old_password"
+                },
+                {
+                    "name": "new_password"
+                }
+            ],
+            "varargs": null,
+            "varkw": null
+        },
         "checkTagAccess": {
             "desc": "(tag_id, user_id=None)",
             "args": [
@@ -5981,17 +6260,13 @@
             "varkw": null
         },
         "createUser": {
-            "desc": "(username, status=None, krb_principal=None)",
+            "desc": "(username, status=None)",
             "args": [
                 {
                     "name": "username"
                 },
                 {
                     "name": "status",
-                    "default": "None"
-                },
-                {
-                    "name": "krb_principal",
                     "default": "None"
                 }
             ],
@@ -6336,17 +6611,13 @@
             "varkw": null
         },
         "editUser": {
-            "desc": "(userInfo, name=None, krb_principal_mappings=None)",
+            "desc": "(userInfo, name=None)",
             "args": [
                 {
                     "name": "userInfo"
                 },
                 {
                     "name": "name",
-                    "default": "None"
-                },
-                {
-                    "name": "krb_principal_mappings",
                     "default": "None"
                 }
             ],
@@ -6788,10 +7059,14 @@
             "varkw": null
         },
         "getEvent": {
-            "desc": "(id)",
+            "desc": "(id, strict=True)",
             "args": [
                 {
                     "name": "id"
+                },
+                {
+                    "name": "strict",
+                    "default": "True"
                 }
             ],
             "varargs": null,
@@ -6927,11 +7202,15 @@
             "varkw": null
         },
         "getLastEvent": {
-            "desc": "(before=None)",
+            "desc": "(before=None, strict=True)",
             "args": [
                 {
                     "name": "before",
                     "default": "None"
+                },
+                {
+                    "name": "strict",
+                    "default": "True"
                 }
             ],
             "varargs": null,
@@ -7235,7 +7514,7 @@
             "varkw": null
         },
         "getRepo": {
-            "desc": "(tag, state=None, event=None, dist=False)",
+            "desc": "(tag, state=None, event=None, dist=False, min_event=None)",
             "args": [
                 {
                     "name": "tag"
@@ -7251,6 +7530,10 @@
                 {
                     "name": "dist",
                     "default": "False"
+                },
+                {
+                    "name": "min_event",
+                    "default": "None"
                 }
             ],
             "varargs": null,
@@ -7435,7 +7718,7 @@
             "varkw": null
         },
         "getUser": {
-            "desc": "(userInfo=None, strict=False, krb_princs=True, groups=False)",
+            "desc": "(userInfo=None, strict=False, groups=False)",
             "args": [
                 {
                     "name": "userInfo",
@@ -7446,12 +7729,18 @@
                     "default": "False"
                 },
                 {
-                    "name": "krb_princs",
-                    "default": "True"
-                },
-                {
                     "name": "groups",
                     "default": "False"
+                }
+            ],
+            "varargs": null,
+            "varkw": null
+        },
+        "getUserGroups": {
+            "desc": "(user)",
+            "args": [
+                {
+                    "name": "user"
                 }
             ],
             "varargs": null,
@@ -8542,13 +8831,17 @@
             "varkw": null
         },
         "host.updateHost": {
-            "desc": "(task_load, ready)",
+            "desc": "(task_load, ready, data=None)",
             "args": [
                 {
                     "name": "task_load"
                 },
                 {
                     "name": "ready"
+                },
+                {
+                    "name": "data",
+                    "default": "None"
                 }
             ],
             "varargs": null,
@@ -9260,7 +9553,7 @@
             "varkw": null
         },
         "listUsers": {
-            "desc": "(userType=0, prefix=None, queryOpts=None)",
+            "desc": "(userType=0, prefix=None, queryOpts=None, perm=None, inherited_perm=False)",
             "args": [
                 {
                     "name": "userType",
@@ -9273,6 +9566,14 @@
                 {
                     "name": "queryOpts",
                     "default": "None"
+                },
+                {
+                    "name": "perm",
+                    "default": "None"
+                },
+                {
+                    "name": "inherited_perm",
+                    "default": "False"
                 }
             ],
             "varargs": null,
@@ -9632,6 +9933,19 @@
             "varargs": null,
             "varkw": null
         },
+        "registerUser": {
+            "desc": "(username, password)",
+            "args": [
+                {
+                    "name": "username"
+                },
+                {
+                    "name": "password"
+                }
+            ],
+            "varargs": null,
+            "varkw": null
+        },
         "removeExternalRepoFromTag": {
             "desc": "(tag_info, repo_info)",
             "args": [
@@ -9658,19 +9972,6 @@
             "varargs": null,
             "varkw": null
         },
-        "removeUserKrbPrincipal": {
-            "desc": "(user, krb_principal)",
-            "args": [
-                {
-                    "name": "user"
-                },
-                {
-                    "name": "krb_principal"
-                }
-            ],
-            "varargs": null,
-            "varkw": null
-        },
         "removeVolume": {
             "desc": "(volume)",
             "args": [
@@ -9691,6 +9992,182 @@
                     "name": "new"
                 }
             ],
+            "varargs": null,
+            "varkw": null
+        },
+        "repo.autoRequests": {
+            "desc": "()",
+            "args": [],
+            "varargs": null,
+            "varkw": null
+        },
+        "repo.checkQueue": {
+            "desc": "()",
+            "args": [],
+            "varargs": null,
+            "varkw": null
+        },
+        "repo.checkRequest": {
+            "desc": "(req_id)",
+            "args": [
+                {
+                    "name": "req_id"
+                }
+            ],
+            "varargs": null,
+            "varkw": null
+        },
+        "repo.get": {
+            "desc": "(tag, min_event=None, at_event=None, opts=None)",
+            "args": [
+                {
+                    "name": "tag"
+                },
+                {
+                    "name": "min_event",
+                    "default": "None"
+                },
+                {
+                    "name": "at_event",
+                    "default": "None"
+                },
+                {
+                    "name": "opts",
+                    "default": "None"
+                }
+            ],
+            "varargs": null,
+            "varkw": null
+        },
+        "repo.getExternalRepoData": {
+            "desc": "(erepo)",
+            "args": [
+                {
+                    "name": "erepo"
+                }
+            ],
+            "varargs": null,
+            "varkw": null
+        },
+        "repo.query": {
+            "desc": "(clauses, fields=None, opts=None)",
+            "args": [
+                {
+                    "name": "clauses"
+                },
+                {
+                    "name": "fields",
+                    "default": "None"
+                },
+                {
+                    "name": "opts",
+                    "default": "None"
+                }
+            ],
+            "varargs": null,
+            "varkw": null
+        },
+        "repo.queryQueue": {
+            "desc": "(clauses=None, fields=None, opts=None)",
+            "args": [
+                {
+                    "name": "clauses",
+                    "default": "None"
+                },
+                {
+                    "name": "fields",
+                    "default": "None"
+                },
+                {
+                    "name": "opts",
+                    "default": "None"
+                }
+            ],
+            "varargs": null,
+            "varkw": null
+        },
+        "repo.references": {
+            "desc": "(repo_id)",
+            "args": [
+                {
+                    "name": "repo_id"
+                }
+            ],
+            "varargs": null,
+            "varkw": null
+        },
+        "repo.request": {
+            "desc": "(tag, min_event=None, at_event=None, opts=None, priority=None, force=False)",
+            "args": [
+                {
+                    "name": "tag"
+                },
+                {
+                    "name": "min_event",
+                    "default": "None"
+                },
+                {
+                    "name": "at_event",
+                    "default": "None"
+                },
+                {
+                    "name": "opts",
+                    "default": "None"
+                },
+                {
+                    "name": "priority",
+                    "default": "None"
+                },
+                {
+                    "name": "force",
+                    "default": "False"
+                }
+            ],
+            "varargs": null,
+            "varkw": null
+        },
+        "repo.setExternalRepoData": {
+            "desc": "(external_repo_id, data)",
+            "args": [
+                {
+                    "name": "external_repo_id"
+                },
+                {
+                    "name": "data"
+                }
+            ],
+            "varargs": null,
+            "varkw": null
+        },
+        "repo.setRequestPriority": {
+            "desc": "(req_id, priority)",
+            "args": [
+                {
+                    "name": "req_id"
+                },
+                {
+                    "name": "priority"
+                }
+            ],
+            "varargs": null,
+            "varkw": null
+        },
+        "repo.setState": {
+            "desc": "(repo_id, state)",
+            "args": [
+                {
+                    "name": "repo_id"
+                },
+                {
+                    "name": "state"
+                }
+            ],
+            "varargs": null,
+            "varkw": null
+        },
+        "repo.updateEndEvents": {
+            "desc": "()",
+            "args": [],
             "varargs": null,
             "varkw": null
         },
@@ -9822,7 +10299,7 @@
             "varkw": null
         },
         "scheduler.getLogMessages": {
-            "desc": "(clauses=None, fields=None)",
+            "desc": "(clauses=None, fields=None, opts=None)",
             "args": [
                 {
                     "name": "clauses",
@@ -9830,6 +10307,10 @@
                 },
                 {
                     "name": "fields",
+                    "default": "None"
+                },
+                {
+                    "name": "opts",
                     "default": "None"
                 }
             ],
@@ -9852,7 +10333,7 @@
             "varkw": null
         },
         "scheduler.getTaskRuns": {
-            "desc": "(clauses=None, fields=None)",
+            "desc": "(clauses=None, fields=None, opts=None)",
             "args": [
                 {
                     "name": "clauses",
@@ -9860,6 +10341,10 @@
                 },
                 {
                     "name": "fields",
+                    "default": "None"
+                },
+                {
+                    "name": "opts",
                     "default": "None"
                 }
             ],
@@ -10158,6 +10643,42 @@
                 },
                 {
                     "name": "taglist"
+                }
+            ],
+            "varargs": null,
+            "varkw": null
+        },
+        "tagFirstChangeEvent": {
+            "desc": "(tag, after=None, inherit=True)",
+            "args": [
+                {
+                    "name": "tag"
+                },
+                {
+                    "name": "after",
+                    "default": "None"
+                },
+                {
+                    "name": "inherit",
+                    "default": "True"
+                }
+            ],
+            "varargs": null,
+            "varkw": null
+        },
+        "tagLastChangeEvent": {
+            "desc": "(tag, before=None, inherit=True)",
+            "args": [
+                {
+                    "name": "tag"
+                },
+                {
+                    "name": "before",
+                    "default": "None"
+                },
+                {
+                    "name": "inherit",
+                    "default": "True"
                 }
             ],
             "varargs": null,

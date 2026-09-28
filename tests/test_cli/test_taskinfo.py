@@ -357,8 +357,7 @@ class TestPrintTaskInfo(utils.CliTestCase):
             'status': 0,
             'usertype': 0,
             'id': 1,
-            'name': 'kojiadmin',
-            'krb_principal': None
+            'name': 'kojiadmin'
         }
 
     @mock.patch('koji_cli.commands.list_task_output_all_volumes')

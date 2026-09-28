@@ -30,7 +30,6 @@ class TestActivateSession(unittest.TestCase):
         activate_session(self.session, options)
         self.session.login.assert_not_called()
         self.session.ssl_login.assert_not_called()
-        self.session.gssapi_login.assert_not_called()
 
     def test_activate_session_ssl(self):
         self.session.logged_in = False
@@ -39,7 +38,6 @@ class TestActivateSession(unittest.TestCase):
         activate_session(self.session, options)
         self.session.ssl_login.assert_called_once_with(certfile, None, 'SERVERCA', proxyuser=None)
         self.session.login.assert_not_called()
-        self.session.gssapi_login.assert_not_called()
 
     def test_activate_session_ssl_logged(self):
         self.session.logged_in = True
@@ -48,7 +46,6 @@ class TestActivateSession(unittest.TestCase):
         activate_session(self.session, options)
         self.session.ssl_login.assert_not_called()
         self.session.login.assert_not_called()
-        self.session.gssapi_login.assert_not_called()
 
     def test_activate_session_ssl_implicit_logged(self):
         self.session.logged_in = True
@@ -58,7 +55,6 @@ class TestActivateSession(unittest.TestCase):
         activate_session(self.session, options)
         self.session.ssl_login.assert_not_called()
         self.session.login.assert_not_called()
-        self.session.gssapi_login.assert_not_called()
 
     def test_activate_session_ssl_implicit(self):
         self.session.logged_in = False
@@ -68,7 +64,6 @@ class TestActivateSession(unittest.TestCase):
         activate_session(self.session, options)
         self.session.ssl_login.assert_called_once_with(certfile, None, 'SERVERCA', proxyuser=None)
         self.session.login.assert_not_called()
-        self.session.gssapi_login.assert_not_called()
 
     def test_activate_session_pw_logged(self):
         self.session.logged_in = True
@@ -76,7 +71,6 @@ class TestActivateSession(unittest.TestCase):
         activate_session(self.session, options)
         self.session.login.assert_not_called()
         self.session.ssl_login.assert_not_called()
-        self.session.gssapi_login.assert_not_called()
 
     def test_activate_session_pw(self):
         self.session.logged_in = False
@@ -84,7 +78,6 @@ class TestActivateSession(unittest.TestCase):
         activate_session(self.session, options)
         self.session.login.assert_called_once_with()
         self.session.ssl_login.assert_not_called()
-        self.session.gssapi_login.assert_not_called()
 
     def test_activate_session_pw_implicit_logged(self):
         self.session.logged_in = True
@@ -92,7 +85,6 @@ class TestActivateSession(unittest.TestCase):
         activate_session(self.session, options)
         self.session.login.assert_not_called()
         self.session.ssl_login.assert_not_called()
-        self.session.gssapi_login.assert_not_called()
 
     def test_activate_session_pw_implicit(self):
         self.session.logged_in = False
@@ -100,68 +92,32 @@ class TestActivateSession(unittest.TestCase):
         activate_session(self.session, options)
         self.session.login.assert_called_once_with()
         self.session.ssl_login.assert_not_called()
-        self.session.gssapi_login.assert_not_called()
 
     def test_activate_session_krb_logged(self):
         self.session.logged_in = True
-        options = {'authtype': 'kerberos', 'debug': False, 'cert': '', 'keytab': None,
-                   'principal': None}
+        options = {'authtype': 'kerberos', 'debug': False, 'cert': ''}
         activate_session(self.session, options)
         self.session.login.assert_not_called()
         self.session.ssl_login.assert_not_called()
-        self.session.gssapi_login.assert_not_called()
 
-    def test_activate_session_krb(self):
+    def test_activate_session_krb_rejected(self):
+        # error() is mocked out, so unlike in production the rejected authtype
+        # falls through to the generic "unable to log in" error as well
         self.session.logged_in = False
-        options = {'authtype': 'kerberos', 'debug': False, 'cert': '', 'keytab': None,
-                   'principal': None}
+        options = {'authtype': 'kerberos', 'debug': False, 'cert': ''}
         activate_session(self.session, options)
         self.session.login.assert_not_called()
         self.session.ssl_login.assert_not_called()
-        self.session.gssapi_login.assert_called_once_with(proxyuser=None)
-
-    def test_activate_session_krb_implicit_logged(self):
-        self.session.logged_in = True
-        options = {'authtype': None, 'debug': False, 'cert': '', 'keytab': None,
-                   'principal': None}
-        activate_session(self.session, options)
-        self.session.login.assert_not_called()
-        self.session.ssl_login.assert_not_called()
-        self.session.gssapi_login.assert_not_called()
-
-    def test_activate_session_krb_implicit(self):
-        self.session.logged_in = False
-        options = {'authtype': None, 'debug': False, 'cert': '', 'keytab': None,
-                   'principal': None}
-        activate_session(self.session, options)
-        self.session.login.assert_not_called()
-        self.session.ssl_login.assert_not_called()
-        self.session.gssapi_login.assert_called_once_with(proxyuser=None)
-
-    def test_activate_session_krb_keytab_logged(self):
-        self.session.logged_in = True
-        options = {'authtype': 'kerberos', 'debug': False, 'cert': '', 'keytab': 'KEYTAB',
-                   'principal': 'PRINCIPAL'}
-        activate_session(self.session, options)
-        self.session.login.assert_not_called()
-        self.session.ssl_login.assert_not_called()
-        self.session.gssapi_login.assert_not_called()
-
-    def test_activate_session_krb_keytab(self):
-        self.session.logged_in = False
-        options = {'authtype': 'kerberos', 'debug': False, 'cert': '', 'keytab': 'KEYTAB',
-                   'principal': 'PRINCIPAL'}
-        activate_session(self.session, options)
-        self.session.login.assert_not_called()
-        self.session.ssl_login.assert_not_called()
-        self.session.gssapi_login.assert_called_once_with(principal='PRINCIPAL', keytab='KEYTAB',
-                                                          proxyuser=None)
+        self.error.assert_any_call(
+            'Kerberos authentication is no longer supported; use --authtype ssl '
+            'or --authtype password')
 
     def test_activate_session_no_method(self):
+        # nothing configured: neither a cert file nor a user, so no auth method
+        # is attempted and the user is told why
         self.session.logged_in = False
         options = {'authtype': None, 'debug': False, 'cert': ''}
         activate_session(self.session, options)
         self.session.login.assert_not_called()
         self.session.ssl_login.assert_not_called()
-        self.session.gssapi_login.assert_called_once()
         self.error.assert_called_once()

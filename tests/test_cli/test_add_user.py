@@ -36,7 +36,6 @@ class TestAddUser(utils.CliTestCase):
         """Test handle_add_user function"""
         username = 'user'
         user_id = 1001
-        principal = 'krb-pricipal'
 
         # Case 1. no argument error
         expected = self.format_error_message(
@@ -66,24 +65,22 @@ class TestAddUser(utils.CliTestCase):
 
         # Case 3. Add user test
         expected = "Added user %s (%i)" % (username, user_id) + "\n"
-        arguments = [username, '--principal', principal]
+        arguments = [username]
         self.session.createUser.return_value = user_id
         handle_add_user(self.options, self.session, arguments)
         self.session.createUser.assert_called_with(
             username,
-            status=0,
-            krb_principal=principal)
+            status=0)
         self.assert_console_message(stdout, expected)
         self.activate_session_mock.assert_called_with(self.session, self.options)
         self.activate_session_mock.reset_mock()
 
         # Case 3. Add blocked user
-        arguments = [username, '--principal', principal, '--disable']
+        arguments = [username, '--disable']
         handle_add_user(self.options, self.session, arguments)
         self.session.createUser.assert_called_with(
             username,
-            status=1,  # 0: normal, 1: disabled
-            krb_principal=principal)
+            status=1)  # 0: normal, 1: disabled
         self.assert_console_message(stdout, expected)
         self.activate_session_mock.assert_called_with(self.session, self.options)
 
@@ -94,10 +91,8 @@ class TestAddUser(utils.CliTestCase):
 (Specify the --help global option for a list of other help options)
 
 Options:
-  -h, --help            show this help message and exit
-  --principal=PRINCIPAL
-                        The Kerberos principal for this user
-  --disable             Prohibit logins by this user
+  -h, --help  show this help message and exit
+  --disable   Prohibit logins by this user
 """ % self.progname)
 
 

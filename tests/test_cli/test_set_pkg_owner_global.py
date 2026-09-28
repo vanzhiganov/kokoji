@@ -82,7 +82,7 @@ Options:
     @mock.patch('sys.stderr', new_callable=StringIO)
     def test_set_pkg_owner_global_old_user_non_exist_user(self, stderr):
         expected = "No such user: test-user\n"
-        user_info = [{'id': 1, 'krb_principals': [], 'name': 'user', 'status': 0,
+        user_info = [{'id': 1, 'name': 'user', 'status': 0,
                       'usertype': 0},
                      None]
         self.session.getUser.side_effect = user_info
@@ -99,7 +99,7 @@ Options:
     @mock.patch('sys.stdout', new_callable=StringIO)
     def test_set_pkg_owner_global_without_pkgs(self, stdout):
         expected = "No data for package test-package\n"
-        user_info = [{'id': 1, 'krb_principals': [], 'name': 'user', 'status': 0,
+        user_info = [{'id': 1, 'name': 'user', 'status': 0,
                       'usertype': 0}]
         self.session.getUser.return_value = user_info
         self.session.listPackages.return_value = []
@@ -112,9 +112,9 @@ Options:
     @mock.patch('sys.stderr', new_callable=StringIO)
     def test_set_pkg_owner_global_user_without_pkgs(self, stderr):
         expected = "No data for user test-user\n"
-        user_info = [{'id': 1, 'krb_principals': [], 'name': 'user', 'status': 0,
+        user_info = [{'id': 1, 'name': 'user', 'status': 0,
                       'usertype': 0},
-                     {'id': 2, 'krb_principals': [], 'name': 'test-user',
+                     {'id': 2, 'name': 'test-user',
                       'status': 0, 'usertype': 0}]
         self.session.getUser.side_effect = user_info
         self.session.listPackages.return_value = []
@@ -132,9 +132,9 @@ Options:
     def test_set_pkg_owner_global_test(self, stdout):
         expected = "Would have changed owner for test-package-123 in tag test-tag: kojiadmin" \
                    " -> user\n"
-        user_info = [{'id': 2, 'krb_principals': [], 'name': 'user', 'status': 0,
+        user_info = [{'id': 2, 'name': 'user', 'status': 0,
                       'usertype': 0},
-                     {'id': 1, 'krb_principals': [], 'name': 'kojiadmin', 'status': 0,
+                     {'id': 1, 'name': 'kojiadmin', 'status': 0,
                       'usertype': 0},
                      ]
         self.session.getUser.side_effect = user_info
@@ -159,7 +159,7 @@ Options:
     @mock.patch('sys.stdout', new_callable=StringIO)
     def test_set_pkg_owner_global_verbose_preserving_owner(self, stdout):
         expected = "Preserving owner=user for package test-package in tag test-tag\n"
-        user_info = {'id': 1, 'krb_principals': [], 'name': 'user', 'status': 0, 'usertype': 0}
+        user_info = {'id': 1, 'name': 'user', 'status': 0, 'usertype': 0}
         self.session.getUser.return_value = user_info
         self.session.listPackages.return_value = [
             {'blocked': False,
@@ -179,7 +179,7 @@ Options:
         self.session.packageListSetOwner.assert_not_called()
 
     def test_set_pkg_owner_global_verbose_valid(self, ):
-        user_info = {'id': 1, 'krb_principals': [], 'name': 'user', 'status': 0,
+        user_info = {'id': 1, 'name': 'user', 'status': 0,
                      'usertype': 0}
         self.session.getUser.return_value = user_info
         self.session.listPackages.return_value = [

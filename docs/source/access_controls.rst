@@ -9,9 +9,9 @@ User/Builder Authentication
 ===========================
 
 Users (and builders) are authenticated via one of the following mechanisms. Most
-preferred is GSSAPI/Kerberos authentication. Second best is authentication via
-SSL certificates. Mostly for testing environments we also support authenticating via
-username/password but it has its limitations which you should be aware of.
+preferred is authentication via SSL certificates. Mostly for testing environments we
+also support authenticating via username/password but it has its limitations which you
+should be aware of.
 
 Details can be found at :ref:`auth-config`
 

@@ -34,8 +34,7 @@ class TestListUsers(unittest.TestCase):
         self.assertEqual(len(self.queries), 1)
         query = self.queries[0]
         self.assertEqual(query.tables, ['users'])
-        self.assertEqual(query.joins, [
-            'LEFT JOIN user_krb_principals ON users.id = user_krb_principals.user_id'])
+        self.assertEqual(query.joins, [])
         self.assertEqual(query.clauses, ['usertype IN %(userType)s'])
 
     def test_valid_userType_none_with_perm_and_prefix(self):
@@ -45,8 +44,7 @@ class TestListUsers(unittest.TestCase):
         query = self.queries[0]
         self.assertEqual(query.tables, ['users'])
         self.assertEqual(query.joins, [
-            'LEFT JOIN user_perms ON users.id = user_perms.user_id',
-            'LEFT JOIN user_krb_principals ON users.id = user_krb_principals.user_id'])
+            'LEFT JOIN user_perms ON users.id = user_perms.user_id'])
         self.assertEqual(query.clauses, [
             'user_perms.active AND user_perms.perm_id = %(perm_id)s',
             "users.name ilike %(prefix)s || '%%'",
@@ -61,8 +59,7 @@ class TestListUsers(unittest.TestCase):
         self.assertEqual(query.joins, [
             'LEFT JOIN user_groups ON user_id = users.id AND user_groups.active IS TRUE',
             'LEFT JOIN user_perms ON users.id = user_perms.user_id '
-                'OR group_id = user_perms.user_id',
-            'LEFT JOIN user_krb_principals ON users.id = user_krb_principals.user_id'])
+                'OR group_id = user_perms.user_id'])
         self.assertEqual(query.clauses, [
             'user_perms.active AND user_perms.perm_id = %(perm_id)s',
             "users.name ilike %(prefix)s || '%%'",

@@ -32,12 +32,10 @@ class TestListUsers(utils.CliTestCase):
     def test_list_users_default_valid(self, stdout):
         arguments = []
         self.session.listUsers.return_value = [{
-            'id': 1, 'krb_principals': [],
-            'name': 'kojiadmin',
+            'id': 1, 'name': 'kojiadmin',
             'status': 0,
             'usertype': 0},
             {'id': 2,
-             'krb_principals': [],
              'name': 'testuser',
              'status': 0,
              'usertype': 0},
@@ -56,8 +54,7 @@ testuser
     def test_list_users_with_prefix(self, stdout):
         arguments = ['--prefix', 'koji']
         self.session.listUsers.return_value = [{
-            'id': 1, 'krb_principals': [],
-            'name': 'kojiadmin',
+            'id': 1, 'name': 'kojiadmin',
             'status': 0,
             'usertype': 0},
         ]
@@ -75,12 +72,10 @@ testuser
     def test_list_users_with_usertype(self, stdout):
         arguments = ['--usertype', 'host']
         self.session.listUsers.return_value = [{
-            'id': 3, 'krb_principals': [],
-            'name': 'kojihost',
+            'id': 3, 'name': 'kojihost',
             'status': 0,
             'usertype': 1},
-            {'id': 5, 'krb_principals': [],
-             'name': 'testhost',
+            {'id': 5, 'name': 'testhost',
              'status': 0,
              'usertype': 1},
         ]
@@ -98,12 +93,10 @@ testhost
     def test_list_users_with_all_types(self, stdout):
         arguments = ['--usertype', 'any']
         self.session.listUsers.return_value = [{
-            'id': 3, 'krb_principals': [],
-            'name': 'kojihost',
+            'id': 3, 'name': 'kojihost',
             'status': 0,
             'usertype': 1},
-            {'id': 5, 'krb_principals': [],
-             'name': 'testhost',
+            {'id': 5, 'name': 'testhost',
              'status': 0,
              'usertype': 1},
         ]
@@ -146,8 +139,7 @@ testhost
     def test_list_users_with_usertype_and_prefix(self, stdout):
         arguments = ['--usertype', 'host', '--prefix', 'test']
         self.session.listUsers.return_value = [{
-            'id': 5, 'krb_principals': [],
-            'name': 'testhost',
+            'id': 5, 'name': 'testhost',
             'status': 0,
             'usertype': 1},
         ]
@@ -211,13 +203,11 @@ testhost
         arguments = ['--perm', perm, '--inherited-perm']
         self.session.getAllPerms.return_value = [{'name': 'test-perm'}, {'name': 'test-perm-2'}]
         self.session.listUsers.return_value = [{
-            'id': 1, 'krb_principals': [],
-            'name': 'kojiadmin',
+            'id': 1, 'name': 'kojiadmin',
             'permission': perm,
             'status': 0,
             'usertype': 0},
             {'id': 4,
-             'krb_principals': [],
              'name': 'testuser1234',
              'permission': perm,
              'status': 0,

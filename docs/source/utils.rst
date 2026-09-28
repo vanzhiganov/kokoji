@@ -285,9 +285,6 @@ Server connection options
 ``password = ''``
     Password for login/password authentication.
 
-``principal = ''``
-    Kerberos principal to use for authentication
-
 ``runas = ''``
     Run as specified user
 

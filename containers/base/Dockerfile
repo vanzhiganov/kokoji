@@ -8,7 +8,6 @@ ENV PYTHONUNBUFFERED=1 \
 
 # Runtime dependencies shared across components.
 # - python3-rpm: the RPM python bindings required by koji-hub (imported at module load)
-# - krb5-devel: provides krb5-config needed to build the gssapi python extension
 # - libpq-devel: postgres client headers for building psycopg2
 # - curl-minimal: already present in the base; installing `curl` would conflict with it
 RUN dnf install -y --setopt=install_weak_deps=0 \
@@ -17,7 +16,6 @@ RUN dnf install -y --setopt=install_weak_deps=0 \
         python3-pip \
         python3-setuptools \
         python3-rpm \
-        krb5-devel \
         libpq-devel \
         pkgconf-pkg-config \
         subversion \

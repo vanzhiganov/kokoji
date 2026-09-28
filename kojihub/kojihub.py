@@ -108,11 +108,6 @@ def log_error(msg):
     logger.error(msg)
 
 
-def xform_user_krb(entry):
-    entry['krb_principals'] = [x for x in entry['krb_principals'] if x is not None]
-    return entry
-
-
 def convert_value(value, cast=None, message=None,
                   exc_type=koji.ParameterError, none_allowed=False, check_only=False):
     """Cast to another type with tailored exception
@@ -4393,24 +4388,21 @@ def get_external_repo_list(tag_info, event=None):
     return repos
 
 
-def get_user(userInfo=None, strict=False, krb_princs=True, groups=False):
+def get_user(userInfo=None, strict=False, groups=False):
     """Return information about a user.
 
-    :param userInfo: a str (Kerberos principal or name) or an int (user id)
+    :param userInfo: a str (name) or an int (user id)
                      or a dict:
                          - id: User's ID
                          - name: User's name
-                         - krb_principal: Kerberos principal
     :param bool strict: whether raising Error when no user found
-    :param bool krb_princs: whether show krb_principals in result
+    :param bool groups: whether include the user's groups in result
     :return: a dict as user's information:
         id: user id
         name: user name
         status: user status (int), may be null
         usertype: user type (int), 0 person, 1 for host, may be null
-        krb_principals: the user's Kerberos principals (list)
     """
-    krb5_join = False
     clauses = []
     if userInfo is None:
         userInfo = context.session.user_id
@@ -4424,8 +4416,7 @@ def get_user(userInfo=None, strict=False, krb_princs=True, groups=False):
         data = {'id': userInfo}
     elif isinstance(userInfo, str):
         data = {'info': userInfo}
-        clauses.append('krb_principal = %(info)s OR name = %(info)s')
-        krb5_join = True
+        clauses.append('name = %(info)s')
     else:
         raise koji.GenericError('Invalid type for userInfo: %s' % type(userInfo))
     if isinstance(data, dict) and not data.get('info'):
@@ -4441,64 +4432,32 @@ def get_user(userInfo=None, strict=False, krb_princs=True, groups=False):
                 clauses.append('users.name = %(name)s')
             else:
                 raise koji.GenericError('Invalid type for username: %s' % type(username))
-        krb_principal = data.get('krb_principal')
-        if krb_principal:
-            if isinstance(krb_principal, str):
-                clauses.append('user_krb_principals.krb_principal'
-                               ' = %(krb_principal)s')
-                krb5_join = True
-            else:
-                raise koji.GenericError('Invalid type for krb_principal: %s' % type(krb_principal))
 
-    joins = []
-    if krb5_join:
-        joins.append('LEFT JOIN user_krb_principals ON users.id = user_krb_principals.user_id')
-    query = QueryProcessor(tables=['users'], columns=fields, joins=joins,
-                           clauses=clauses, values=data)
+    query = QueryProcessor(tables=['users'], columns=fields, clauses=clauses, values=data)
     user = query.executeOne()
     if not user and strict:
         raise koji.GenericError("No such user: %r" % userInfo)
-    if user:
-        if krb_princs:
-            user['krb_principals'] = list_user_krb_principals(user['id'])
-        if groups:
-            user['groups'] = [x for x in get_user_groups(user['id']).values()]
+    if user and groups:
+        user['groups'] = [x for x in get_user_groups(user['id']).values()]
     return user
 
 
-def edit_user(userInfo, name=None, krb_principal_mappings=None):
+def edit_user(userInfo, name=None):
     """Edit information for an existing user.
 
-    Use this method to rename a user, or to add/remove/modify Kerberos
-    principal(s) for this account.
-
-    Example krb_principal_mappings values:
-
-    To add a new Kerberos principal to a user account:
-      [{'old': None, 'new': 'myuser@NEW.EXAMPLE.COM'}]
-
-    To remove an old Kerberos principal from a user account:
-      [{'old': 'myuser@OLD.EXAMPLE.COM', 'new': None}]
-
-    To modify a user's old Kerberos principal to a new one:
-      [{'old': 'myuser@OLD.EXAMPLE.NET', 'new': 'myuser@NEW.EXAMPLE.NET'}]
+    Use this method to rename a user.
 
     :param userInfo: username (str) or ID (int)
     :param str name: new name for this user account
-    :param list krb_principal_mappings: List of changes to make for this
-                                        user's Kerberos principal. Each change
-                                        is a dict of "old" and "new"
-                                        Kerberos principals.
-    :raises: GenericError if the user does not exist, or if there were
-             problems in the krb_principal_mappings.
+    :raises: GenericError if the user does not exist, or if the new name is
+             already taken.
     """
 
     context.session.assertPerm('admin')
-    _edit_user(userInfo, name=name,
-               krb_principal_mappings=krb_principal_mappings)
+    _edit_user(userInfo, name=name)
 
 
-def _edit_user(userInfo, name=None, krb_principal_mappings=None):
+def _edit_user(userInfo, name=None):
     """Edit information for an existing user."""
     user = get_user(userInfo, strict=True)
     if name and user['name'] != name:
@@ -4517,87 +4476,6 @@ def _edit_user(userInfo, name=None, krb_principal_mappings=None):
         update = UpdateProcessor('users', values=values, clauses=['id = %(userID)i'],
                                  data={'name': name})
         update.execute()
-    if krb_principal_mappings:
-        added = set()
-        removed = set()
-        for pairs in krb_principal_mappings:
-            old = pairs.get('old')
-            new = pairs.get('new')
-            if old:
-                removed.add(old)
-            if new:
-                verify_name_user(krb=new)
-                added.add(new)
-        dups = added & removed
-        if dups:
-            raise koji.GenericError("There are some conflicts between added"
-                                    " and removed Kerberos principals: %s"
-                                    % ', '.join(dups))
-        currents = set(user.get('krb_principals'))
-        dups = added & currents
-        if dups:
-            raise koji.GenericError("Cannot add existing Kerberos"
-                                    " principals: %s" % ', '.join(dups))
-        unable_removed = removed - currents
-        if unable_removed:
-            raise koji.GenericError("Cannot remove non-existent Kerberos"
-                                    " principals: %s"
-                                    % ', '.join(unable_removed))
-
-        # attempt to update kerberos principal
-        for r in removed:
-            context.session.removeKrbPrincipal(user['id'], krb_principal=r)
-        for a in added:
-            context.session.setKrbPrincipal(user['id'], krb_principal=a)
-
-
-def list_user_krb_principals(user_info=None):
-    """Return kerberos principal list of a user.
-
-    :param user_info: either a str (username) or an int (user id)
-    :return: user's kerberos principals (list)
-    """
-    if user_info is None:
-        user_info = context.session.user_id
-        if user_info is None:
-            # not logged in
-            raise koji.GenericError("No user provided")
-    fields = ['krb_principal']
-    data = {'info': user_info}
-    if isinstance(user_info, int):
-        joins = []
-        clauses = ['user_id = %(info)i']
-    elif isinstance(user_info, str):
-        joins = ['users ON users.id = user_krb_principals.user_id']
-        clauses = ['name = %(info)s']
-    else:
-        raise koji.GenericError('Invalid type for user_info: %s' % type(user_info))
-    query = QueryProcessor(tables=['user_krb_principals'],
-                           columns=fields, joins=joins,
-                           clauses=clauses, values=data,
-                           transform=lambda row: row['krb_principal'])
-    return query.execute() or []
-
-
-def get_user_by_krb_principal(krb_principal, strict=False, krb_princs=True):
-    """get information about a user by kerberos principal.
-
-    :param str krb_principal: full user kerberos principals
-    :param bool strict: whether raising Error when no user found
-    :param bool krb_princs: whether show krb_principals in result
-    :return: a dict as user's information:
-        id: user id
-        name: user name
-        status: user status (int), may be null
-        usertype: user type (int), 0 person, 1 for host, may be null
-        krb_principals: the user's Kerberos principals (list)
-    """
-    if krb_principal is None:
-        raise koji.GenericError("No kerberos principal provided")
-    if not isinstance(krb_principal, str):
-        raise koji.GenericError("Invalid type for krb_principal: %s" % type(krb_principal))
-    return get_user({'krb_principal': krb_principal}, strict=strict,
-                    krb_princs=krb_princs)
 
 
 def find_build_id(X, strict=False):
@@ -9563,16 +9441,12 @@ def get_group_members(group):
     if not ginfo or ginfo['usertype'] != koji.USERTYPES['GROUP']:
         raise koji.GenericError("No such group: %s" % group)
     query = QueryProcessor(tables=['user_groups'],
-                           columns=['id', 'name', 'usertype', 'array_agg(krb_principal)'],
-                           aliases=['id', 'name', 'usertype', 'krb_principals'],
-                           joins=['JOIN users ON user_groups.user_id = users.id',
-                                  'LEFT JOIN user_krb_principals'
-                                  ' ON users.id = user_krb_principals.user_id'],
+                           columns=['id', 'name', 'usertype'],
+                           joins=['JOIN users ON user_groups.user_id = users.id'],
                            clauses=[eventCondition(None), 'group_id = %(group_id)i'],
                            values={'group_id': ginfo['id']},
                            opts={'group': 'users.id'},
-                           enable_group=True,
-                           transform=xform_user_krb)
+                           enable_group=True)
     return query.iterate()
 
 
@@ -11459,11 +11333,10 @@ class RootExports(object):
         :param str version: build version
         :param str release: release version
         :param str epoch: epoch version
-        :param owner: a str (Kerberos principal or name) or an int (user id)
+        :param owner: a str (name) or an int (user id)
                          or a dict:
                              - id: User's ID
                              - name: User's name
-                             - krb_principal: Kerberos principal
         :param bool draft: create a draft build or not
         :return: int build ID
         """
@@ -13377,44 +13250,20 @@ class RootExports(object):
         update.set(description=description)
         update.execute()
 
-    def createUser(self, username, status=None, krb_principal=None):
+    def createUser(self, username, status=None):
         """Add a user to the database
 
         :param str username: The username for this Koji user.
         :param int status: This must be one of the values of the
                            koji.USER_STATUS enum. If unspecified,
                            the default is koji.USER_STATUS['NORMAL'].
-        :param str krb_principal: a custom Kerberos principal, or None.
-        :raises: GenericError if the user or Kerberos principal already
-                 exists.
+        :raises: GenericError if the user already exists.
         """
         context.session.assertPerm('admin')
-        verify_name_user(username, krb_principal)
+        verify_name_user(username)
         if get_user(username):
             raise koji.GenericError('user already exists: %s' % username)
-        if krb_principal and get_user_by_krb_principal(krb_principal):
-            raise koji.GenericError(
-                f'user with this Kerberos principal already exists: {krb_principal}')
-        return context.session.createUser(username, status=status, krb_principal=krb_principal)
-
-    def addUserKrbPrincipal(self, user, krb_principal):
-        """Add a Kerberos principal for user"""
-        context.session.assertPerm('admin')
-        userinfo = get_user(user, strict=True)
-        verify_name_user(krb=krb_principal)
-        if get_user_by_krb_principal(krb_principal):
-            raise koji.GenericError(
-                f'user with this Kerberos principal already exists: {krb_principal}')
-        return context.session.setKrbPrincipal(userinfo['name'], krb_principal)
-
-    def removeUserKrbPrincipal(self, user, krb_principal):
-        """remove a Kerberos principal for user"""
-        context.session.assertPerm('admin')
-        userinfo = get_user(user, strict=True)
-        if not krb_principal:
-            raise koji.GenericError('krb_principal must be specified')
-        return context.session.removeKrbPrincipal(userinfo['name'],
-                                                  krb_principal)
+        return context.session.createUser(username, status=status)
 
     def enableUser(self, username):
         """Enable logins by the specified user"""
@@ -13444,11 +13293,10 @@ class RootExports(object):
         """
         The groups associated with the given user
 
-        :param user: a str (Kerberos principal or name) or an int (user id)
+        :param user: a str (name) or an int (user id)
                      or a dict:
                          - id: User's ID
                          - name: User's name
-                         - krb_principal: Kerberos principal
 
         :returns: a list of dicts, each containing the id and name of
                   a group
@@ -13479,7 +13327,6 @@ class RootExports(object):
         - name
         - status
         - usertype
-        - krb_principals
 
         If no users match, the list will be empty.
         """
@@ -13498,7 +13345,6 @@ class RootExports(object):
             ('users.name', 'name'),
             ('status', 'status'),
             ('usertype', 'usertype'),
-            ('array_agg(krb_principal)', 'krb_principals'),
         ]
         if perm:
             perm_id = get_perm_id(perm, strict=True)
@@ -13512,7 +13358,6 @@ class RootExports(object):
                     'OR group_id = user_perms.user_id'])
             else:
                 joins.append('LEFT JOIN user_perms ON users.id = user_perms.user_id')
-        joins.append('LEFT JOIN user_krb_principals ON users.id = user_krb_principals.user_id')
         if prefix:
             clauses.append("users.name ilike %(prefix)s || '%%'")
         if queryOpts is None:
@@ -13528,7 +13373,7 @@ class RootExports(object):
         query = QueryProcessor(columns=fields, aliases=aliases,
                                tables=['users'], joins=joins, clauses=clauses,
                                values=locals(), opts=queryOpts,
-                               enable_group=True, transform=xform_user_krb)
+                               enable_group=True)
         return query.execute()
 
     def getBuildConfig(self, tag, event=None):
@@ -13872,19 +13717,14 @@ class RootExports(object):
                          arch=taskInfo['arch'], channel=channel['name'],
                          priority=taskInfo['priority'])
 
-    def addHost(self, hostname, arches, krb_principal=None, force=False):
+    def addHost(self, hostname, arches, force=False):
         """
         Add a builder host to the database.
 
         :param str hostname: name for the host entry (fqdn recommended).
         :param list arches: list of architectures this builder supports.
-        :param str krb_principal: (optional) a non-default kerberos principal
-                                  for the host.
         :param bool force: override user type
         :returns: new host id
-
-        If krb_principal is not given then that field will be generated
-        from the HostPrincipalFormat setting (if available).
         """
         context.session.assertPerm('host')
         verify_host_name(hostname)
@@ -13897,11 +13737,7 @@ class RootExports(object):
         query = QueryProcessor(tables=['channels'], columns=['id'], clauses=["name = 'default'"])
         default_channel = query.singleValue(strict=True)
         # builder user can already exist, if host tried to log in before adding into db
-        userinfo = {'name': hostname}
-        if krb_principal:
-            convert_value(krb_principal, cast=str, check_only=True)
-            userinfo['krb_principal'] = krb_principal
-        user = get_user(userInfo=userinfo)
+        user = get_user(userInfo={'name': hostname})
         if user:
             if user['usertype'] != koji.USERTYPES['HOST']:
                 if force and user['usertype'] == koji.USERTYPES['NORMAL']:
@@ -13916,12 +13752,7 @@ class RootExports(object):
                         'user %s already exists and it is not a host' % hostname)
             userID = user['id']
         else:
-            if krb_principal is None:
-                fmt = context.opts.get('HostPrincipalFormat')
-                if fmt:
-                    krb_principal = fmt % hostname
-            userID = context.session.createUser(hostname, usertype=koji.USERTYPES['HOST'],
-                                                krb_principal=krb_principal)
+            userID = context.session.createUser(hostname, usertype=koji.USERTYPES['HOST'])
         # host entry
         hostID = nextval('host_id_seq')
         insert = InsertProcessor('host', data={'id': hostID, 'user_id': userID, 'name': hostname})
@@ -14122,11 +13953,6 @@ class RootExports(object):
         if context.session.logged_in:
             me = self.getUser(context.session.user_id)
             me['authtype'] = context.session.authtype
-            # backward compatible for cli moshimoshi, but it's not real
-            if me.get('krb_principals'):
-                me['krb_principal'] = me['krb_principals'][0]
-            else:
-                me['krb_principal'] = None
             return me
         else:
             return None
@@ -14135,11 +13961,10 @@ class RootExports(object):
         """Sets owner of a build
 
         :param int|str|dict build: build ID, NVR or dict with name, version and release
-        :param user: a str (Kerberos principal or name) or an int (user id)
+        :param user: a str (name) or an int (user id)
                      or a dict:
                          - id: User's ID
                          - name: User's name
-                         - krb_principal: Kerberos principal
 
         :returns: None
         """
@@ -14304,10 +14129,10 @@ class RootExports(object):
         return _count, results
 
     def getBuildNotifications(self, userID=None):
-        """Get build notifications for the user with the given ID, name or
-        Kerberos principal. If no user is specified, get the notifications for
-        the currently logged-in user. If there is no currently logged-in user,
-        raise a GenericError."""
+        """Get build notifications for the user with the given ID or name.
+        If no user is specified, get the notifications for the currently
+        logged-in user. If there is no currently logged-in user, raise a
+        GenericError."""
         userID = get_user(userID, strict=True)['id']
         return get_build_notifications(userID)
 
@@ -14327,10 +14152,10 @@ class RootExports(object):
         return result
 
     def getBuildNotificationBlocks(self, userID=None):
-        """Get build notifications for the user with the given ID, name or
-        Kerberos principal. If no user is specified, get the notifications for
-        the currently logged-in user. If there is no currently logged-in user,
-        raise a GenericError."""
+        """Get build notifications for the user with the given ID or name.
+        If no user is specified, get the notifications for the currently
+        logged-in user. If there is no currently logged-in user, raise a
+        GenericError."""
         userID = get_user(userID, strict=True)['id']
         return get_build_notification_blocks(userID)
 
@@ -16337,27 +16162,19 @@ def verify_name_internal(name):
             raise koji.GenericError("Name %s does not match RegexNameInternal value" % name)
 
 
-def verify_name_user(name=None, krb=None):
+def verify_name_user(name=None):
     if name and not isinstance(name, str):
         raise koji.GenericError("Name should be string")
-    if krb and not isinstance(krb, str):
-        raise koji.GenericError("Kerberos principal should be string")
     max_name_length_internal = context.opts['MaxNameLengthInternal']
 
     if max_name_length_internal != 0:
         if name and len(name) > max_name_length_internal:
             raise koji.GenericError("Name %s is too long. Max length is %s characters"
                                     % (name, max_name_length_internal))
-        if krb and len(krb) > max_name_length_internal:
-            raise koji.GenericError("Kerberos principal %s is too long. Max length is "
-                                    "%s characters" % (krb, max_name_length_internal))
     if context.opts.get('RegexUserName.compiled'):
         regex_user_name_compiled = context.opts['RegexUserName.compiled']
         if (name is not None) and (not regex_user_name_compiled.match(name)):
             raise koji.GenericError("Name %s does not match RegexUserName value" % name)
-        if (krb is not None) and (not regex_user_name_compiled.match(krb)):
-            raise koji.GenericError("Kerberos principal %s does not match RegexUserName "
-                                    "value" % krb)
 
 
 def verify_host_name(name):

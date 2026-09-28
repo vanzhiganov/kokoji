@@ -28,7 +28,7 @@ class TestGrantPermission(unittest.TestCase):
         self.context.session.assertLogin = mock.MagicMock()
         self.user_name = 'test_user'
         self.perms_name = 'test_perms'
-        self.userinfo = {'id': 1, 'krb_principals': [], 'name': self.user_name,
+        self.userinfo = {'id': 1, 'name': self.user_name,
                          'status': 0, 'usertype': 0}
         self.perm_info = {'id': 1, 'name': self.perms_name}
 

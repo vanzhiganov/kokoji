@@ -7,7 +7,7 @@ from setuptools import setup
 
 def get_install_requires():
     # To install all build requires:
-    # $ dnf install python-pip git krb5-devel gcc redhat-rpm-config \
+    # $ dnf install python-pip git gcc redhat-rpm-config \
     #               glib2-devel sqlite-devel libxml2-devel python-devel \
     #               openssl-devel libffi-devel
 
@@ -15,7 +15,6 @@ def get_install_requires():
         'defusedxml',
         'python-dateutil',
         'requests',
-        'requests-gssapi',
         'six',
         # 'libcomps',
         # 'rpm',

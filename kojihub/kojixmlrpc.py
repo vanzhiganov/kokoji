@@ -428,9 +428,6 @@ config_map = [
     ['DBConnectionString', 'string', None],
     ['KojiDir', 'string', None],
 
-    ['ProxyPrincipals', 'string', ''],
-    ['HostPrincipalFormat', 'string', None],
-    ['AllowedKrbRealms', 'string', '*'],
     # TODO:  this option should be turned True in 1.34
     ['DisableURLSessions', 'boolean', False],
 

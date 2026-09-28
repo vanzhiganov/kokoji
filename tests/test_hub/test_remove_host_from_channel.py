@@ -27,7 +27,6 @@ class TestRemoveHostFromChannel(unittest.TestCase):
         self.context.session.assertPerm = mock.MagicMock()
         self.context_db.event_id = 42
         self.context_db.session.user_id = 23
-        self.context.opts = {'HostPrincipalFormat': '-%s-'}
         self.exports = kojihub.RootExports()
         self.list_channels = mock.patch('kojihub.kojihub.list_channels').start()
         self.get_channel_id = mock.patch('kojihub.kojihub.get_channel_id').start()

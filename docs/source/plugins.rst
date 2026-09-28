@@ -183,7 +183,7 @@ And in scripts, you can use following calls:
 
     import koji
     ks = koji.ClientSession('https://koji.fedoraproject.org/kojihub')
-    ks.gssapi_login()
+    ks.ssl_login('/etc/koji/client.crt', None, '/etc/koji/serverca.crt')
     ks.createSideTag('f30-build')
 
 .. _protonmsg-config:

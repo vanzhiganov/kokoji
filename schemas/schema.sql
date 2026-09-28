@@ -39,12 +39,6 @@ CREATE TABLE users (
 	usertype INTEGER NOT NULL
 ) WITHOUT OIDS;
 
-CREATE TABLE user_krb_principals (
-	user_id INTEGER NOT NULL REFERENCES users(id),
-	krb_principal VARCHAR(255) NOT NULL UNIQUE,
-	PRIMARY KEY (user_id, krb_principal)
-) WITHOUT OIDS;
-
 CREATE TABLE permissions (
 	id SERIAL NOT NULL PRIMARY KEY,
 	name VARCHAR(50) UNIQUE NOT NULL,
@@ -861,7 +855,7 @@ tag_listing, tag_config, tag_inheritance, tag_packages,
 rpminfo TO PUBLIC;
 
 -- example code to add initial admins
--- insert into users (name, usertype, status, krb_principal) values ('admin', 0, 0, 'admin@EXAMPLE.COM');
+-- insert into users (name, usertype, status) values ('admin', 0, 0);
 -- insert into user_perms (user_id, perm_id)
 --       select users.id, permissions.id from users, permissions
 --       where users.name in ('admin')

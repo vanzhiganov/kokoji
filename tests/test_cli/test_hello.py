@@ -49,13 +49,11 @@ class TestHello(utils.CliTestCase):
     @mock.patch('koji_cli.commands._printable_unicode')
     def test_handle_moshimoshi(self, print_unicode_mock, stdout):
         """Test handle_moshimoshi function"""
-        user = {'name': self.progname,
-                'krb_principal': '%s@localhost' % self.progname}
+        user = {'name': self.progname}
         cert = '/etc/pki/user.cert'
         session = mock.MagicMock(baseurl=self.huburl, authtype=None)
         # Mock out the xmlrpc server
         session.getLoggedInUser.return_value = None
-        session.krb_principal = user['krb_principal']
         mock_hub_version = '1.35.0'
         session.hub_version_str = mock_hub_version
         print_unicode_mock.return_value = "Hello"
@@ -82,9 +80,6 @@ class TestHello(utils.CliTestCase):
         # valid authentication
         auth_tests = {
             koji.AUTHTYPES['NORMAL']: 'Authenticated via password',
-            koji.AUTHTYPES['GSSAPI']: 'Authenticated via GSSAPI',
-            koji.AUTHTYPES['KERBEROS']: 'Authenticated via Kerberos principal %s' %
-                                        user['krb_principal'],
             koji.AUTHTYPES['SSL']: 'Authenticated via client certificate %s' % cert
         }
         # same hubinfo
@@ -100,10 +95,8 @@ class TestHello(utils.CliTestCase):
             self.assert_console_message(
                 stdout, "{0}\n\n{1}\n{2}\n".format(message, hubinfo, authinfo))
         mock_call_activate = mock.call(session, self.options)
-        self.activate_session_mock.assert_has_calls([mock_call_activate, mock_call_activate,
-                                                     mock_call_activate, mock_call_activate])
-        session.getLoggedInUser.assert_has_calls([mock.call(), mock.call(), mock.call(),
-                                                  mock.call()])
+        self.activate_session_mock.assert_has_calls([mock_call_activate, mock_call_activate])
+        session.getLoggedInUser.assert_has_calls([mock.call(), mock.call()])
 
     def test_handle_moshimoshi_help(self):
         self.assert_help(

@@ -32,7 +32,7 @@ class TestListPkgs(utils.CliTestCase):
         self.owner = 'test-owner'
         self.tag = 'test-tag-2'
         self.pkg = 'test-pkg-2'
-        self.userinfo = {'id': 1, 'krb_principals': [], 'name': self.owner,
+        self.userinfo = {'id': 1, 'name': self.owner,
                          'status': 0, 'usertype': 0}
         self.list_packages = [{'blocked': False,
                                'extra_arches': '',

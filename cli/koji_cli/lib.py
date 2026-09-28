@@ -6,7 +6,6 @@ import json
 import optparse
 import os
 import random
-import socket
 import string
 import sys
 import time
@@ -767,18 +766,13 @@ def activate_session(session, options):
             and options.authtype is None:
         # authenticate using user/password
         session.login()
-    elif options.authtype == "kerberos" or options.authtype is None:
-        try:
-            kwargs = {'proxyuser': runas}
-            if getattr(options, 'principal', None):
-                kwargs['principal'] = options.principal
-                if getattr(options, 'keytab', None):
-                    kwargs['keytab'] = options.keytab
-            session.gssapi_login(**kwargs)
-        except socket.error as e:
-            warn("Could not connect to Kerberos authentication service: %s" % e.args[1])
+    elif options.authtype == "kerberos":
+        error("Kerberos authentication is no longer supported; use --authtype ssl "
+              "or --authtype password")
     if not noauth and not session.logged_in:
-        error("Unable to log in, no authentication methods available")
+        error("Unable to log in. Configure an SSL client certificate (--cert) or "
+              "a username and password (--user/--password), or pass --noauth for "
+              "read-only access to a hub configured with LoginCreatesUser off")
     # don't add "options" to ensure_connection it would create loop in case of --force-auth
     # when it calls activate_session
     ensure_connection(session)

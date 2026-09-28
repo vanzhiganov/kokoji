@@ -170,7 +170,8 @@ file had this:
 
     [MyKoji]
     server = https://koji.mydomain.com/kojihub
-    authtype = kerberos
+    authtype = ssl
+    cert = ~/.mydomain.cert
     topdir = /mnt/koji
     weburl = https://koji.mydomain.com/koji
     topurl = https://download.mydomain.com/kojifiles
@@ -727,7 +728,6 @@ You can run the tests from your local and you will need to install the following
 For py3 instances:
  * ``gcc``
  * ``glibc-langpack-en``
- * ``krb5-devel``
  * ``python3-devel``
  * ``python3-librepo``
  * ``python3-tox``
@@ -738,7 +738,6 @@ For py2 instances:
  * ``dnf``
  * ``dnf-plugins-core``
  * ``gcc``
- * ``krb5-devel``
  * ``libffi-devel``
  * ``python-devel``
  * ``python-librepo``

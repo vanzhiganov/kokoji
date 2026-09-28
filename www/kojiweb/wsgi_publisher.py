@@ -69,14 +69,6 @@ class Dispatcher(object):
         ['KojiGreeting', 'string', 'Welcome to Koji Web'],
         ['LiteralFooter', 'boolean', True],
 
-        ['WebPrincipal', 'string', None],
-        ['WebKeytab', 'string', '/etc/httpd.keytab'],
-        ['WebCCache', 'string', '/var/tmp/kojiweb.ccache'],
-        ['KrbService', 'string', 'host'],
-        ['KrbRDNS', 'boolean', True],
-        ['KrbCanonHost', 'boolean', False],
-        ['KrbServerRealm', 'string', None],
-
         ['WebAuthType', 'string', None],
 
         ['WebCert', 'string', None],
@@ -154,18 +146,14 @@ class Dispatcher(object):
                 opts[name] = default
         opts['Secret'] = koji.util.HiddenValue(opts['Secret'])
 
-        if opts['WebAuthType'] not in (None, 'password', 'gssapi', 'ssl'):
+        if opts['WebAuthType'] not in (None, 'password', 'ssl'):
             raise koji.ConfigurationError(f"Invalid value {opts['WebAuthType']} for "
-                                          "WebAuthType (password/ssl/gssapi)")
-        if opts['WebAuthType'] == 'gssapi':
-            opts['WebAuthType'] = koji.AUTHTYPES['GSSAPI']
-        elif opts['WebAuthType'] == 'ssl':
+                                          "WebAuthType (password/ssl)")
+        if opts['WebAuthType'] == 'ssl':
             opts['WebAuthType'] = koji.AUTHTYPES['SSL']
         elif opts['WebAuthType'] == 'password':
             opts['WebAuthType'] = koji.AUTHTYPES['NORMAL']
         # if there is no explicit request, use same authtype as web has
-        elif opts['WebPrincipal']:
-            opts['WebAuthType'] = koji.AUTHTYPES['GSSAPI']
         elif opts['WebCert']:
             opts['WebAuthType'] = koji.AUTHTYPES['SSL']
 

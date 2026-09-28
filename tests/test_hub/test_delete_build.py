@@ -112,8 +112,6 @@ class TestDeleteBuild(unittest.TestCase):
         self.get_user.return_value = {
             "authtype": 2,
             "id": 1,
-            "krb_principal": None,
-            "krb_principals": [],
             "name": "kojiadmin",
             "status": 0,
             "usertype": 0,

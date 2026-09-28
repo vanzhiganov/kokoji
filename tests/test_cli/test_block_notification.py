@@ -94,8 +94,7 @@ class TestBlockNotification(utils.CliTestCase):
         expected = ""
 
         self.session.hasPerm.return_value = True
-        self.session.getUser.return_value = {'id': 2, 'krb_principals': [],
-                                             'name': 'testuser', 'status': 0, 'usertype': 0}
+        self.session.getUser.return_value = {'id': 2, 'name': 'testuser', 'status': 0, 'usertype': 0}
         self.session.getBuildNotificationBlocks.return_value = []
         self.session.createNotificationBlock.return_value = None
         self.session.getPackageID.return_value = 1
@@ -119,8 +118,7 @@ class TestBlockNotification(utils.CliTestCase):
 
     def test_handle_block_notification_existing_block(self):
         self.session.hasPerm.return_value = True
-        self.session.getUser.return_value = {'id': 2, 'krb_principals': [],
-                                             'name': 'testuser', 'status': 0, 'usertype': 0}
+        self.session.getUser.return_value = {'id': 2, 'name': 'testuser', 'status': 0, 'usertype': 0}
         self.session.getBuildNotificationBlocks.return_value = [{'package_id': 1,
                                                                  'tag_id': 2}]
         self.session.createNotificationBlock.return_value = None

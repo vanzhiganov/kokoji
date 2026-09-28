@@ -54,7 +54,7 @@ class FakeSession(auth.Session):
         self.logged_in = True
         self.id = 1
         self.user_id = user['id']
-        self.authtype = koji.AUTHTYPES['GSSAPI']
+        self.authtype = koji.AUTHTYPES['SSL']
         self.hostip = '127.0.0.1'
         self.master = None
         self.callnum = 1

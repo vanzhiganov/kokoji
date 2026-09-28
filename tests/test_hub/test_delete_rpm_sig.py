@@ -63,8 +63,7 @@ class TestDeleteRPMSig(unittest.TestCase):
                               'sigkey': ''},
                              {'rpm_id': 2, 'sighash': '78c245caa6deb70f0abc8b844c642cd6',
                               'sigkey': '2f86d6a1'}]
-        self.userinfo = {'authtype': 2, 'id': 1, 'krb_principal': None, 'krb_principals': [],
-                         'name': 'testuser', 'status': 0, 'usertype': 0}
+        self.userinfo = {'authtype': 1, 'id': 1, 'name': 'testuser', 'status': 0, 'usertype': 0}
         self.set_up_files()
 
     def set_up_files(self):

@@ -25,8 +25,7 @@ class TestAddGroupMember(unittest.TestCase):
         data = [{'id': 3,
                  'name': 'test-group',
                  'status': 0,
-                 'usertype': 2,
-                 'krb_principals': []},
+                 'usertype': 2},
                 None,
                 ]
         group = 'test-group'
@@ -39,7 +38,6 @@ class TestAddGroupMember(unittest.TestCase):
     def test_non_exist_group(self):
         data = [None,
                 {'id': 1,
-                 'krb_principals': [],
                  'name': 'test-user',
                  'status': 0,
                  'usertype': 0}

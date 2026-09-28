@@ -388,51 +388,6 @@ class TestAuthSession(unittest.TestCase):
         with self.assertRaises(koji.AuthError):
             s.login('user', 'password')
 
-    def test_checkKrbPrincipal(self):
-        s, cntext = self.get_session()
-        self.assertIsNone(s.checkKrbPrincipal(None))
-        self.context.opts = {'AllowedKrbRealms': '*'}
-        self.assertIsNone(s.checkKrbPrincipal('any'))
-        self.context.opts = {'AllowedKrbRealms': 'example.com'}
-        with self.assertRaises(koji.AuthError) as cm:
-            s.checkKrbPrincipal('any')
-        self.assertEqual(cm.exception.args[0],
-                         'invalid Kerberos principal: any')
-        with self.assertRaises(koji.AuthError) as cm:
-            s.checkKrbPrincipal('any@')
-        self.assertEqual(cm.exception.args[0],
-                         'invalid Kerberos principal: any@')
-        with self.assertRaises(koji.AuthError) as cm:
-            s.checkKrbPrincipal('any@bannedrealm')
-        self.assertEqual(cm.exception.args[0],
-                         "Kerberos principal's realm:"
-                         " bannedrealm is not allowed")
-        self.assertIsNone(s.checkKrbPrincipal('user@example.com'))
-        self.context.opts = {'AllowedKrbRealms': 'example.com,example.net,example.org'}
-        self.assertIsNone(s.checkKrbPrincipal('user@example.net'))
-
-    def test_getUserIdFromKerberos(self):
-        krb_principal = 'test-krb-principal'
-        self.query_singleValue.return_value = 135
-        s, cntext = self.get_session()
-        s.checkKrbPrincipal = mock.MagicMock()
-        s.checkKrbPrincipal.return_value = True
-
-        s.getUserIdFromKerberos(krb_principal)
-
-        self.assertEqual(len(self.queries), 4)
-        # check only last update query, first three are tested in test_basic_instance
-        query = self.queries[3]
-        self.assertEqual(query.tables, ['users'])
-        self.assertEqual(query.joins, ['user_krb_principals ON '
-                                       'users.id = user_krb_principals.user_id'])
-        self.assertEqual(query.clauses, ['krb_principal = %(krb_principal)s'])
-        self.assertEqual(query.columns, ['id'])
-        self.assertEqual(query.values, {'krb_principal': krb_principal})
-
-        self.assertEqual(len(self.updates), 2)
-        # all updates are tested in test_basic_instance
-
     def test_getUserId(self):
         self.query_singleValue.return_value = 135
         s, cntext = self.get_session()
@@ -641,50 +596,6 @@ class TestAuthSession(unittest.TestCase):
         self.assertEqual(query.values, {'user_id': 2})
 
         self.assertEqual(len(self.updates), 2)
-
-    def test_createUserFromKerberos_invalid_krb(self):
-        s, cntext = self.get_session()
-        krb_principal = 'test-krb-princ'
-        with self.assertRaises(koji.AuthError) as cm:
-            s.createUserFromKerberos(krb_principal)
-        self.assertEqual(cm.exception.args[0], 'invalid Kerberos principal: %s' % krb_principal)
-
-    def test_createUserFromKerberos_user_not_exists(self):
-        self.query_execute.return_value = None
-        s, cntext = self.get_session()
-        krb_principal = 'test-krb-princ@redhat.com'
-        s.createUser = mock.MagicMock()
-        s.createUser.return_value = 3
-        s.createUserFromKerberos(krb_principal)
-        self.assertEqual(len(self.queries), 4)
-        self.assertEqual(len(self.updates), 2)
-
-        query = self.queries[3]
-        self.assertEqual(query.tables, ['users'])
-        self.assertEqual(query.joins, ['LEFT JOIN user_krb_principals ON '
-                                       'users.id = user_krb_principals.user_id'])
-        self.assertEqual(query.clauses, ['name = %(user_name)s'])
-        self.assertEqual(query.columns, ['id', 'krb_principal'])
-        self.assertEqual(query.values, {'user_name': 'test-krb-princ'})
-
-    def test_createUserFromKerberos_valid(self):
-        self.query_execute.return_value = [{'id': 1, 'krb_principal': 'krb-user-1@redhat.com'},
-                                           {'id': 1, 'krb_principal': 'krb-user-2@redhat.com'}]
-        s, cntext = self.get_session()
-        krb_principal = 'test-krb-princ@redhat.com'
-        s.setKrbPrincipal = mock.MagicMock()
-        s.setKrbPrincipal.return_value = 1
-        s.createUserFromKerberos(krb_principal)
-        self.assertEqual(len(self.queries), 4)
-        self.assertEqual(len(self.updates), 2)
-
-        query = self.queries[3]
-        self.assertEqual(query.tables, ['users'])
-        self.assertEqual(query.joins, ['LEFT JOIN user_krb_principals ON '
-                                       'users.id = user_krb_principals.user_id'])
-        self.assertEqual(query.clauses, ['name = %(user_name)s'])
-        self.assertEqual(query.columns, ['id', 'krb_principal'])
-        self.assertEqual(query.values, {'user_name': 'test-krb-princ'})
 
     # functions outside Session object
 
