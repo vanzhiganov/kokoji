@@ -1,0 +1,140 @@
+#!/usr/bin/python3
+"""Log in to a Koji hub and report the resulting session.
+
+This is a small, dependency-light counterpart to the `koji` CLI: it does the
+config lookup and authentication ladder, then prints what it got back. Useful
+for smoke-testing hub connectivity and credentials from a script or CI job.
+
+It only logs in. Creating users is a separate concern -- see the module
+docstring in the sibling `create-user` script.
+"""
+
+import optparse
+import os
+import sys
+from xmlrpc.client import Fault
+
+import koji
+
+
+def error(msg, code=1):
+    sys.stderr.write("ERROR: %s\n" % msg)
+    sys.stderr.flush()
+    sys.exit(code)
+
+
+def get_options():
+    parser = optparse.OptionParser(usage="%prog [options]")
+    parser.add_option("-c", "--config", metavar="FILE",
+                      help="use alternate config file")
+    parser.add_option("-p", "--profile", default="koji", metavar="NAME",
+                      help="config profile to use. default: koji")
+    parser.add_option("-s", "--server", metavar="URL",
+                      help="url of koji hub XMLRPC server")
+    parser.add_option("-u", "--user", help="username to authenticate as")
+    parser.add_option("--password", help="password for the user")
+    parser.add_option("--cert", metavar="FILE",
+                      help="client SSL certificate for authentication")
+    parser.add_option("--serverca", metavar="FILE",
+                      help="CA cert that issued the hub's certificate")
+    parser.add_option("-n", "--noauth", action="store_true", default=False,
+                      help="do not authenticate; only verify the hub is reachable")
+    parser.add_option("-d", "--debug", action="store_true", default=False,
+                      help="show debug output")
+    parser.add_option("--debug-xmlrpc", action="store_true", default=False,
+                      help="show xmlrpc debug output")
+    (options, args) = parser.parse_args()
+
+    if args:
+        parser.error("This command takes no arguments")
+
+    # Merge the koji config file under the command line, the way the CLI does:
+    # anything the user passed explicitly wins, everything else is filled in
+    # from the profile.
+    try:
+        result = koji.read_config(options.profile, user_config=options.config)
+    except koji.ConfigurationError as e:
+        parser.error(e.args[0])
+
+    for name, value in result.items():
+        if getattr(options, name, None) is None:
+            setattr(options, name, value)
+
+    for name in ('cert', 'serverca'):
+        if getattr(options, name, None):
+            setattr(options, name, os.path.expanduser(getattr(options, name)))
+
+    return options
+
+
+def main(options):
+    server = options.server or 'http://localhost/kojihub'
+    session_opts = koji.grab_session_options(options)
+
+    if options.debug:
+        print("server:   %s" % server)
+        print("authtype: %s" % ('noauth' if options.noauth else 'auto'))
+        print("user:     %s" % (options.user or '<none>'))
+
+    session = koji.ClientSession(server, opts=session_opts)
+
+    if options.noauth:
+        # Force one round trip so an unreachable hub still fails loudly.
+        session.getLoggedInUser()
+    elif options.cert:
+        # An explicit --cert that does not exist is a typo, not a reason to
+        # silently fall through to password auth.
+        if not os.path.isfile(options.cert):
+            error("No such certificate file: %s" % options.cert)
+        session.ssl_login(options.cert, None, options.serverca)
+    elif options.user:
+        session.login()
+    else:
+        # user/password are deliberately absent from read_config's defaults
+        # (see koji/__init__.py), so they can never come from the config file
+        # -- only from these options. Don't imply otherwise in the message.
+        error("No credentials. Pass --user/--password or --cert, or use "
+              "--noauth for an anonymous reachability check.\n"
+              "(user and password are never read from the config file)")
+
+    if options.noauth:
+        # Return before the logged_in check: anonymous sessions are never
+        # logged in, and the call above already proved the hub is reachable.
+        print("Connected anonymously to %s (hub version %s)"
+              % (server, session.hub_version_str))
+        return 0
+
+    if not session.logged_in:
+        error("Unable to log in")
+
+    # keys are hyphenated: see kojihub/auth.py createSession, which is what
+    # _prepCall reads back out of self.sinfo
+    sinfo = session.sinfo or {}
+    print("Logged in to %s" % server)
+    print("  session id:   %s" % sinfo.get('session-id'))
+    print("  authtype:     %s" % koji.AUTHTYPES.get(session.authtype))
+    print("  hub version:  %s" % session.hub_version_str)
+
+    # getLoggedInUser carries the authtype and id the hub associates with the
+    # session, which is a better confirmation than trusting our own state.
+    me = session.getLoggedInUser()
+    if me:
+        print("  user:         %s (id %s)" % (me['name'], me['id']))
+        perms = session.getUserPerms(me['id'])
+        print("  permissions:  %s" % (', '.join(sorted(perms)) or '<none>'))
+    return 0
+
+
+if __name__ == '__main__':
+    try:
+        sys.exit(main(get_options()))
+    except koji.GenericError as e:
+        error('koji: %s' % e)
+    except koji.AuthError as e:
+        error('authentication failed: %s' % e)
+    except Fault as e:
+        # A real hub maps its own errors to koji exceptions, but anything else
+        # arrives as a bare XML-RPC fault and should not dump a traceback.
+        error('hub returned fault %s: %s' % (e.faultCode, e.faultString))
+    except IOError as e:
+        error('I/O error: %s' % e)

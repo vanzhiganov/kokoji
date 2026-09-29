@@ -348,6 +348,7 @@ def register(environ, page=None):
     options = environ['koji.options']
 
     if not options.get('AllowRegistration', False):
+        authlogger.warning('Registration refused: registration is disabled on this server')
         raise koji.ActionNotAllowed('registration is disabled on this server')
 
     values = _initValues(environ, title='register', pageID='register')
@@ -366,18 +367,22 @@ def register(environ, page=None):
 
     if not username:
         values['registerError'] = 'Please provide a username'
+        authlogger.warning('Registration failed: no username submitted')
         return _genHTML(environ, 'register.chtml')
     if not password:
         values['registerError'] = 'Please provide a password'
+        authlogger.warning('Registration failed: no password submitted for user %s', username)
         return _genHTML(environ, 'register.chtml')
     if password != confirm_password:
         values['registerError'] = 'Passwords do not match'
+        authlogger.warning('Registration failed: password mismatch for user %s', username)
         return _genHTML(environ, 'register.chtml')
 
     try:
         session.registerUser(username, password)
     except (koji.GenericError, koji.AuthError) as e:
         values['registerError'] = str(e)
+        authlogger.warning('Registration failed for %s: %s', username, e)
         return _genHTML(environ, 'register.chtml')
 
     values['registerInfo'] = 'Account %s created. You can now log in.' % username
