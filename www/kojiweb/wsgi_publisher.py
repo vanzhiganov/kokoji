@@ -78,6 +78,8 @@ class Dispatcher(object):
 
         ['LoginTimeout', 'integer', 72],
 
+        ['ForceSSL', 'boolean', True],
+
         ['Secret', 'string', None],
 
         ['LoginDisabled', 'boolean', False],

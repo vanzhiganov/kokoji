@@ -84,7 +84,8 @@ def _setUserCookie(environ, user):
     cookies = http.cookies.SimpleCookie()
     cookies['user'] = value
     c = cookies['user']  # morsel instance
-    c['secure'] = True
+    c['secure'] = (options.get('ForceSSL', True)
+                   or options['WebAuthType'] == koji.AUTHTYPES['SSL'])
     c['path'] = os.path.dirname(environ['SCRIPT_NAME'])
     # the Cookie module treats integer expire times as relative seconds
     c['expires'] = int(options['LoginTimeout']) * 60 * 60
@@ -336,7 +337,7 @@ def _password_login(environ, page=None):
 
     _setUserCookie(environ, username)
     authlogger.info('Successful password authentication by %s', username)
-    _redirectBack(environ, page, forceSSL=True)
+    _redirectBack(environ, page, forceSSL=options.get('ForceSSL', True))
 
 
 def register(environ, page=None):
