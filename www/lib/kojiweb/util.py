@@ -218,12 +218,18 @@ class FieldStorageCompat(Mapping):
 
     def __init__(self, environ):
         qs = environ.get('QUERY_STRING', '')
-        if not qs:
-            # for python < 3.11, parse_qs will error on a blank string
-            self.data = {}
-            return
+        data = parse_qs(qs, strict_parsing=True, keep_blank_values=True) if qs else {}
+        content_type = environ.get('CONTENT_TYPE', '').split(';', 1)[0].strip().lower()
+        if (environ.get('REQUEST_METHOD') == 'POST'
+                and content_type == 'application/x-www-form-urlencoded'):
+            content_length = int(environ.get('CONTENT_LENGTH') or 0)
+            if content_length:
+                body = environ['wsgi.input'].read(content_length)
+                if isinstance(body, bytes):
+                    body = body.decode('utf-8')
+                for key, values in parse_qs(body, keep_blank_values=True).items():
+                    data.setdefault(key, []).extend(values)
 
-        data = parse_qs(qs, strict_parsing=True, keep_blank_values=True)
         # replace singleton lists with single values
         for arg in data:
             val = data[arg]

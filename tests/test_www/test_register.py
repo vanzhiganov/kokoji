@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 
+import io
 import logging
 import unittest
 
@@ -9,6 +10,7 @@ except ImportError:
     import mock
 
 import koji
+from kojiweb.util import FieldStorageCompat
 
 from .loadwebindex import webidx
 
@@ -40,10 +42,10 @@ class TestRegisterLogging(unittest.TestCase):
         self.logger.setLevel(self.old_level)
         mock.patch.stopall()
 
-    def call_register(self, form, allow=True, side_effect=None):
+    def call_register(self, form, allow=True, side_effect=None, field_storage=None):
         environ = {
             'koji.options': {'AllowRegistration': allow},
-            'koji.form': mock.MagicMock(
+            'koji.form': field_storage if field_storage is not None else mock.MagicMock(
                 **{'getfirst.side_effect': lambda k, d='': form.get(k, d)}),
             'koji.values': self.values,
         }
@@ -63,6 +65,21 @@ class TestRegisterLogging(unittest.TestCase):
                             'confirm_password': 'pw'})
         self.assertEqual(self.messages(), ['New user registered: bob'])
         self.assertEqual(self.records[0].levelno, logging.INFO)
+
+    def test_post_body_is_sent_to_hub(self):
+        body = b'username=bob&password=pw&confirm_password=pw'
+        environ = {
+            'REQUEST_METHOD': 'POST',
+            'CONTENT_TYPE': 'application/x-www-form-urlencoded',
+            'CONTENT_LENGTH': str(len(body)),
+            'QUERY_STRING': '',
+            'wsgi.input': io.BytesIO(body),
+        }
+        form = FieldStorageCompat(environ)
+
+        self.call_register({}, field_storage=form)
+
+        self.session.registerUser.assert_called_once_with('bob', 'pw')
 
     def test_hub_rejection_logged(self):
         self.call_register({'username': 'bob', 'password': 'pw',
