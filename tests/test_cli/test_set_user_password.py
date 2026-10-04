@@ -45,6 +45,63 @@ class TestSetUserPassword(utils.CliTestCase):
 
     @mock.patch('getpass.getpass')
     @mock.patch('sys.stdout', new_callable=six.StringIO)
+    def test_handle_set_user_password_arg(self, stdout, getpass_mock):
+        args = [self.user, '--password=' + self.password]
+
+        handle_set_user_password(self.options, self.session, args)
+
+        self.assertMultiLineEqual(stdout.getvalue(),
+                                 'Password set for user %s\n' % self.user)
+        self.session.setUserPassword.assert_called_once_with(self.user, self.password)
+        getpass_mock.assert_not_called()
+
+    @mock.patch('getpass.getpass')
+    @mock.patch('sys.stdout', new_callable=six.StringIO)
+    def test_handle_set_user_password_arg_separate(self, stdout, getpass_mock):
+        args = [self.user, '--password', self.password]
+
+        handle_set_user_password(self.options, self.session, args)
+
+        self.session.setUserPassword.assert_called_once_with(self.user, self.password)
+        getpass_mock.assert_not_called()
+
+    @mock.patch('getpass.getpass')
+    def test_handle_set_user_password_arg_empty(self, getpass_mock):
+        args = [self.user, '--password=']
+
+        self.assert_system_exit(
+            handle_set_user_password,
+            self.options,
+            self.session,
+            args,
+            stdout='',
+            stderr='Password must not be empty\n',
+            activate_session=None,
+            exit_code=1
+        )
+
+        self.session.setUserPassword.assert_not_called()
+        getpass_mock.assert_not_called()
+
+    @mock.patch('getpass.getpass')
+    def test_handle_set_user_password_arg_and_stdin(self, getpass_mock):
+        args = [self.user, '--password=' + self.password, '--password-stdin']
+
+        self.assert_system_exit(
+            handle_set_user_password,
+            self.options,
+            self.session,
+            args,
+            stdout='',
+            stderr='--password and --password-stdin are mutually exclusive\n',
+            activate_session=None,
+            exit_code=1
+        )
+
+        self.session.setUserPassword.assert_not_called()
+
+    @mock.patch('getpass.getpass')
+    @mock.patch('sys.stdout', new_callable=six.StringIO)
     def test_handle_set_user_password_stdin(self, stdout, getpass_mock):
         args = [self.user, '--password-stdin']
 
@@ -116,8 +173,12 @@ class TestSetUserPassword(utils.CliTestCase):
 (Specify the --help global option for a list of other help options)
 
 Options:
-  -h, --help        show this help message and exit
-  --password-stdin  read the password from stdin instead of prompting for it
+  -h, --help           show this help message and exit
+  --password=PASSWORD  use this password instead of prompting for one. Visible
+                       to other users through ps, so prefer --password-stdin
+                       where you can
+  --password-stdin     read the password from stdin instead of prompting for
+                       it
 """ % self.progname)
 
 

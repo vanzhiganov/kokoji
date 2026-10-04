@@ -222,8 +222,9 @@ builder self-registration:
 koji add-host builder1.example.com x86_64
 koji enable-host builder1.example.com
 koji add-host-to-channel builder1.example.com x86_64
-koji set-host-password builder1.example.com     # prompts twice, never takes
-                                                # the password in argv
+koji set-host-password builder1.example.com     # prompts twice by default;
+                                                # --password also exists, see
+                                                # "Setting the password" below
 
 # ...or let LoginCreatesUser do it: kojid logs in first and the hub creates
 # the user, which addHost then finds and reuses (kojihub/kojihub.py:13739-13750)
@@ -241,18 +242,32 @@ the hostname through `get_host(strict=True)` — so the name must belong to a
 It is what you want to recover a locked-out human administrator; prefer
 `set-host-password` for builders, since it also proves the name is a host.
 
-Neither command accepts a password as an argument. Without
-`--password-stdin` they prompt twice through `getpass`, so the value never
-reaches `ps` or the shell history. For scripted use:
+Three ways to supply the password, in precedence order:
+
+| | |
+|---|---|
+| *(nothing)* | prompted for twice through `getpass` — the default, and the safest |
+| `--password-stdin` | one line read from stdin, for scripted use |
+| `--password=PASSWORD` | taken from the command line |
+
+`--password` and `--password-stdin` are mutually exclusive and the command
+errors out if you give both, rather than quietly picking one.
+
+Prefer the prompt or `--password-stdin`. A password in argv is readable by
+every user on the box through `ps` and is kept in the shell history:
 
 ```bash
+# preferred for scripts
 printf '%s' "$PASSWORD" | koji set-host-password builder1.example.com --password-stdin
+
+# only when nothing else is possible
+koji set-host-password builder1.example.com --password="$PASSWORD"
 ```
 
-An empty password is rejected (`Session.setPassword`,
-`kojihub/auth.py:651`). Note the column is `VARCHAR(255)`
-(`schemas/schema.sql:37`) — anything longer is not something you want to be
-discovering on the builder.
+An empty password is rejected from every source (`--password=` included, and
+by `Session.setPassword`, `kojihub/auth.py:651`). Note the column is
+`VARCHAR(255)` (`schemas/schema.sql:37`) — anything longer is not something you
+want to be discovering on the builder.
 
 If a user was auto-created as `usertype = NORMAL`, `add-host` needs `--force`
 to convert it to `HOST`.

@@ -205,14 +205,35 @@ def handle_add_host(goptions, session, args):
         print("%s added: id %d" % (host, id))
 
 
-def _prompt_password(options):
-    """Obtain a password without ever putting it in argv.
+def _add_password_options(parser):
+    """Register the password-source options shared by the set-*-password commands."""
+    parser.add_option("--password", metavar="PASSWORD",
+                      help="use this password instead of prompting for one. "
+                           "Visible to other users through ps, so prefer "
+                           "--password-stdin where you can")
+    parser.add_option("--password-stdin", action="store_true", default=False,
+                      help="read the password from stdin instead of prompting for it")
 
-    Passwords on a command line are visible to every user on the box through
-    ps and land in the shell history, so this never accepts one as an
-    argument.  --password-stdin reads a single line from stdin for scripted
-    use; otherwise we prompt twice through getpass.
+
+def _prompt_password(options):
+    """Obtain the new password for a set-*-password command.
+
+    Three sources, in order of precedence:
+      --password       taken verbatim from the command line
+      --password-stdin one line read from stdin
+      otherwise        prompted for twice through getpass
+
+    A password given in argv is readable by every user on the box through ps
+    and is kept in the shell history, so --password-stdin and the interactive
+    prompt are both preferable where you can use them.  --password is here for
+    the cases where neither is possible.
     """
+    if options.password is not None:
+        if options.password_stdin:
+            error("--password and --password-stdin are mutually exclusive")
+        if not options.password:
+            error("Password must not be empty")
+        return options.password
     if options.password_stdin:
         password = sys.stdin.readline().rstrip('\n')
         if not password:
@@ -231,8 +252,7 @@ def handle_set_host_password(goptions, session, args):
     "[admin] Set the password of a builder host"
     usage = "usage: %prog set-host-password [options] <hostname>"
     parser = OptionParser(usage=get_usage_str(usage))
-    parser.add_option("--password-stdin", action="store_true", default=False,
-                      help="read the password from stdin instead of prompting for it")
+    _add_password_options(parser)
     (options, args) = parser.parse_args(args)
     if len(args) < 1:
         parser.error("Please specify the hostname of the host")
@@ -249,8 +269,7 @@ def handle_set_user_password(goptions, session, args):
     "[admin] Set the password of any user"
     usage = "usage: %prog set-user-password [options] <username>"
     parser = OptionParser(usage=get_usage_str(usage))
-    parser.add_option("--password-stdin", action="store_true", default=False,
-                      help="read the password from stdin instead of prompting for it")
+    _add_password_options(parser)
     (options, args) = parser.parse_args(args)
     if len(args) < 1:
         parser.error("Please specify the username of the user")
