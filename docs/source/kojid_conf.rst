@@ -304,7 +304,10 @@ Please use SSL authentication instead.
 
 .. glossary::
    user=None
-       Username for authentication
+       Username for authentication. Must match the name the host was
+       registered under with ``koji add-host``.
 
    password=None
-       Clear-text password (I've told you.)
+       Clear-text password (I've told you.) An administrator sets it on
+       the hub with ``koji set-host-password <hostname>``; copy the value
+       they used into here. See :doc:`../builder/README` for the details.

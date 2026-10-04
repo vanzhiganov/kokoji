@@ -10397,6 +10397,19 @@
             "varargs": null,
             "varkw": null
         },
+        "setHostPassword": {
+            "desc": "(hostname, password)",
+            "args": [
+                {
+                    "name": "hostname"
+                },
+                {
+                    "name": "password"
+                }
+            ],
+            "varargs": null,
+            "varkw": null
+        },
         "setInheritanceData": {
             "desc": "(tag, data, clear=False)",
             "args": [
@@ -10426,6 +10439,19 @@
                 {
                     "name": "recurse",
                     "default": "True"
+                }
+            ],
+            "varargs": null,
+            "varkw": null
+        },
+        "setUserPassword": {
+            "desc": "(username, password)",
+            "args": [
+                {
+                    "name": "username"
+                },
+                {
+                    "name": "password"
                 }
             ],
             "varargs": null,

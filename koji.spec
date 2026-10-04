@@ -275,6 +275,7 @@ Requires(postun): systemd
 Requires: /usr/bin/svn
 Requires: /usr/bin/git
 Requires: createrepo_c >= 0.11.0
+Requires: dnf
 %if 0%{py3_support} > 1
 Requires: python%{python3_pkgversion}-%{name} = %{version}-%{release}
 Requires: python%{python3_pkgversion}-librepo

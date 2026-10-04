@@ -59,10 +59,12 @@ admin commands:
         revoke-cg-access          Remove a user from a content generator
         revoke-permission         Revoke a permission from a user
         set-build-volume          Move a build to a different volume
+        set-host-password         Set the password of a builder host
         set-pkg-arches            Set the list of extra arches for a package
         set-pkg-owner             Set the owner for a package
         set-pkg-owner-global      Set the owner for a package globally
         set-task-priority         Set task priority
+        set-user-password         Set the password of any user
         unblock-group-pkg         Unblock a package from a group's package listing
         unblock-group-req         Unblock a group's requirement listing
         unblock-pkg               Unblock a package in the listing for tag

@@ -3,6 +3,7 @@ from __future__ import absolute_import, division
 import ast
 import dateutil.parser
 import fnmatch
+import getpass
 import itertools
 import json
 import logging
@@ -202,6 +203,64 @@ def handle_add_host(goptions, session, args):
     else:
         id = session.addHost(host, args[1:], force=options.force)
         print("%s added: id %d" % (host, id))
+
+
+def _prompt_password(options):
+    """Obtain a password without ever putting it in argv.
+
+    Passwords on a command line are visible to every user on the box through
+    ps and land in the shell history, so this never accepts one as an
+    argument.  --password-stdin reads a single line from stdin for scripted
+    use; otherwise we prompt twice through getpass.
+    """
+    if options.password_stdin:
+        password = sys.stdin.readline().rstrip('\n')
+        if not password:
+            error("No password was read from stdin")
+        return password
+    while True:
+        password = getpass.getpass("Password: ")
+        if not password:
+            error("Password must not be empty")
+        if password == getpass.getpass("Confirm password: "):
+            return password
+        print("Passwords do not match, please try again")
+
+
+def handle_set_host_password(goptions, session, args):
+    "[admin] Set the password of a builder host"
+    usage = "usage: %prog set-host-password [options] <hostname>"
+    parser = OptionParser(usage=get_usage_str(usage))
+    parser.add_option("--password-stdin", action="store_true", default=False,
+                      help="read the password from stdin instead of prompting for it")
+    (options, args) = parser.parse_args(args)
+    if len(args) < 1:
+        parser.error("Please specify the hostname of the host")
+    elif len(args) > 1:
+        parser.error("This command only accepts one argument (hostname)")
+    hostname = args[0]
+
+    activate_session(session, goptions)
+    session.setHostPassword(hostname, _prompt_password(options))
+    print("Password set for host %s" % hostname)
+
+
+def handle_set_user_password(goptions, session, args):
+    "[admin] Set the password of any user"
+    usage = "usage: %prog set-user-password [options] <username>"
+    parser = OptionParser(usage=get_usage_str(usage))
+    parser.add_option("--password-stdin", action="store_true", default=False,
+                      help="read the password from stdin instead of prompting for it")
+    (options, args) = parser.parse_args(args)
+    if len(args) < 1:
+        parser.error("Please specify the username of the user")
+    elif len(args) > 1:
+        parser.error("This command only accepts one argument (username)")
+    username = args[0]
+
+    activate_session(session, goptions)
+    session.setUserPassword(username, _prompt_password(options))
+    print("Password set for user %s" % username)
 
 
 def handle_edit_host(options, session, args):

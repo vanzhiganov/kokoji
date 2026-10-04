@@ -13779,6 +13779,43 @@ class RootExports(object):
         """Mark a host as disabled"""
         set_host_enabled(hostname, False)
 
+    def setHostPassword(self, hostname, password):
+        """[admin] Set the password of a builder host's user account.
+
+        This is the credential kojid uses to log in (see "password" in
+        kojid.conf).  The host is identified by hostname and must already
+        exist -- the account itself is normally created for you by addHost().
+
+        The hostname MUST be byte-identical to the name passed to addHost():
+        the hub works out which host a session belongs to by looking up the
+        session's user_id in the host table (Session._getHostId).  A mismatch
+        leaves the builder registered but permanently idle, with no error.
+
+        :param str hostname: name of an existing host
+        :param str password: new password (plaintext)
+        """
+        context.session.assertPerm('admin')
+        host = get_host(hostname, strict=True)
+        context.session.setPassword(host['name'], password)
+
+    def setUserPassword(self, username, password):
+        """[admin] Set the password of any user account.
+
+        Unlike setHostPassword() this works for human accounts too, which makes
+        it the way to recover a locked-out administrator.  Use
+        setHostPassword() when the target is a builder: it additionally proves
+        the name belongs to a registered host.
+
+        :param str username: name of an existing user
+        :param str password: new password (plaintext)
+        """
+        context.session.assertPerm('admin')
+        user = get_user(userInfo={'name': username}, strict=True)
+        if user['usertype'] == koji.USERTYPES['GROUP']:
+            raise koji.GenericError('groups cannot log in, so they have no password: %s'
+                                    % username)
+        context.session.setPassword(username, password)
+
     def enableChannel(self, channelname, comment=None):
         """Mark a channel as enabled"""
         set_channel_enabled(channelname, enabled=True, comment=comment)
