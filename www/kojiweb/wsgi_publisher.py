@@ -269,12 +269,14 @@ class Dispatcher(object):
         try:
             self._setup(environ)
         except Exception:
-            self.startup_error = "unknown startup_error"
             etype, e = sys.exc_info()[:2]
             tb_short = ''.join(traceback.format_exception_only(etype, e))
-            self.startup_error = "startup_error: %s" % tb_short
             tb_str = ''.join(traceback.format_exception(*sys.exc_info()))
-            self.logger.error(tb_str)
+            # the detail belongs in the log; the browser gets no more than a
+            # generic notice, since it names modules and config paths
+            self.logger.error("Startup failed: %s\n%s", tb_short, tb_str)
+            self.startup_error = ("The web interface failed to start up. "
+                                  "Please check the server log for details.")
 
     def simple_error_page(self, message=None, err=None):
         result = ["""\
@@ -331,10 +333,14 @@ class Dispatcher(object):
             values['explanation'] = message or "Unknown error"
             values['debug_level'] = 0
         values['tb_short'] = tb_short
+        # PythonDebug is the only thing that may put a real traceback in the
+        # response. error.chtml keys off tb_long having content, so an empty
+        # string means the block is not rendered at all -- we must not fall
+        # back to substituting placeholder text here.
         if int(self.options.get("PythonDebug", 0)):
             values['tb_long'] = tb_long
         else:
-            values['tb_long'] = "Full tracebacks disabled"
+            values['tb_long'] = ''
         # default these koji values to false so the _genHTML doesn't try to look
         # them up (which will fail badly if the hub is offline)
         # FIXME - we need a better fix for this
@@ -356,8 +362,11 @@ class Dispatcher(object):
 
     def handle_request(self, environ, start_response):
         if self.startup_error:
-            status = '200 OK'
-            result, headers = self.error_page(environ, message=self.startup_error)
+            status = '500 Internal Server Error'
+            # err=False: there is no live exception to describe, and asking
+            # error_page for one would render a stray "NoneType: None"
+            result, headers = self.error_page(environ, message=self.startup_error,
+                                              err=False)
             start_response(status, headers)
             return result
         if environ['REQUEST_METHOD'] not in ['GET', 'POST', 'HEAD']:

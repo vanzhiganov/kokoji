@@ -10,20 +10,16 @@ $explanation
 
 #if $debug_level >= 1
 <div>
-#else
-<div style="visibility: hidden">
-#end if
 $tb_short
 </div>
-
-#if $debug_level >= 2
-<div>
-#else
-<div style="visibility: hidden">
 #end if
+
+#if $tb_long
+<div>
 <pre>
 #echo $tb_long
 </pre>
 </div>
+#end if
 
 #include "includes/footer.chtml"
