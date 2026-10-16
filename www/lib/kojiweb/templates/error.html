@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block content %}
+
+
+  <h4>Error</h4>
+
+<div>
+{{ explanation }}
+</div>
+
+{% if debug_level >= 1 %}
+<div>
+{{ tb_short }}
+</div>
+{% endif %}
+
+{% if tb_long %}
+<div>
+<pre>
+{{ tb_long }}
+</pre>
+</div>
+{% endif %}
+
+{% endblock %}

@@ -1,75 +1,44 @@
-import importlib.util
-import os
-import os.path
-import shutil
-import sys
-import tempfile
 import unittest
-import warnings
 from unittest import mock
-
-import Cheetah.Template
 
 import koji
 import kojiweb
+import kojiweb.errors
 import kojiweb.util
 
-
-WSP_FILENAME = os.path.join(os.path.dirname(__file__), '../../www/kojiweb/wsgi_publisher.py')
-ERROR_TMPL = os.path.join(os.path.dirname(__file__), '../../www/kojiweb/error.chtml')
 
 # markers we plant in the values dict, so we can look for them in the output
 EXCEPTION_LINE = 'EXCEPTION_LINE_MARKER'
 TRACEBACK = 'FULL_TRACEBACK_MARKER'
 
 
-def load_module(name, filename):
-    spec = importlib.util.spec_from_file_location(name, filename)
-    mod = importlib.util.module_from_spec(spec)
-    sys.modules[name] = mod
-    spec.loader.exec_module(mod)
-    return mod
-
-
-# load wsgi_publisher by path, the same way loadwebindex.py loads index.py
-wsp = load_module('wsgi_publisher_test', WSP_FILENAME)
+def make_environ(options=None):
+    opts = {
+        'LoginDisabled': False,
+        'SiteName': 'test',
+        'LiteralFooter': True,
+        'AllowRegistration': False,
+    }
+    if options:
+        opts.update(options)
+    return {'koji.options': opts}
 
 
 class ErrorTemplateTestCase(unittest.TestCase):
-    """Render error.chtml and check what actually reaches the browser.
-
-    Cheetah resolves a relative #include against the cwd (not the template's
-    own directory) and error.chtml starts with "#from kojiweb import util", so
-    we render a copy out of a temp dir alongside stub includes.
-    """
-
-    def setUp(self):
-        self.tmpdir = tempfile.mkdtemp()
-        self.origdir = os.getcwd()
-        os.mkdir(os.path.join(self.tmpdir, 'includes'))
-        for name in ('header.chtml', 'footer.chtml'):
-            with open(os.path.join(self.tmpdir, 'includes', name), 'w') as f:
-                f.write('stub\n')
-        shutil.copy(ERROR_TMPL, os.path.join(self.tmpdir, 'error.chtml'))
-        os.chdir(self.tmpdir)
-        with warnings.catch_warnings():
-            warnings.simplefilter('ignore')
-            self.template = Cheetah.Template.Template.compile(file='error.chtml')
-
-    def tearDown(self):
-        os.chdir(self.origdir)
-        shutil.rmtree(self.tmpdir)
+    """Render error.html and check what actually reaches the browser."""
 
     def render(self, debug_level, tb_long):
-        values = {
+        environ = make_environ()
+        kojiweb.util._initValues(environ, 'Error', 'error')
+        values = environ['koji.values']
+        values.update({
             'explanation': 'an error occurred',
             'debug_level': debug_level,
             'tb_short': EXCEPTION_LINE,
             'tb_long': tb_long,
-        }
-        with warnings.catch_warnings():
-            warnings.simplefilter('ignore')
-            return str(self.template(namespaces=[values]).respond())
+            'etype': None,
+        })
+        return kojiweb.util._genHTML(environ, 'error.chtml')
 
 
 class TestTracebackNotRendered(ErrorTemplateTestCase):
@@ -128,10 +97,9 @@ class TestExceptionLine(ErrorTemplateTestCase):
 
 
 class ErrorPageTestCase(unittest.TestCase):
-    """Publisher-level checks: what error_page puts in the values dict."""
+    """error_page checks: what it puts in the values dict."""
 
     def setUp(self):
-        self.dispatcher = wsp.Dispatcher()
         self.environ = {'koji.values': {}}
         self.captured = {}
 
@@ -144,12 +112,9 @@ class ErrorPageTestCase(unittest.TestCase):
             self.captured['values'] = environ['koji.values']
             return 'PAGE'
 
-        # error_page looks up the global "kojiweb", which _setup would have
-        # imported; we skip _setup so bind it ourselves
         self._patchers = [
             mock.patch.object(kojiweb.util, '_initValues', fake_initValues),
             mock.patch.object(kojiweb.util, '_genHTML', fake_genHTML),
-            mock.patch.object(wsp, 'kojiweb', kojiweb, create=True),
         ]
         for patcher in self._patchers:
             patcher.start()
@@ -160,44 +125,32 @@ class ErrorPageTestCase(unittest.TestCase):
 
     def raise_and_render(self, error, python_debug=False):
         """Render the error page for `error` and return the values dict"""
-        self.dispatcher.options = {'PythonDebug': python_debug}
         try:
             raise error
         except type(error):
-            self.dispatcher.error_page(self.environ)
+            kojiweb.errors.error_page(self.environ, {'PythonDebug': python_debug})
         return self.captured['values']
 
     def render_startup_error(self):
-        self.dispatcher.options = {}
-        statuses = []
-        self.dispatcher.handle_request(
-            {'REQUEST_METHOD': 'GET', 'koji.values': {}},
-            lambda status, headers: statuses.append(status))
-        return statuses, self.captured['values']
+        kojiweb.errors.error_page(
+            self.environ, {},
+            message='the web interface failed to start up', err=False)
+        return self.captured['values']
 
 
 class TestPythonDebugGate(ErrorPageTestCase):
 
     def test_no_traceback_by_default(self):
         # PythonDebug is off in every shipped config
-        self.dispatcher.options = {}
-        try:
-            raise koji.GenericError('SUPER_SECRET_TOKEN')
-        except koji.GenericError:
-            self.dispatcher.error_page(self.environ)
-        values = self.captured['values']
+        values = self.raise_and_render(koji.GenericError('SUPER_SECRET_TOKEN'))
         self.assertEqual(values['tb_long'], '')
         self.assertNotIn('SUPER_SECRET_TOKEN', values['tb_long'])
 
     def test_no_placeholder_substituted(self):
         # we used to put "Full tracebacks disabled" here, which then rendered
         # as visible page content because explainError defaults to level 2
-        self.dispatcher.options = {}
-        try:
-            raise koji.GenericError('boom')
-        except koji.GenericError:
-            self.dispatcher.error_page(self.environ)
-        self.assertNotIn('traceback', self.captured['values']['tb_long'].lower())
+        values = self.raise_and_render(koji.GenericError('boom'))
+        self.assertNotIn('traceback', values['tb_long'].lower())
 
     def test_traceback_only_with_pythondebug(self):
         values = self.raise_and_render(koji.GenericError('boom'), python_debug=True)
@@ -205,13 +158,9 @@ class TestPythonDebugGate(ErrorPageTestCase):
         self.assertIn('GenericError', values['tb_long'])
 
     def test_pythondebug_off_gives_empty_string_not_none(self):
-        # error.chtml tests #if $tb_long, so it has to be falsy, not missing
-        self.dispatcher.options = {'PythonDebug': False}
-        try:
-            raise koji.GenericError('boom')
-        except koji.GenericError:
-            self.dispatcher.error_page(self.environ)
-        self.assertEqual(self.captured['values']['tb_long'], '')
+        # error.html tests {% if tb_long %}, so it has to be falsy, not missing
+        values = self.raise_and_render(koji.GenericError('boom'), python_debug=False)
+        self.assertEqual(values['tb_long'], '')
 
     def test_exception_line_still_available(self):
         # the single-line text is a deliberate feature, keep it
@@ -221,43 +170,57 @@ class TestPythonDebugGate(ErrorPageTestCase):
 
 
 class TestStartupError(ErrorPageTestCase):
-
-    def test_exception_detail_not_in_message(self):
-        secret = 'No module named super_secret_module'
-        with mock.patch.object(self.dispatcher, '_setup', side_effect=RuntimeError(secret)):
-            with mock.patch.object(self.dispatcher.logger, 'error'):
-                self.dispatcher.setup({})
-        self.assertIsNotNone(self.dispatcher.startup_error)
-        self.assertNotIn(secret, self.dispatcher.startup_error)
-        self.assertNotIn('super_secret_module', self.dispatcher.startup_error)
-
-    def test_exception_detail_goes_to_the_log(self):
-        secret = 'super_secret_module'
-        with mock.patch.object(self.dispatcher, '_setup', side_effect=RuntimeError(secret)):
-            with mock.patch.object(self.dispatcher.logger, 'error') as logged:
-                self.dispatcher.setup({})
-        logged.assert_called_once()
-        logged_text = ''.join([str(x) for x in logged.call_args[0]])
-        self.assertIn(secret, logged_text)
-        self.assertIn('Traceback', logged_text)
-
-    def test_startup_error_is_a_500(self):
-        # it used to report 200 OK, which made monitors think all was well
-        self.dispatcher.startup_error = 'the web interface failed to start up'
-        statuses, values = self.render_startup_error()
-        self.assertEqual(statuses, ['500 Internal Server Error'])
-        self.assertEqual(values['explanation'], self.dispatcher.startup_error)
+    """Startup failures must not leak exception detail into the page."""
 
     def test_startup_error_renders_no_exception_text(self):
         # err=False keeps error_page from describing a nonexistent exception,
         # which otherwise rendered a stray "NoneType: None"
-        self.dispatcher.startup_error = 'the web interface failed to start up'
-        statuses, values = self.render_startup_error()
+        values = self.render_startup_error()
         self.assertEqual(values['tb_short'], '')
         self.assertEqual(values['tb_long'], '')
         self.assertEqual(values['debug_level'], 0)
         self.assertIsNone(values['etype'])
         self.assertNotIn('NoneType', str(values['explanation']))
+
+
+class TestStartupErrorClient(unittest.TestCase):
+    """End-to-end startup failure checks through the Flask app."""
+
+    def test_exception_detail_not_in_message(self):
+        secret = 'No module named super_secret_module'
+        with mock.patch.object(kojiweb, 'load_config',
+                               side_effect=RuntimeError(secret)):
+            app = kojiweb.create_app()
+            client = app.test_client()
+            with self.assertLogs('koji.web', level='ERROR'):
+                resp = client.get('/')
+        self.assertEqual(resp.status_code, 500)
+        body = resp.get_data(as_text=True)
+        self.assertNotIn(secret, body)
+        self.assertNotIn('super_secret_module', body)
+        self.assertIn(app.extensions['kojiweb']['startup_error'], body)
+
+    def test_exception_detail_goes_to_the_log(self):
+        secret = 'super_secret_module'
+        with mock.patch.object(kojiweb, 'load_config',
+                               side_effect=RuntimeError(secret)):
+            app = kojiweb.create_app()
+            client = app.test_client()
+            with self.assertLogs('koji.web', level='ERROR') as logs:
+                client.get('/')
+        logged_text = '\n'.join(logs.output)
+        self.assertIn(secret, logged_text)
+        self.assertIn('Traceback', logged_text)
+
+    def test_startup_error_is_a_500(self):
+        # it used to report 200 OK, which made monitors think all was well
+        app = kojiweb.create_app(options={})
+        app.extensions['kojiweb']['startup_error'] = 'the web interface failed to start up'
+        client = app.test_client()
+        resp = client.get('/')
+        self.assertEqual(resp.status_code, 500)
+        body = resp.get_data(as_text=True)
+        self.assertIn('the web interface failed to start up', body)
 
 
 if __name__ == '__main__':

@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block content %}
+
+
+  <h4>Build Targets</h4>
+  <table class="data-list">
+    <tr>
+      <td class="paginate" colspan="2">
+        {% if len(targetPages) > 1 %}
+        <form class="pageJump" action="">
+          Page:
+          <select onchange="javascript: window.location = 'buildtargets?start=' + this.value * {{ targetRange }} + '{{ passthrough('order') }}';">
+            {% for pageNum in targetPages %}
+            <option value="{{ pageNum }}"{{ ' selected' if pageNum == targetCurrentPage else '' }}>{{ pageNum + 1 }}</option>
+            {% endfor %}
+          </select>
+        </form>
+        {% endif %}
+        {% if targetStart > 0 %}
+        <a href="buildtargets?start={{ targetStart - targetRange }}{{ passthrough('order') }}">&lt;&lt;&lt;</a>
+        {% endif %}
+        {% if totalTargets != 0 %}
+        <strong>Targets {{ targetStart + 1 }} through {{ targetStart + targetCount }} of {{ totalTargets }}</strong>
+        {% endif %}
+        {% if targetStart + targetCount < totalTargets %}
+        <a href="buildtargets?start={{ targetStart + targetRange }}{{ passthrough('order') }}">&gt;&gt;&gt;</a>
+        {% endif %}
+      </td>
+    </tr>
+    <tr class="list-header">
+      <th><a href="buildtargets?order={{ toggleOrder('id') }}">ID</a> {{ sortImage('id') }}</th>
+      <th><a href="buildtargets?order={{ toggleOrder('name') }}">Name</a> {{ sortImage('name') }}</th>
+    </tr>
+    {% if len(targets) > 0 %}
+    {% for target in targets %}
+    <tr class="{{ rowToggle() }}">
+      <td>{{ target.id }}</td>
+      <td><a href="buildtargetinfo?targetID={{ target.id }}">{{ target.name }}</a></td>
+    </tr>
+    {% endfor %}
+    {% else %}
+    <tr class="row-odd">
+      <td colspan="2">No build targets</td>
+    </tr>
+    {% endif %}
+    <tr>
+      <td class="paginate" colspan="2">
+        {% if len(targetPages) > 1 %}
+        <form class="pageJump" action="">
+          Page:
+          <select onchange="javascript: window.location = 'buildtargets?start=' + this.value * {{ targetRange }} + '{{ passthrough('order') }}';">
+            {% for pageNum in targetPages %}
+            <option value="{{ pageNum }}"{{ ' selected' if pageNum == targetCurrentPage else '' }}>{{ pageNum + 1 }}</option>
+            {% endfor %}
+          </select>
+        </form>
+        {% endif %}
+        {% if targetStart > 0 %}
+        <a href="buildtargets?start={{ targetStart - targetRange }}{{ passthrough('order') }}">&lt;&lt;&lt;</a>
+        {% endif %}
+        {% if totalTargets != 0 %}
+        <strong>Targets {{ targetStart + 1 }} through {{ targetStart + targetCount }} of {{ totalTargets }}</strong>
+        {% endif %}
+        {% if targetStart + targetCount < totalTargets %}
+        <a href="buildtargets?start={{ targetStart + targetRange }}{{ passthrough('order') }}">&gt;&gt;&gt;</a>
+        {% endif %}
+      </td>
+    </tr>
+  </table>
+  
+  {% if 'admin' in perms %}
+  <br/>
+  <a href="buildtargetcreate{{ koji_authToken(first=True) }}">Create new Build Target</a>
+  {% endif %}
+
+{% endblock %}

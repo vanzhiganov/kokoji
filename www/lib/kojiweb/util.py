@@ -25,6 +25,7 @@ import os
 import re
 import ssl
 import stat
+import sys
 import urllib
 from collections.abc import Mapping
 from functools import wraps
@@ -32,14 +33,25 @@ from socket import error as socket_error
 from urllib.parse import parse_qs
 from xml.parsers.expat import ExpatError
 
-import Cheetah.Template
+import jinja2
+from markupsafe import Markup
 
 import koji
 import koji.tasks
 from koji.xmlrpcplus import xmlrpc_client
 
 
-themeInfo = {}
+# Directory that holds the Jinja2 templates
+TEMPLATE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
+
+# The Jinja2 environment used to render templates. When running under Flask
+# this is set to the application's environment; the standalone environment
+# below is used when rendering outside of a request/app context (e.g. in the
+# error handling code and in tests).
+_jinja_env = None
+
+
+themeInfo = {'name': None, 'staticdir': '/usr/share/koji-web/static'}
 themeCache = {}
 
 # allowed values for SQL ordering (e.g. -id, package_name, etc.)
@@ -94,14 +106,10 @@ def themePath(path, local=False):
     return ret
 
 
-class EscapeFilter(Cheetah.Filters.Filter):
-    def filter(self, val, *args, **kw):
-        """Apply html escaping to most values"""
-        if isinstance(val, SafeValue):
-            result = str(val.value)
-        else:
-            result = escapeHTML(val)
-        return result
+# NOTE: The old Cheetah-based templates escaped every interpolated value via
+# the EscapeFilter below. Jinja2's autoescaping provides the same guarantee:
+# {{ value }} is escaped unless the value implements __html__(). SafeValue
+# implements __html__() so pre-sanitized markup passes through unchanged.
 
 
 class SafeValue:
@@ -133,6 +141,11 @@ class SafeValue:
         # mainly needed for boolean evaluation in templates
         return len(self.value)
 
+    def __html__(self):
+        # Tells Jinja2 (and other templating engines) that this value is
+        # already safe to render without escaping.
+        return str(self.value)
+
 
 def safe_return(func):
     @wraps(func)
@@ -141,47 +154,65 @@ def safe_return(func):
     return _safe
 
 
-TEMPLATES = {}
+def _get_jinja_env():
+    """Return the Jinja2 environment to render templates with.
+
+    Under Flask the application's environment is used; outside a request/app
+    context (error handling, tests) a standalone environment is created and
+    cached.
+    """
+    try:
+        from flask import current_app
+        if current_app:
+            return current_app.jinja_env
+    except (ImportError, RuntimeError):
+        pass
+    global _jinja_env
+    if _jinja_env is None:
+        env = jinja2.Environment(loader=jinja2.FileSystemLoader(TEMPLATE_DIR))
+        setup_jinja_env(env)
+        _jinja_env = env
+    return _jinja_env
 
 
 def _genHTML(environ, fileName):
-    reqdir = os.path.dirname(environ['SCRIPT_FILENAME'])
-    if os.getcwd() != reqdir:
-        os.chdir(reqdir)
+    values = environ['koji.values']
 
     if 'koji.currentUser' in environ:
-        environ['koji.values']['currentUser'] = environ['koji.currentUser']
+        values['currentUser'] = environ['koji.currentUser']
     else:
-        environ['koji.values']['currentUser'] = None
-    environ['koji.values']['authToken'] = _genToken(environ)
-    if 'mavenEnabled' not in environ['koji.values']:
+        values['currentUser'] = None
+    values['authToken'] = _genToken(environ)
+    if 'mavenEnabled' not in values:
         if 'koji.session' in environ:
-            environ['koji.values']['mavenEnabled'] = environ['koji.session'].mavenEnabled()
+            values['mavenEnabled'] = environ['koji.session'].mavenEnabled()
         else:
-            environ['koji.values']['mavenEnabled'] = False
-    if 'winEnabled' not in environ['koji.values']:
+            values['mavenEnabled'] = False
+    if 'winEnabled' not in values:
         if 'koji.session' in environ:
-            environ['koji.values']['winEnabled'] = environ['koji.session'].winEnabled()
+            values['winEnabled'] = environ['koji.session'].winEnabled()
         else:
-            environ['koji.values']['winEnabled'] = False
-    if 'LoginDisabled' not in environ['koji.values']:
+            values['winEnabled'] = False
+    if 'LoginDisabled' not in values:
         if 'koji.options' in environ:
-            environ['koji.values']['LoginDisabled'] = environ['koji.options']['LoginDisabled']
+            values['LoginDisabled'] = environ['koji.options']['LoginDisabled']
         else:
-            environ['koji.values']['LoginDisabled'] = False
-    if 'AllowRegistration' not in environ['koji.values']:
+            values['LoginDisabled'] = False
+    if 'AllowRegistration' not in values:
         if 'koji.options' in environ:
-            environ['koji.values']['AllowRegistration'] = environ['koji.options'].get(
+            values['AllowRegistration'] = environ['koji.options'].get(
                 'AllowRegistration', False)
         else:
-            environ['koji.values']['AllowRegistration'] = False
+            values['AllowRegistration'] = False
 
-    tmpl_class = TEMPLATES.get(fileName)
-    if not tmpl_class:
-        tmpl_class = Cheetah.Template.Template.compile(file=fileName)
-        TEMPLATES[fileName] = tmpl_class
-    tmpl_inst = tmpl_class(namespaces=[environ['koji.values']], filter=EscapeFilter)
-    return tmpl_inst.respond()
+    # Cheetah templates had a .chtml extension; the Jinja2 templates use .html
+    if fileName.endswith('.chtml'):
+        fileName = fileName[:-len('.chtml')] + '.html'
+    # fresh per-render counter used by rowToggle()
+    values['_rowNum_holder'] = [0]
+    env = _get_jinja_env()
+    tmpl = env.get_template(fileName)
+    return tmpl.render(**values)
 
 
 def _truncTime():
@@ -793,6 +824,22 @@ def authToken(template, first=False, form=False):
         return ''
 
 
+def join_list(value, sep=', '):
+    """Join a list of values as strings (Jinja has no comprehensions)."""
+    return sep.join(str(val) for val in value)
+
+
+def join_items(value, sep=', '):
+    """Join a mapping as key=value pairs."""
+    return sep.join('%s=%s' % ((n == '' and "''" or n), v) for n, v in value.items())
+
+
+def formatProperties(props):
+    """Format a mapping for display (used by the taskinfo template)."""
+    return ', '.join([v is not None and '%s=%s' % (n, v) or str(n)
+                      for n, v in props.items()])
+
+
 def explainError(error):
     """Explain an exception in user-consumable terms
 
@@ -1107,3 +1154,232 @@ def task_result_to_html(result=None, exc_class=None,
         total_abbr_len += line_len
 
     return SafeValue(full_ret_str), SafeValue(abbr_ret_str)
+
+
+# ---------------------------------------------------------------------------
+# Jinja2 integration
+# ---------------------------------------------------------------------------
+
+def _resolve_context_var(context, name, default=None):
+    """Look up a template variable, treating Jinja Undefined as missing."""
+    try:
+        value = context.resolve(name)
+    except Exception:
+        return default
+    if isinstance(value, jinja2.Undefined):
+        return default
+    return value
+
+
+@jinja2.pass_context
+def _ctx_toggleOrder(context, sortKey, orderVar='order'):
+    """Jinja equivalent of toggleOrder(template, sortKey, orderVar)."""
+    if _resolve_context_var(context, orderVar) == sortKey:
+        return '-' + sortKey
+    else:
+        return sortKey
+
+
+@jinja2.pass_context
+def _ctx_sortImage(context, sortKey, orderVar='order'):
+    """Jinja equivalent of sortImage(template, sortKey, orderVar)."""
+    orderVal = _resolve_context_var(context, orderVar)
+    if orderVal == sortKey:
+        return SafeValue('<img src="%s" class="sort" alt="ascending sort"/>'
+                         % themePath("images/gray-triangle-up.gif"))
+    elif orderVal == '-' + sortKey:
+        return SafeValue('<img src="%s" class="sort" alt="descending sort"/>'
+                         % themePath("images/gray-triangle-down.gif"))
+    else:
+        return ''
+
+
+def _passthrough_values(vars, values, prefix='&'):
+    result = []
+    for var in vars:
+        value = values.get(var, None)
+        if value is not None:
+            if isinstance(value, str):
+                if value.isdigit():
+                    pass
+                else:
+                    value = urllib.parse.quote(value)
+            result.append('%s=%s' % (var, value))
+    if result:
+        if prefix is None:
+            prefix = ''
+        return prefix + '&'.join(result)
+    else:
+        return ''
+
+
+@jinja2.pass_context
+def _ctx_passthrough(context, *vars, prefix='&'):
+    """Jinja equivalent of passthrough(template, *vars, prefix)."""
+    return _passthrough_values(vars, context.get_all(), prefix)
+
+
+@jinja2.pass_context
+def _ctx_passthrough_except(context, *exclude, prefix='&'):
+    """Jinja equivalent of passthrough_except(template, *exclude, prefix)."""
+    passvars = _resolve_context_var(context, '_PASSTHROUGH', []) or []
+    vars = [var for var in passvars if var not in exclude]
+    return _passthrough_values(vars, context.get_all(), prefix)
+
+
+@jinja2.pass_context
+def _ctx_rowToggle(context):
+    """Jinja equivalent of rowToggle(template)."""
+    holder = _resolve_context_var(context, '_rowNum_holder')
+    if not holder:
+        holder = [0]
+        context.vars['_rowNum_holder'] = holder
+    holder[0] += 1
+    if holder[0] % 2:
+        return 'row-odd'
+    else:
+        return 'row-even'
+
+
+def _jinja_toggleSelected(var, option, checked=False):
+    """Jinja equivalent of toggleSelected(template, var, option, checked)."""
+    if var == option:
+        if checked:
+            return SafeValue('checked="checked"')
+        else:
+            return SafeValue('selected="selected"')
+    else:
+        return ''
+
+
+@jinja2.pass_context
+def _ctx_varExists(context, name):
+    """Jinja equivalent of Cheetah's $varExists(name).
+
+    True when ``name`` resolves to a defined value in the template context.
+    """
+    try:
+        value = context.resolve(name)
+    except Exception:
+        return False
+    return not isinstance(value, jinja2.Undefined)
+
+
+@jinja2.pass_context
+def _ctx_authToken(context, first=False, form=False):
+    """Jinja equivalent of authToken(template, first, form)."""
+    token = _resolve_context_var(context, 'authToken')
+    if token is not None:
+        token = escapeHTML(token)
+        if form:
+            return SafeValue('<input type="hidden" name="a" value="%s"/>' % token)
+        if first:
+            return SafeValue('?a=' + token)
+        else:
+            return SafeValue('&a=' + token)
+    else:
+        return ''
+
+
+def _jinja_greeting():
+    """Return a random greeting, as the old header template did."""
+    import random
+    from koji_cli.lib import greetings
+    return random.choice(greetings)
+
+
+def _theme_file(name):
+    """Read a theme override file, returning SafeValue markup or None."""
+    path = themePath(name, local=True)
+    if path and os.path.exists(path):
+        with open(path, 'rt', encoding='utf-8') as f:
+            return SafeValue(f.read())
+    return None
+
+
+def setup_jinja_env(env):
+    """Register globals, filters and settings used by the kojiweb templates."""
+    import pprint as _pprint
+    import random as _random
+
+    env.autoescape = True
+    env.trim_blocks = False
+    env.lstrip_blocks = False
+
+    # {% break %} / {% continue %} are used by a couple of templates
+    if 'jinja2.ext.loopcontrols' not in env.extensions:
+        env.add_extension('jinja2.ext.loopcontrols')
+
+    # Expose modules commonly referenced by the templates
+    env.globals['koji'] = koji
+    env.globals['util'] = sys.modules[__name__]
+    env.globals['os'] = os
+    env.globals['sys'] = sys
+    env.globals['pprint'] = _pprint
+    env.globals['random'] = _random
+    import time as _time_mod
+    import datetime as _datetime_mod
+    env.globals['time'] = _time_mod
+    env.globals['datetime'] = _datetime_mod
+
+    # Python builtins/helpers that Cheetah made available
+    env.globals['len'] = len
+    env.globals['str'] = str
+    env.globals['bool'] = bool
+    env.globals['int'] = int
+    env.globals['all'] = all
+    env.globals['any'] = any
+    env.globals['isinstance'] = isinstance
+    env.globals['sorted'] = sorted
+    env.globals['dict'] = dict
+    env.globals['list'] = list
+    env.globals['set'] = set
+    env.globals['tuple'] = tuple
+    env.globals['enumerate'] = enumerate
+    env.globals['sum'] = sum
+    env.globals['min'] = min
+    env.globals['max'] = max
+    env.globals['round'] = round
+    env.globals['repr'] = repr
+    env.globals['zip'] = zip
+    env.globals['getattr'] = getattr
+    env.globals['hasattr'] = hasattr
+    env.globals['isinstance'] = isinstance
+    env.globals['pformat'] = _pprint.pformat
+    env.globals['quote'] = urllib.parse.quote
+    env.globals['unquote'] = urllib.parse.unquote
+    env.globals['greeting'] = _jinja_greeting
+    env.globals['read_theme_file'] = _theme_file
+
+    # Context-aware template helpers (replace the old $self-based ones)
+    env.globals['toggleOrder'] = _ctx_toggleOrder
+    env.globals['sortImage'] = _ctx_sortImage
+    env.globals['passthrough'] = _ctx_passthrough
+    env.globals['passthrough_except'] = _ctx_passthrough_except
+    env.globals['rowToggle'] = _ctx_rowToggle
+    env.globals['authToken'] = _ctx_authToken
+    # Distinct callable name: "authToken" is shadowed by a string value in the
+    # render context (the current token), so templates call this instead.
+    env.globals['koji_authToken'] = _ctx_authToken
+    env.globals['varExists'] = _ctx_varExists
+    env.globals['toggleSelected'] = _jinja_toggleSelected
+
+    # Plain utility functions, also reachable via the "util" namespace
+    for name in ('themePath', 'imageTag', 'stateImage', 'brStateImage', 'brLabel',
+                 'stateName', 'brStateName', 'repoStateName', 'repoState', 'taskState',
+                 'formatTime', 'formatTimeLong', 'formatTimeRSS', 'formatTimestampDifference',
+                 'formatDep', 'formatMode', 'formatThousands', 'formatNatural', 'formatLink',
+                 'formatRPM', 'formatFileFlags', 'taskScratchClass', 'escapeHTML',
+                 'task_result_to_html', 'explainError'):
+        env.globals.setdefault(name, globals()[name])
+
+    # Filters mirroring the common helpers
+    env.filters['themePath'] = themePath
+    env.filters['escapeHTML'] = escapeHTML
+    env.filters['formatTime'] = formatTime
+    env.filters['formatTimeLong'] = formatTimeLong
+    env.filters['formatRPM'] = formatRPM
+    env.filters['formatNatural'] = formatNatural
+    env.filters['formatThousands'] = formatThousands
+    env.filters['formatLink'] = formatLink
+    return env

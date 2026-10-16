@@ -1,0 +1,127 @@
+{#
+  Base template for the koji web interface.
+
+  This replaces the old Cheetah includes/header.chtml and
+  includes/footer.chtml. Page templates extend this template and fill in the
+  "content" block.
+#}
+{%- set koji_nav = [
+    ('index', 'summary', 'Summary'),
+    ('packages', 'packages', 'Packages'),
+    ('builds', 'builds', 'Builds'),
+    ('tasks', 'tasks', 'Tasks'),
+    ('tags', 'tags', 'Tags'),
+    ('buildtargets', 'buildtargets', 'Build Targets'),
+    ('users', 'users', 'Users'),
+    ('hosts', 'hosts', 'Hosts'),
+    ('reports', 'reports', 'Reports'),
+    ('search', 'search', 'Search'),
+    ('api', 'api', 'API'),
+] -%}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>{{ title }} | {{ siteName }}</title>
+    <link rel="shortcut icon" href="{{ util.themePath('images/koji.ico') }}"/>
+    <link rel="stylesheet" href="{{ util.themePath('carbon/carbon.min.css') }}"/>
+    <link rel="stylesheet" href="{{ util.themePath('koji.css') }}"/>
+    <link rel="alternate stylesheet" type="text/css" media="screen" title="Debug" href="{{ util.themePath('debug.css') }}"/>
+    <link rel="alternate" type="application/rss+xml" title="Koji: recent builds" href="recentbuilds"/>
+  </head>
+  <body id="{{ pageID }}">
+
+    <a class="cds--skip-to-content" href="#main-content">Skip to main content</a>
+
+    <!-- Carbon UI shell header -->
+    <header class="cds--header" role="banner">
+      <a class="cds--header__name" href="index" title="Koji">
+        <img src="{{ util.themePath('images/koji.png') }}" alt="Koji Logo" class="cds--header__logo" style="height: 1.25rem; margin-right: 0.5rem;"/>
+        <span class="cds--header__name--prefix">{{ siteName }}</span>
+      </a>
+      <nav class="cds--header__nav" aria-label="Main navigation">
+        <ul class="cds--header__menu-bar" role="menubar">
+          {% for href, pid, label in koji_nav %}
+          <li role="none">
+            <a class="cds--header__menu-item" role="menuitem" href="{{ href }}"
+               {% if pageID == pid %}aria-current="page"{% endif %}>{{ label }}</a>
+          </li>
+          {% endfor %}
+        </ul>
+      </nav>
+    </header>
+
+    {% set extra_nav = read_theme_file('extra-nav.html') %}
+    {% if extra_nav %}
+    <div class="koji-header-content">{{ extra_nav }}</div>
+    {% endif %}
+
+    <div class="koji-header-content">
+      <div class="koji-login-info">
+        <span>{{ koji.formatTimeLong(currentDate) }}</span>
+        {% if not LoginDisabled %}
+          {% if currentUser %}
+          <span>{{ greeting() }}, <a href="userinfo?userID={{ currentUser.id }}">{{ currentUser.name }}</a></span>
+          <span><a href="logout">logout</a></span>
+          {% else %}
+            {% if AllowRegistration %}
+            <span><a href="register">register</a></span>
+            {% endif %}
+            <span><a href="login">login</a></span>
+          {% endif %}
+        {% endif %}
+      </div>
+
+      <form action="search" id="headerSearch" role="search" style="margin-top: 1rem;">
+        <input type="hidden" name="match" value="glob"/>
+        <div class="cds--select cds--select--inline">
+          <label class="cds--label cds--visually-hidden" for="searchType">Search type</label>
+          <select id="searchType" name="type" class="cds--select-input">
+            <option value="package" {{ toggleSelected(type, "package") }}>Packages</option>
+            <option value="build" {{ toggleSelected(type, "build") }}>Builds</option>
+            <option value="tag" {{ toggleSelected(type, "tag") }}>Tags</option>
+            <option value="target" {{ toggleSelected(type, "target") }}>Build Targets</option>
+            <option value="user" {{ toggleSelected(type, "user") }}>Users</option>
+            <option value="host" {{ toggleSelected(type, "host") }}>Hosts</option>
+            <option value="rpm" {{ toggleSelected(type, "rpm") }}>RPMs</option>
+            {% if mavenEnabled %}
+            <option value="maven" {{ toggleSelected(type, "maven") }}>Maven Artifacts</option>
+            {% endif %}
+            {% if winEnabled %}
+            <option value="win" {{ toggleSelected(type, "win") }}>Windows Artifacts</option>
+            {% endif %}
+          </select>
+        </div>
+        <div class="cds--text-input-wrapper" style="display: inline-block;">
+          <input type="text" name="terms" class="cds--text-input"
+                 title="You can use glob expressions here (e.g. 'bash-*')"
+                 value="{{ terms|default('', true) }}"/>
+        </div>
+        <button type="submit" class="cds--btn cds--btn--primary">Search</button>
+      </form>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <main class="cds--content" id="main-content">
+      {% block content %}{% endblock %}
+    </main>
+
+    <!-- FOOTER -->
+    <footer>
+      <p id="footer">
+        Copyright &copy; 2006-2024 Red Hat, Inc.
+        <a href="https://pagure.io/koji/"><img src="{{ util.themePath('images/powered-by-koji.png') }}" alt="Powered By Koji" id="PoweredByKojiLogo"/></a>
+      </p>
+      {% set extra_footer = read_theme_file('extra-footer.html') %}
+      {% if extra_footer %}
+      <div>{{ extra_footer }}</div>
+      {% endif %}
+    </footer>
+
+    {% set extra_bottom = read_theme_file('extra-bottom.html') %}
+    {% if extra_bottom %}
+    {{ extra_bottom }}
+    {% endif %}
+  </body>
+</html>

@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block content %}
+
+{% macro printOption(value, label=None) %}
+{% if not label %}
+{% set label = value %}
+{% endif %}
+<option value="{{ value }}"{{ ' selected' if value == days else '' }}>{{ label }}</option>
+{% endmacro %}
+
+{% set numTotal = numSucceeded + numFailed + numCanceled %}
+
+
+  <h4>Succeeded/Failed/Canceled Builds{{ ' in the last %i days' % days if days != -1 else '' }}</h4>
+  <table class="data-list">
+    <tr style="text-align: left">
+      <td colspan="3">
+        <form action="">
+          Show last
+          <select onchange="javascript: window.location = 'buildsbystatus?days=' + this.value;">
+            {{ printOption(1)|safe }}
+            {{ printOption(3)|safe }}
+            {{ printOption(5)|safe }}
+            {{ printOption(7)|safe }}
+            {{ printOption(14)|safe }}
+            {{ printOption(30)|safe }}
+            {{ printOption(60)|safe }}
+            {{ printOption(90)|safe }}
+            {{ printOption(120)|safe }}
+            {{ printOption(180)|safe }}
+            {{ printOption(365)|safe }}
+            {{ printOption(-1, 'all')|safe }}
+          </select> days
+        </form>
+      </td>
+    </tr>
+    <tr class="list-header">
+      <th>Type</th>
+      <th>Builds</th>
+      <th>&nbsp;</th>
+    </tr>
+    <tr class="row-odd taskclosed">
+      <td>Succeeded</td>
+      <td width="{{ graphWidth + 5 }}"><img src="{{ util.themePath('images/1px.gif') }}" width="{{ increment * numSucceeded }}" height="15" class="graphrow" alt="graph row"/></td>
+      <td>{{ numSucceeded }}</td>
+    </tr>
+    <tr class="row-even taskfailed">
+      <td>Failed</td>
+      <td width="{{ graphWidth + 5 }}"><img src="{{ util.themePath('images/1px.gif') }}" width="{{ increment * numFailed }}" height="15" class="graphrow" alt="graph row"/></td>
+      <td>{{ numFailed }}</td>
+    </tr>
+    <tr class="row-odd taskcanceled">
+      <td>Canceled</td>
+      <td width="{{ graphWidth + 5 }}"><img src="{{ util.themePath('images/1px.gif') }}" width="{{ increment * numCanceled }}" height="15" class="graphrow" alt="graph row"/></td>
+      <td>{{ numCanceled }}</td>
+    </tr>
+    <tr class="row-even">
+      <td>Total</td>
+      <td></td>
+      <td>{{ numTotal }}</td>
+    </tr>
+  </table>
+
+{% endblock %}

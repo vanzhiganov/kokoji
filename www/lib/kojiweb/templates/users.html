@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block content %}
+
+
+  <h4>Users{{ ' starting with "%s"' % prefix if prefix else '' }}</h4>
+  <table class="data-list">
+    <tr>
+      <td class="charlist" colspan="5">
+        {% for char in chars %}
+        {% if prefix == char %}
+        <strong>{{ char }}</strong>
+        {% else %}
+        <a href="users?prefix={{ char }}{{ passthrough('order') }}">{{ char }}</a>
+        {% endif %}
+        | 
+        {% endfor %}
+        {% if prefix %}
+        <a href="users?{{ passthrough('order', prefix='') }}">all</a>
+        {% else %}
+        <strong>all</strong>
+        {% endif %}
+      </td>
+    </tr>
+    <tr>
+      <td class="paginate" colspan="5">
+        {% if len(userPages) > 1 %}
+        <form class="pageJump" action="">
+          Page:
+          <select onchange="javascript: window.location = 'users?start=' + this.value * {{ userRange }} + '{{ passthrough('order', 'prefix') }}';">
+            {% for pageNum in userPages %}
+            <option value="{{ pageNum }}"{{ ' selected' if pageNum == userCurrentPage else '' }}>{{ pageNum + 1 }}</option>
+            {% endfor %}
+          </select>
+        </form>
+        {% endif %}
+        {% if userStart > 0 %}
+        <a href="users?start={{ userStart - userRange }}{{ passthrough('order', 'prefix') }}">&lt;&lt;&lt;</a>
+        {% endif %}
+        {% if totalUsers != 0 %}
+        <strong>Users {{ userStart + 1 }} through {{ userStart + userCount }} of {{ totalUsers }}</strong>
+        {% endif %}
+        {% if userStart + userCount < totalUsers %}
+        <a href="users?start={{ userStart + userRange }}{{ passthrough('order', 'prefix') }}">&gt;&gt;&gt;</a>
+        {% endif %}
+      </td>
+    </tr>
+    <tr class="list-header">
+      <th><a href="users?order={{ toggleOrder('id') }}{{ passthrough('prefix') }}">ID</a> {{ sortImage('id') }}</th>
+      <th><a href="users?order={{ toggleOrder('name') }}{{ passthrough('prefix') }}">Name</a> {{ sortImage('name') }}</th>
+      <th>Packages</th>
+      <th>Builds</th>
+      <th>Tasks</th>
+    </tr>
+    {% if len(users) > 0 %}
+      {% for user in users %}
+        <tr class="{{ rowToggle() }}">
+          <td>{{ user.id }}</td>
+          <td><a href="userinfo?userID={{ quote(user.name) }}">{{ user.name }}</a></td>
+          <td><a href="packages?userID={{ quote(user.name) }}">view</a></td>
+          <td><a href="builds?userID={{ quote(user.name) }}">view</a></td>
+          <td><a href="tasks?owner={{ quote(user.name) }}">view</a></td>
+        </tr>
+      {% endfor %}
+    {% else %}
+      <tr class="row-odd">
+        <td colspan="5">No users</td>
+      </tr>
+    {% endif %}
+    <tr>
+      <td class="paginate" colspan="5">
+        {% if len(userPages) > 1 %}
+        <form class="pageJump" action="">
+          Page:
+          <select onchange="javascript: window.location = 'users?start=' + this.value * {{ userRange }} + '{{ passthrough('order', 'prefix') }}';">
+            {% for pageNum in userPages %}
+            <option value="{{ pageNum }}"{{ ' selected' if pageNum == userCurrentPage else '' }}>{{ pageNum + 1 }}</option>
+            {% endfor %}
+          </select>
+        </form>
+        {% endif %}
+        {% if userStart > 0 %}
+        <a href="users?start={{ userStart - userRange }}{{ passthrough('order', 'prefix') }}">&lt;&lt;&lt;</a>
+        {% endif %}
+        {% if totalUsers != 0 %}
+        <strong>Users {{ userStart + 1 }} through {{ userStart + userCount }} of {{ totalUsers }}</strong>
+        {% endif %}
+        {% if userStart + userCount < totalUsers %}
+        <a href="users?start={{ userStart + userRange }}{{ passthrough('order', 'prefix') }}">&gt;&gt;&gt;</a>
+        {% endif %}
+      </td>
+    </tr>
+  </table>
+
+{% endblock %}
