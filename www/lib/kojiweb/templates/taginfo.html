@@ -5,7 +5,7 @@
   <h4>Information for tag <a href="taginfo?tagID={{ tag.id }}">{{ tag.name }}</a></h4>
 
   <table>
-    {% if child and 'admin' in perms %}
+    {% if child and 'tag' in perms %}
     <tr>
       <th colspan="2"><a href="tagparent?tagID={{ child.id }}&parentID={{ tag.id }}&action=add{{ koji_authToken() }}">Add {{ tag.name }} as parent of {{ child.name }}</a></th>
     </tr>
@@ -60,7 +60,7 @@
             <span class="treeBranch">
               <span class="treeLabel">
                 <a href="taginfo?tagID={{ parent.parent_id }}">{{ parent.name }}</a>
-                {% if depth == 1 and 'admin' in perms %}
+                {% if depth == 1 and 'tag' in perms %}
                 <span class="treeLink">(<a href="tagparent?tagID={{ tag.id }}&parentID={{ parent.parent_id }}&action=edit{{ koji_authToken() }}">edit</a>) (<a href="tagparent?tagID={{ tag.id }}&parentID={{ parent.parent_id }}&action=remove{{ koji_authToken() }}">remove</a>)</span>
                 {% endif %}
               </span>
@@ -89,7 +89,7 @@
       </td>
     </tr>
     {% endif %}
-    {% if 'admin' in perms %}
+    {% if 'tag' in perms %}
     <tr>
       <td colspan="2"><a href="tags?childID={{ tag.id }}">Add parent</a></td>
     </tr>
@@ -152,7 +152,7 @@
         {% endif %}
       </td>
     </tr>
-    {% if 'admin' in perms %}
+    {% if 'tag' in perms %}
     <tr>
       <td colspan="2"><a href="tagedit?tagID={{ tag.id }}{{ koji_authToken() }}">Edit tag</a></td>
     </tr>

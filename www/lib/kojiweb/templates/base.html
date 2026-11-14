@@ -50,33 +50,27 @@
           {% endfor %}
         </ul>
       </nav>
-    </header>
-
-    {% set extra_nav = read_theme_file('extra-nav.html') %}
-    {% if extra_nav %}
-    <div class="koji-header-content">{{ extra_nav }}</div>
-    {% endif %}
-
-    <div class="koji-header-content">
-      <div class="koji-login-info">
-        <span>{{ koji.formatTimeLong(currentDate) }}</span>
-        {% if not LoginDisabled %}
-          {% if currentUser %}
-          <span>{{ greeting() }}, <a href="userinfo?userID={{ currentUser.id }}">{{ currentUser.name }}</a></span>
-          <span><a href="logout">logout</a></span>
-          {% else %}
-            {% if AllowRegistration %}
-            <span><a href="register">register</a></span>
-            {% endif %}
-            <span><a href="login">login</a></span>
-          {% endif %}
+      {% if not LoginDisabled %}
+      <div class="cds--header__global">
+        {% if currentUser %}
+        <span class="cds--header__menu-item" style="padding: 16px 1rem 16px;align-items: center;block-size: 100%">{{ greeting() }}, <a href="userinfo?userID={{ currentUser.id }}">{{ currentUser.name }}</a></span>
+        <a class="cds--header__menu-item" href="logout">Logout</a>
+        {% else %}
+        {% if AllowRegistration %}
+        <a class="cds--header__menu-item" href="register">Register</a>
+        {% endif %}
+        <a class="cds--header__menu-item" href="login">Login</a>
         {% endif %}
       </div>
+      {% endif %}
+    </header>
 
+    <!-- MAIN CONTENT -->
+    <main class="cds--content" id="main-content">
       <form action="search" id="headerSearch" role="search">
         <input type="hidden" name="match" value="glob"/>
         <div class="cds--select cds--select--inline">
-          <label class="cds--label cds--visually-hidden" for="searchType">Search type</label>
+          <label class="cds--label" for="searchType">Search type</label>
           <div class="cds--select-input__wrapper">
             <select id="searchType" name="type" class="cds--select-input">
               <option value="package" {{ toggleSelected(type, "package") }}>Packages</option>
@@ -98,18 +92,26 @@
             </svg>
           </div>
         </div>
-        <div class="cds--text-input-wrapper">
+        <div class="cds--search" role="search">
+          <svg focusable="false" class="cds--search-magnifier" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M15 14.3L10.7 10c1.9-2.3 1.6-5.8-.7-7.7S4.2.7 2.3 3 .7 8.8 3 10.7c2 1.7 5 1.7 7 0l4.3 4.3zM2 6.5C2 4 4 2 6.5 2S11 4 11 6.5 9 11 6.5 11 2 9 2 6.5z"/>
+          </svg>
           <label class="cds--label cds--visually-hidden" for="searchTerms">Search terms</label>
-          <input type="text" id="searchTerms" name="terms" class="cds--text-input"
+          <input type="text" id="searchTerms" name="terms" class="cds--search-input"
                  title="You can use glob expressions here (e.g. 'bash-*')"
                  value="{{ terms|default('', true) }}"/>
         </div>
         <button type="submit" class="cds--btn cds--btn--primary">Search</button>
+        {% if currentDate %}
+        <span class="cds--label">{{ koji.formatTimeLong(currentDate) }}</span>
+        {% endif %}
       </form>
-    </div>
 
-    <!-- MAIN CONTENT -->
-    <main class="cds--content" id="main-content">
+      {% set extra_nav = read_theme_file('extra-nav.html') %}
+      {% if extra_nav %}
+      <div>{{ extra_nav }}</div>
+      {% endif %}
+
       {% block content %}{% endblock %}
     </main>
 

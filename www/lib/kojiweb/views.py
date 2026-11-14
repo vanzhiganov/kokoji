@@ -142,6 +142,95 @@ def _getUserCookie(environ):
     return user
 
 
+HUB_SESSION_COOKIE = 'hubsession'
+
+
+def _setHubSessionCookie(environ, session):
+    """Keep the hub session of a password login, so later requests can use it.
+
+    The hub checks callnum ordering per session, so the current callnum is
+    stored with the session id and key.
+    """
+    options = environ['koji.options']
+    value = '%s:%s:%s' % (session.sinfo['session-id'], session.sinfo['session-key'],
+                          session.callnum)
+    digest = hashlib.sha256((value + options['Secret'].value).encode('utf-8')).hexdigest()
+    cookies = http.cookies.SimpleCookie()
+    cookies[HUB_SESSION_COOKIE] = '%s:%s' % (digest, value)
+    c = cookies[HUB_SESSION_COOKIE]  # morsel instance
+    c['secure'] = options.get('ForceSSL', True)
+    c['path'] = os.path.dirname(environ['SCRIPT_NAME'])
+    c['expires'] = int(options['LoginTimeout']) * 60 * 60
+    out = c.OutputString()
+    out += '; HttpOnly; SameSite=Strict'
+    environ['koji.headers'].append(['Set-Cookie', out])
+
+
+def _clearHubSessionCookie(environ):
+    cookies = http.cookies.SimpleCookie()
+    cookies[HUB_SESSION_COOKIE] = ''
+    c = cookies[HUB_SESSION_COOKIE]  # morsel instance
+    c['path'] = os.path.dirname(environ['SCRIPT_NAME'])
+    c['expires'] = 0
+    out = c.OutputString()
+    environ['koji.headers'].append(['Set-Cookie', out])
+
+
+def _getHubSession(environ):
+    """Return the stored hub session info, or None if missing or invalid."""
+    options = environ['koji.options']
+    cookies = http.cookies.SimpleCookie(environ.get('HTTP_COOKIE', ''))
+    if HUB_SESSION_COOKIE not in cookies:
+        return None
+    parts = cookies[HUB_SESSION_COOKIE].value.split(':')
+    if len(parts) != 4:
+        authlogger.warning('malformed hub session cookie')
+        return None
+    sig = parts[0]
+    value = ':'.join(parts[1:])
+    if not options['Secret'].value:
+        raise koji.AuthError('Unable to authenticate, server secret not configured')
+    digest = hashlib.sha256((value + options['Secret'].value).encode('utf-8')).hexdigest()
+    if digest != sig:
+        authlogger.warning('invalid hub session cookie')
+        return None
+    try:
+        session_id, session_key, callnum = int(parts[1]), parts[2], int(parts[3])
+    except ValueError:
+        authlogger.warning('invalid hub session cookie values')
+        return None
+    return {'session-id': session_id, 'session-key': session_key,
+            'header-auth': True, 'callnum': callnum}
+
+
+def _restoreHubSession(environ, session):
+    """Attach the stored hub session to the client session, if there is one."""
+    hub = _getHubSession(environ)
+    if not hub:
+        return
+    callnum = hub.pop('callnum')
+    session.setSession(hub)
+    # setSession resets callnum; keep counting from where the last request stopped
+    session.callnum = callnum
+
+
+def _persistHubSession(environ):
+    """Store the hub session after a request, so the next request can reuse it.
+
+    Only used for password logins; SSL logins authenticate on every request.
+    """
+    session = environ.get('koji.session')
+    options = environ.get('koji.options') or {}
+    if session is None or not session.logged_in or not session.sinfo:
+        return
+    if options.get('WebAuthType') != koji.AUTHTYPES['NORMAL']:
+        return
+    _setHubSessionCookie(environ, session)
+    # ClientSession.__del__ logs the session out on the hub; the session must
+    # outlive this request, so forget it locally instead
+    session._forget()
+
+
 def _sslLogin(environ, session, username):
     options = environ['koji.options']
     client_cert = options['WebCert']
@@ -187,16 +276,21 @@ def _assertLogin(environ):
         assert False  # pragma: no cover
 
 
-def _getServer(environ):
-    options = environ['koji.options']
+def _makeClientSession(options):
     opts = {}
     if os.path.exists(options['KojiHubCA']):
         opts['serverca'] = options['KojiHubCA']
+    return koji.ClientSession(options['KojiHubURL'], opts=opts)
 
-    session = koji.ClientSession(options['KojiHubURL'], opts=opts)
+
+def _getServer(environ):
+    options = environ['koji.options']
+    session = _makeClientSession(options)
 
     environ['koji.currentLogin'] = _getUserCookie(environ)
     if environ['koji.currentLogin']:
+        if options['WebAuthType'] == koji.AUTHTYPES['NORMAL']:
+            _restoreHubSession(environ, session)
         environ['koji.currentUser'] = session.getUser(environ['koji.currentLogin'])
         if not environ['koji.currentUser']:
             raise koji.AuthError(
@@ -394,8 +488,17 @@ def register(environ, page=None):
 def logout(environ, page=None):
     user = _getUserCookie(environ)
     _clearUserCookie(environ)
+    _clearHubSessionCookie(environ)
     if user:
         authlogger.info('Logout by %s', user)
+        # do not use _getServer here: it would set the user cookie again
+        session = _makeClientSession(environ['koji.options'])
+        _restoreHubSession(environ, session)
+        if session.logged_in:
+            try:
+                session.logout()
+            except koji.GenericError as e:
+                authlogger.info('Hub logout failed for %s: %s', user, e)
 
     _redirectBack(environ, page, forceSSL=False)
 
@@ -1586,7 +1689,38 @@ def userinfo(environ, userID, packageOrder='package_name', packageStart=None,
                                 start=buildStart, dataName='builds', prefix='build',
                                 order=buildOrder, pageSize=10)
 
+    if environ['koji.currentUser']:
+        values['perms'] = server.getUserPerms(environ['koji.currentUser']['id'])
+    else:
+        values['perms'] = []
+    if 'admin' in values['perms']:
+        values['allPerms'] = server.getAllPerms()
+        values['userPerms'] = server.getUserPerms(user['id'], with_groups=False)
+
     return _genHTML(environ, 'userinfo.chtml')
+
+
+def userperms(environ, userID, permission, action):
+    server = _getServer(environ)
+    _assertLogin(environ)
+
+    if 'admin' not in server.getUserPerms(environ['koji.currentUser']['id']):
+        raise koji.ActionNotAllowed('admin permission required to manage permissions')
+
+    userID = _convert_if_int(userID)
+    user = server.getUser(userID, strict=True)
+
+    if action == 'grant':
+        server.grantPermission(user['id'], permission)
+    elif action == 'revoke':
+        # keep at least one way to manage the system: do not drop your own admin
+        if permission == 'admin' and user['id'] == environ['koji.currentUser']['id']:
+            raise koji.ActionNotAllowed('you cannot revoke your own admin permission')
+        server.revokePermission(user['id'], permission)
+    else:
+        raise koji.GenericError('unknown action: %s' % action)
+
+    _redirect(environ, 'userinfo?userID=%i' % user['id'])
 
 
 # headers shown in rpminfo and buildinfo pages

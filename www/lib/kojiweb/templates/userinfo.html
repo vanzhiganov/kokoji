@@ -23,6 +23,44 @@
     </div>
   </div>
 
+  {% if 'admin' in perms %}
+  <section id="permissions" class="cds--data-table-container">
+    <div class="cds--data-table-header">
+      <h4 class="cds--data-table-header__title">Permissions</h4>
+    </div>
+    <table class="cds--data-table cds--data-table--zebra">
+      <thead>
+        <tr>
+          <th scope="col">Permission</th>
+          <th scope="col">Status</th>
+          <th scope="col">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for perm in allPerms %}
+        {% set granted = perm.name in userPerms %}
+        <tr>
+          <td>{{ perm.name }}</td>
+          <td>{{ 'granted' if granted else 'not granted' }}</td>
+          <td>
+            <form method="post" action="userperms">
+              {{ koji_authToken(form=True) }}
+              <input type="hidden" name="userID" value="{{ user.id }}"/>
+              <input type="hidden" name="permission" value="{{ perm.name }}"/>
+              {% if granted %}
+              <button type="submit" name="action" value="revoke" class="cds--btn cds--btn--danger--tertiary cds--btn--sm">Revoke</button>
+              {% else %}
+              <button type="submit" name="action" value="grant" class="cds--btn cds--btn--tertiary cds--btn--sm">Grant</button>
+              {% endif %}
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  {% endif %}
+
   <section id="packagelist" class="cds--data-table-container">
     <div class="cds--data-table-header">
       <h4 class="cds--data-table-header__title">Packages</h4>

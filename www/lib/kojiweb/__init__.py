@@ -128,14 +128,23 @@ def _dispatch(name):
     except ServerRedirect:
         location = environ.get('koji.redirect', '/')
         resp = redirect(location, code=302)
+        views._persistHubSession(environ)
         # keep the Set-Cookie headers (e.g. the user cookie set on login)
         _apply_headers(resp, environ.get('koji.headers', []))
         return resp
-    except Exception:
+    except Exception as exc:
         tb_str = ''.join(traceback.format_exception(*sys.exc_info()))
         logging.getLogger("koji.web").error(tb_str)
+        views._persistHubSession(environ)
         body, status = _render_error(environ, state)
-        return Response(body, status=status, mimetype='text/html')
+        if isinstance(exc, koji.ActionNotAllowed):
+            # the user is logged in but lacks the permission for this action
+            status = 403
+        resp = Response(body, status=status, mimetype='text/html')
+        _apply_headers(resp, environ.get('koji.headers', []))
+        return resp
+
+    views._persistHubSession(environ)
 
     if result is None:
         result = ''

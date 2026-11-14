@@ -68,7 +68,7 @@
     </tr>
   </table>
 
-  {% if 'admin' in perms %}
+  {% if 'tag' in perms %}
   <br/>
   <a href="tagcreate{{ koji_authToken(first=True) }}">Create new Tag</a>
   {% endif %}
