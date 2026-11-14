@@ -2,158 +2,207 @@
 {% set _PASSTHROUGH = ['archiveID', 'fileOrder', 'fileStart', 'buildrootOrder', 'buildrootStart'] %}
 {% block content %}
 
+{% macro filePagination() %}
+  <div class="cds--pagination">
+    <div class="cds--pagination__left">
+      {% if len(filePages) > 1 %}
+      <div class="cds--select cds--select--inline">
+        <label class="cds--label" for="filePage">Page</label>
+        <div class="cds--select-input__wrapper">
+          <select id="filePage" class="cds--select-input" onchange="javascript: window.location = 'archiveinfo?fileStart=' + this.value * {{ fileRange }} + '{{ passthrough_except('fileStart') }}#filelist';">
+            {% for pageNum in filePages %}
+            <option value="{{ pageNum }}"{{ ' selected' if pageNum == fileCurrentPage else '' }}>{{ pageNum + 1 }}</option>
+            {% endfor %}
+          </select>
+          <svg focusable="false" class="cds--select__arrow" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 22L6 12l1.4-1.4 8.6 8.6 8.6-8.6L26 12z"/></svg>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+    <div class="cds--pagination__right">
+      {% if totalFiles != 0 %}
+      <span class="cds--pagination__items-count">{{ fileStart + 1 }}&ndash;{{ fileStart + fileCount }} of {{ totalFiles }}</span>
+      {% endif %}
+      {% if fileStart > 0 %}
+      <a class="cds--btn cds--btn--ghost cds--btn--sm" href="archiveinfo?fileStart={{ fileStart - fileRange }}{{ passthrough_except('fileStart') }}#filelist">Previous</a>
+      {% endif %}
+      {% if fileStart + fileCount < totalFiles %}
+      <a class="cds--btn cds--btn--ghost cds--btn--sm" href="archiveinfo?fileStart={{ fileStart + fileRange }}{{ passthrough_except('fileStart') }}#filelist">Next</a>
+      {% endif %}
+    </div>
+  </div>
+{% endmacro %}
+
+{% macro buildrootPagination() %}
+  <div class="cds--pagination">
+    <div class="cds--pagination__left">
+      {% if len(buildrootPages) > 1 %}
+      <div class="cds--select cds--select--inline">
+        <label class="cds--label" for="buildrootPage">Page</label>
+        <div class="cds--select-input__wrapper">
+          <select id="buildrootPage" class="cds--select-input" onchange="javascript: window.location = 'archiveinfo?buildrootStart=' + this.value * {{ buildrootRange }} + '{{ passthrough_except('buildrootStart') }}#buildrootlist';">
+            {% for pageNum in buildrootPages %}
+            <option value="{{ pageNum }}"{{ ' selected' if pageNum == buildrootCurrentPage else '' }}>{{ pageNum + 1 }}</option>
+            {% endfor %}
+          </select>
+          <svg focusable="false" class="cds--select__arrow" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 22L6 12l1.4-1.4 8.6 8.6 8.6-8.6L26 12z"/></svg>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+    <div class="cds--pagination__right">
+      {% if totalBuildroots != 0 %}
+      <span class="cds--pagination__items-count">{{ buildrootStart + 1 }}&ndash;{{ buildrootStart + buildrootCount }} of {{ totalBuildroots }}</span>
+      {% endif %}
+      {% if buildrootStart > 0 %}
+      <a class="cds--btn cds--btn--ghost cds--btn--sm" href="archiveinfo?buildrootStart={{ buildrootStart - buildrootRange }}{{ passthrough_except('buildrootStart') }}#buildrootlist">Previous</a>
+      {% endif %}
+      {% if buildrootStart + buildrootCount < totalBuildroots %}
+      <a class="cds--btn cds--btn--ghost cds--btn--sm" href="archiveinfo?buildrootStart={{ buildrootStart + buildrootRange }}{{ passthrough_except('buildrootStart') }}#buildrootlist">Next</a>
+      {% endif %}
+    </div>
+  </div>
+{% endmacro %}
+
   <h4>Information for archive <a href="archiveinfo?archiveID={{ archive.id }}">{{ archive.filename }}</a></h4>
 
-  <table>
-    <tr>
-      <th>ID</th><td>{{ archive.id }}</td>
-    </tr>
-    <tr>
-    {% if wininfo %}
-      <th>File Name</th><td>{{ koji.pathinfo.winfile(archive) }}</td>
-    {% else %}
-      <th>File Name</th><td>{{ archive.filename }}</td>
-    {% endif %}
-    </tr>
-    {% if archive.metadata_only %}
-    <tr>
-      <th>Metadata only</th><td>True (file not imported)</td>
-    </tr>
-    {% endif %}
-    <tr>
-      <th>File Type</th><td>{{ archive_type.description }}</td>
-    </tr>
-    <tr>
-      <th>Build</th><td><a href="buildinfo?buildID={{ build.id }}">{{ koji.buildLabel(build) }}</a></td>
-    </tr>
-    {% if maveninfo %}
-    <tr>
-      <th>Maven groupId</th><td>{{ archive.group_id }}</td>
-    </tr>
-    <tr>
-      <th>Maven artifactId</th><td>{{ archive.artifact_id }}</td>
-    </tr>
-    <tr>
-      <th>Maven version</th><td>{{ archive.version }}</td>
-    </tr>
-    {% endif %}
-    <tr>
-      <th>Size</th><td><span title="{{ util.formatThousands(archive.size) }}">{{ util.formatNatural(archive.size) }}</span></td>
-    </tr>
-    <tr>
-      <th>Checksum</th><td>{{ archive.checksum }}</td>
-    </tr>
-    {% if wininfo %}
-    <tr>
-      <th>Platforms</th><td>{{ archive.platforms }}</td>
-    </tr>
-    <tr>
-      <th>Flags</th><td>{{ archive.flags }}</td>
-    </tr>
-    {% endif %}
-    {% if builtInRoot %}
-    <tr>
-      <th>Buildroot</th><td><a href="buildrootinfo?buildrootID={{ builtInRoot.id }}">{{ util.brLabel(builtInRoot) }}</a></td>
-    </tr>
-    {% endif %}
-    {% if archive.get('extra') %}
-    <tr>
-      <th>Extra</th><td class="usertext">{{ pformat(archive.extra) }}</td>
-    </tr>
-    {% endif %}
-    {% if files %}
-    <tr>
-      <th id="filelist">Files</th>
-      <td class="container">
-        <table class="nested data-list">
-          <tr>
-            <td class="paginate" colspan="2">
-              {% if len(filePages) > 1 %}
-              <form class="pageJump">
-                Page:
-                <select onchange="javascript: window.location = 'archiveinfo?fileStart=' + this.value * {{ fileRange }} + '{{ passthrough_except('fileStart') }}#filelist';">
-                  {% for pageNum in filePages %}
-                  <option value="{{ pageNum }}"{{ ' selected' if pageNum == fileCurrentPage else '' }}>{{ pageNum + 1 }}</option>
-                  {% endfor %}
-                </select>
-              </form>
-              {% endif %}
-              {% if fileStart > 0 %}
-              <a href="archiveinfo?fileStart={{ fileStart - fileRange }}{{ passthrough_except('fileStart') }}#filelist">&lt;&lt;&lt;</a>
-              {% endif %}
-              <strong>{{ fileStart + 1 }} through {{ fileStart + fileCount }} of {{ totalFiles }}</strong>
-              {% if fileStart + fileCount < totalFiles %}
-              <a href="archiveinfo?fileStart={{ fileStart + fileRange }}{{ passthrough_except('fileStart') }}#filelist">&gt;&gt;&gt;</a>
-              {% endif %}
-            </td>
-          </tr>
-          <tr class="list-header">
-            <th><a href="archiveinfo?fileOrder={{ toggleOrder('name', 'fileOrder') }}{{ passthrough_except('fileOrder', 'fileStart') }}#filelist">Name</a> {{ sortImage('name', 'fileOrder') }}</th>
-            <th><a href="archiveinfo?fileOrder={{ toggleOrder('size', 'fileOrder') }}{{ passthrough_except('fileOrder', 'fileStart') }}#filelist">Size</a> {{ sortImage('size', 'fileOrder') }}</th>
-          </tr>
-          {% for file in files %}
-          <tr class="{{ rowToggle() }}">
-            <td><a href="fileinfo?archiveID={{ archive.id }}&filename={{ quote(file.name) }}">{{ file.name }}</a></td><td><span title="{{ util.formatThousands(file.size) }}">{{ util.formatNatural(file.size) }}</span></td>
-          </tr>
-          {% endfor %}
-        </table>
-      </td>
-    </tr>
-    {% endif %}
-    <tr>
-      <th id="buildrootlist">Component&nbsp;of</th>
-      <td class="container">
-        {% if len(buildroots) > 0 %}
-        <table class="nested data-list">
-          <tr>
-            <td class="paginate" colspan="3">
-              {% if len(buildrootPages) > 1 %}
-              <form class="pageJump" action="">
-                Page:
-                <select onchange="javascript: window.location = 'archiveinfo?buildrootStart=' + this.value * {{ buildrootRange }} + '{{ passthrough_except('buildrootStart') }}#buildrootlist';">
-                  {% for pageNum in buildrootPages %}
-                  <option value="{{ pageNum }}"{{ ' selected' if pageNum == buildrootCurrentPage else '' }}>{{ pageNum + 1 }}</option>
-                  {% endfor %}
-                </select>
-              </form>
-              {% endif %}
-              {% if buildrootStart > 0 %}
-              <a href="archiveinfo?buildrootStart={{ buildrootStart - buildrootRange }}{{ passthrough_except('buildrootStart') }}#buildrootlist">&lt;&lt;&lt;</a>
-              {% endif %}
-              <strong>{{ buildrootStart + 1 }} through {{ buildrootStart + buildrootCount }} of {{ totalBuildroots }}</strong>
-              {% if buildrootStart + buildrootCount < totalBuildroots %}
-              <a href="archiveinfo?buildrootStart={{ buildrootStart + buildrootRange }}{{ passthrough_except('buildrootStart') }}#buildrootlist">&gt;&gt;&gt;</a>
-              {% endif %}
-            </td>
-          </tr>
-          <tr class="list-header">
-            <th><a href="archiveinfo?buildrootOrder={{ toggleOrder('id', 'buildrootOrder') }}{{ passthrough_except('buildrootOrder', 'buildrootStart') }}#buildrootlist">Buildroot</a> {{ sortImage('id', 'buildrootOrder') }}</th>
-            <th><a href="archiveinfo?buildrootOrder={{ toggleOrder('create_event_time', 'buildrootOrder') }}{{ passthrough_except('buildrootOrder', 'buildrootStart') }}#buildrootlist">Created</a> {{ sortImage('create_event_time', 'buildrootOrder') }}</th>
-            <th><a href="archiveinfo?buildrootOrder={{ toggleOrder('state', 'buildrootOrder') }}{{ passthrough_except('buildrootOrder', 'buildrootStart') }}#buildrootlist">State</a> {{ sortImage('state', 'buildrootOrder') }}</th>
-          </tr>
-          {% for buildroot in buildroots %}
-          <tr class="{{ rowToggle() }}">
-            <td><a href="buildrootinfo?buildrootID={{ buildroot.id }}">{{ util.brLabel(buildroot) }}</a></td>
-            <td>{{ util.formatTime(buildroot.create_event_time) }}</td>
-            <td>{{ util.imageTag(util.brStateName(buildroot.state)) }}</td>
-          </tr>
-          {% endfor %}
-        </table>
+  <div class="cds--structured-list">
+    <div class="cds--structured-list-tbody">
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">ID</div>
+        <div class="cds--structured-list-td">{{ archive.id }}</div>
+      </div>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">File Name</div>
+        {% if wininfo %}
+        <div class="cds--structured-list-td">{{ koji.pathinfo.winfile(archive) }}</div>
         {% else %}
-        No buildroots
+        <div class="cds--structured-list-td">{{ archive.filename }}</div>
         {% endif %}
-      </td>
-    </tr>
-    {% if show_rpm_components %}
-    <tr>
-      <th colspan="2"><a href="rpmlist?imageID={{ archive.id }}&amp;type=image" title="RPM components that are part of this archive">RPM components</a></th>
-    </tr>
+      </div>
+      {% if archive.metadata_only %}
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Metadata only</div>
+        <div class="cds--structured-list-td">True (file not imported)</div>
+      </div>
+      {% endif %}
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">File Type</div>
+        <div class="cds--structured-list-td">{{ archive_type.description }}</div>
+      </div>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Build</div>
+        <div class="cds--structured-list-td"><a href="buildinfo?buildID={{ build.id }}">{{ koji.buildLabel(build) }}</a></div>
+      </div>
+      {% if maveninfo %}
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Maven groupId</div>
+        <div class="cds--structured-list-td">{{ archive.group_id }}</div>
+      </div>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Maven artifactId</div>
+        <div class="cds--structured-list-td">{{ archive.artifact_id }}</div>
+      </div>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Maven version</div>
+        <div class="cds--structured-list-td">{{ archive.version }}</div>
+      </div>
+      {% endif %}
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Size</div>
+        <div class="cds--structured-list-td"><span title="{{ util.formatThousands(archive.size) }}">{{ util.formatNatural(archive.size) }}</span></div>
+      </div>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Checksum</div>
+        <div class="cds--structured-list-td">{{ archive.checksum }}</div>
+      </div>
+      {% if wininfo %}
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Platforms</div>
+        <div class="cds--structured-list-td">{{ archive.platforms }}</div>
+      </div>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Flags</div>
+        <div class="cds--structured-list-td">{{ archive.flags }}</div>
+      </div>
+      {% endif %}
+      {% if builtInRoot %}
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Buildroot</div>
+        <div class="cds--structured-list-td"><a href="buildrootinfo?buildrootID={{ builtInRoot.id }}">{{ util.brLabel(builtInRoot) }}</a></div>
+      </div>
+      {% endif %}
+      {% if archive.get('extra') %}
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Extra</div>
+        <div class="cds--structured-list-td usertext">{{ pformat(archive.extra) }}</div>
+      </div>
+      {% endif %}
+      {% if show_rpm_components %}
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td"><a href="rpmlist?imageID={{ archive.id }}&amp;type=image" title="RPM components that are part of this archive">RPM components</a></div>
+      </div>
+      {% endif %}
+      {% if show_archive_components %}
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td"><a href="archivelist?imageID={{ archive.id }}&amp;type=image" title="Archive components that are part of this archive">Archive components</a></div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if files %}
+  <section id="filelist" class="cds--data-table-container">
+    <div class="cds--data-table-header">
+      <h4 class="cds--data-table-header__title">Files</h4>
+    </div>
+    {{ filePagination()|safe }}
+    <table class="cds--data-table cds--data-table--zebra">
+      <thead>
+        <tr>
+          <th scope="col"><a href="archiveinfo?fileOrder={{ toggleOrder('name', 'fileOrder') }}{{ passthrough_except('fileOrder', 'fileStart') }}#filelist">Name</a> {{ sortImage('name', 'fileOrder') }}</th>
+          <th scope="col"><a href="archiveinfo?fileOrder={{ toggleOrder('size', 'fileOrder') }}{{ passthrough_except('fileOrder', 'fileStart') }}#filelist">Size</a> {{ sortImage('size', 'fileOrder') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for file in files %}
+        <tr>
+          <td><a href="fileinfo?archiveID={{ archive.id }}&filename={{ quote(file.name) }}">{{ file.name }}</a></td>
+          <td><span title="{{ util.formatThousands(file.size) }}">{{ util.formatNatural(file.size) }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  {% endif %}
+
+  <section id="buildrootlist" class="cds--data-table-container">
+    <div class="cds--data-table-header">
+      <h4 class="cds--data-table-header__title">Component&nbsp;of</h4>
+    </div>
+    {% if len(buildroots) > 0 %}
+    {{ buildrootPagination()|safe }}
+    <table class="cds--data-table cds--data-table--zebra">
+      <thead>
+        <tr>
+          <th scope="col"><a href="archiveinfo?buildrootOrder={{ toggleOrder('id', 'buildrootOrder') }}{{ passthrough_except('buildrootOrder', 'buildrootStart') }}#buildrootlist">Buildroot</a> {{ sortImage('id', 'buildrootOrder') }}</th>
+          <th scope="col"><a href="archiveinfo?buildrootOrder={{ toggleOrder('create_event_time', 'buildrootOrder') }}{{ passthrough_except('buildrootOrder', 'buildrootStart') }}#buildrootlist">Created</a> {{ sortImage('create_event_time', 'buildrootOrder') }}</th>
+          <th scope="col"><a href="archiveinfo?buildrootOrder={{ toggleOrder('state', 'buildrootOrder') }}{{ passthrough_except('buildrootOrder', 'buildrootStart') }}#buildrootlist">State</a> {{ sortImage('state', 'buildrootOrder') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for buildroot in buildroots %}
+        <tr>
+          <td><a href="buildrootinfo?buildrootID={{ buildroot.id }}">{{ util.brLabel(buildroot) }}</a></td>
+          <td>{{ util.formatTime(buildroot.create_event_time) }}</td>
+          <td>{{ util.imageTag(util.brStateName(buildroot.state)) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p>No buildroots</p>
     {% endif %}
-    {% if show_archive_components %}
-    <tr>
-      <th colspan="2"><a href="archivelist?imageID={{ archive.id }}&amp;type=image" title="Archive components that are part of this archive">Archive components</a></th>
-    </tr>
-    {% endif %}
-  </table>
+  </section>
 
 {% endblock %}

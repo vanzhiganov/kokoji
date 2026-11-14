@@ -36,98 +36,118 @@ in {{ channel }} channel
   {% endif %}
 {% endmacro %}
 
-
-
-  <h4>{{ headerState(state)|safe }} {{ headerReady(ready)|safe }} {{ headerArch(arch)|safe }} {{ headerChannel(channel)|safe }}</h4>
-  <table class="data-list">
-    <tr>
-      <td colspan="9">
-        <table class="nested">
-          <tr><td>
-              <strong>State</strong>:
-          </td><td>
-              <select name="state" class="filterlist" onchange="javascript: window.location = 'hosts?state=' + this.value + '{{ passthrough_except('state') }}';">
-                <option value="enabled" {{ 'selected' if state == 'enabled' else '' }}>enabled</option>
-                <option value="disabled" {{ 'selected' if state == 'disabled' else '' }}>disabled</option>
-                <option value="all" {{ 'selected' if state == 'all' else '' }}>all</option>
-              </select>
-          </td>
-          <td>
-              <strong>Channels</strong>:
-          </td><td>
-              <select name="channel" class="filterlist" onchange="javascript: window.location = 'hosts?channel=' + this.value + '{{ passthrough_except('channel') }}';">
-                <option value="all" {{ 'selected' if not channel else '' }}>all</option>
-                {% for chan in channels %}
-                <option value="{{ chan.name }}" {{ 'selected' if chan.name == channel else '' }}>{{ chan.name }}</option>
-                {% endfor %}
-              </select>
-          </td>
-          </tr>
-          <tr><td>
-              <strong>Ready</strong>:
-          </td><td>
-              <select name="ready" class="filterlist" onchange="javascript: window.location = 'hosts?ready=' + this.value + '{{ passthrough_except('ready') }}';">
-                <option value="yes" {{ 'selected' if ready == 'yes' else '' }}>yes</option>
-                <option value="no" {{ 'selected' if ready == 'no' else '' }}>no</option>
-                <option value="all" {{ 'selected' if ready== 'all' else '' }}>all</option>
-              </select>
-          </td><td>
-              <strong>Arches</strong>:
-          </td><td>
-              <select name="arch" class="filterlist" onchange="javascript: window.location = 'hosts?arch=' + this.value + '{{ passthrough_except('arch') }}';">
-                <option value="all" {{ 'selected' if not arch else '' }}>all</option>
-                {% for arch_item in arches %}
-                <option value="{{ arch_item }}" {{ 'selected' if arch_item == arch else '' }}>{{ arch_item }}</option>
-                {% endfor %}
-              </select>
-          </td></tr>
-        </table>
-      </td>
-    </tr>
-    <tr>
-      <td class="paginate" colspan="9">
-        {% if len(hostPages) > 1 %}
-        <form class="pageJump" action="">
-          Page:
-          <select onchange="javascript: window.location = 'hosts?start=' + this.value * {{ hostRange }} + '{{ passthrough_except() }}';">
+{% macro pagination() %}
+  <div class="cds--pagination">
+    <div class="cds--pagination__left">
+      {% if len(hostPages) > 1 %}
+      <div class="cds--select cds--select--inline">
+        <label class="cds--label" for="hostPage">Page</label>
+        <div class="cds--select-input__wrapper">
+          <select id="hostPage" class="cds--select-input" onchange="javascript: window.location = 'hosts?start=' + this.value * {{ hostRange }} + '{{ passthrough_except() }}';">
             {% for pageNum in hostPages %}
             <option value="{{ pageNum }}"{{ ' selected' if pageNum == hostCurrentPage else '' }}>{{ pageNum + 1 }}</option>
             {% endfor %}
           </select>
-        </form>
-        {% endif %}
-        {% if hostStart > 0 %}
-        <a href="hosts?start={{ hostStart - hostRange }}{{ passthrough_except() }}">&lt;&lt;&lt;</a>
-        {% endif %}
-        {% if totalHosts != 0 %}
-        <strong>Hosts {{ hostStart + 1 }} through {{ hostStart + hostCount }} of {{ totalHosts }}</strong>
-        {% endif %}
-        {% if hostStart + hostCount < totalHosts %}
-        <a href="hosts?start={{ hostStart + hostRange }}{{ passthrough_except() }}">&gt;&gt;&gt;</a>
-        {% endif %}
-      </td>
-    </tr>
-    <tr class="list-header">
-      <th><a href="hosts?order={{ toggleOrder('id') }}{{ passthrough_except('order') }}">ID</a> {{ sortImage('id') }}</th>
-      <th><a href="hosts?order={{ toggleOrder('name') }}{{ passthrough_except('order') }}">Name</a> {{ sortImage('name') }}</th>
-      <th><a href="hosts?order={{ toggleOrder('arches') }}{{ passthrough_except('order') }}">Arches</a> {{ sortImage('arches') }}</th>
-      <th><a href="hosts?order={{ toggleOrder('channels') }}{{ passthrough_except('order') }}">Channels</a> {{ sortImage('channels') }}</th>
-      <th><a href="hosts?order={{ toggleOrder('enabled') }}{{ passthrough_except('order') }}">Enabled?</a> {{ sortImage('enabled') }}</th>
-      <th><a href="hosts?order={{ toggleOrder('ready') }}{{ passthrough_except('order') }}">Ready?</a> {{ sortImage('ready') }}</th>
-      <th><a href="hosts?order={{ toggleOrder('task_load') }}{{ passthrough_except('order') }}">Load</a> {{ sortImage('task_load') }}</th>
-      <th><a href="hosts?order={{ toggleOrder('capacity') }}{{ passthrough_except('order') }}">Cap.</a> {{ sortImage('capacity') }}</th>
-      <th><a href="hosts?order={{ toggleOrder('last_update') }}{{ passthrough_except('order') }}">Last Update</a> {{ sortImage('last_update') }}</th>
-    </tr>
-    {% if len(hosts) > 0 %}
-      {% for host in hosts %}
-        <tr class="{{ rowToggle() }}">
+          <svg focusable="false" class="cds--select__arrow" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 22L6 12l1.4-1.4 8.6 8.6 8.6-8.6L26 12z"/></svg>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+    <div class="cds--pagination__right">
+      {% if totalHosts != 0 %}
+      <span class="cds--pagination__items-count">{{ hostStart + 1 }}&ndash;{{ hostStart + hostCount }} of {{ totalHosts }}</span>
+      {% endif %}
+      {% if hostStart > 0 %}
+      <a class="cds--btn cds--btn--ghost cds--btn--sm" href="hosts?start={{ hostStart - hostRange }}{{ passthrough_except() }}">Previous</a>
+      {% endif %}
+      {% if hostStart + hostCount < totalHosts %}
+      <a class="cds--btn cds--btn--ghost cds--btn--sm" href="hosts?start={{ hostStart + hostRange }}{{ passthrough_except() }}">Next</a>
+      {% endif %}
+    </div>
+  </div>
+{% endmacro %}
+
+  <h4>{{ headerState(state)|safe }} {{ headerReady(ready)|safe }} {{ headerArch(arch)|safe }} {{ headerChannel(channel)|safe }}</h4>
+
+  <form action="hosts" class="koji-filters">
+    <div class="cds--select cds--select--inline">
+      <label class="cds--label" for="filterState">State</label>
+      <div class="cds--select-input__wrapper">
+        <select id="filterState" name="state" class="cds--select-input" onchange="javascript: window.location = 'hosts?state=' + this.value + '{{ passthrough_except('state') }}';">
+          <option value="enabled" {{ 'selected' if state == 'enabled' else '' }}>enabled</option>
+          <option value="disabled" {{ 'selected' if state == 'disabled' else '' }}>disabled</option>
+          <option value="all" {{ 'selected' if state == 'all' else '' }}>all</option>
+        </select>
+        <svg focusable="false" class="cds--select__arrow" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 22L6 12l1.4-1.4 8.6 8.6 8.6-8.6L26 12z"/></svg>
+      </div>
+    </div>
+    <div class="cds--select cds--select--inline">
+      <label class="cds--label" for="filterChannel">Channels</label>
+      <div class="cds--select-input__wrapper">
+        <select id="filterChannel" name="channel" class="cds--select-input" onchange="javascript: window.location = 'hosts?channel=' + this.value + '{{ passthrough_except('channel') }}';">
+          <option value="all" {{ 'selected' if not channel else '' }}>all</option>
+          {% for chan in channels %}
+          <option value="{{ chan.name }}" {{ 'selected' if chan.name == channel else '' }}>{{ chan.name }}</option>
+          {% endfor %}
+        </select>
+        <svg focusable="false" class="cds--select__arrow" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 22L6 12l1.4-1.4 8.6 8.6 8.6-8.6L26 12z"/></svg>
+      </div>
+    </div>
+    <div class="cds--select cds--select--inline">
+      <label class="cds--label" for="filterReady">Ready</label>
+      <div class="cds--select-input__wrapper">
+        <select id="filterReady" name="ready" class="cds--select-input" onchange="javascript: window.location = 'hosts?ready=' + this.value + '{{ passthrough_except('ready') }}';">
+          <option value="yes" {{ 'selected' if ready == 'yes' else '' }}>yes</option>
+          <option value="no" {{ 'selected' if ready == 'no' else '' }}>no</option>
+          <option value="all" {{ 'selected' if ready == 'all' else '' }}>all</option>
+        </select>
+        <svg focusable="false" class="cds--select__arrow" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 22L6 12l1.4-1.4 8.6 8.6 8.6-8.6L26 12z"/></svg>
+      </div>
+    </div>
+    <div class="cds--select cds--select--inline">
+      <label class="cds--label" for="filterArch">Arches</label>
+      <div class="cds--select-input__wrapper">
+        <select id="filterArch" name="arch" class="cds--select-input" onchange="javascript: window.location = 'hosts?arch=' + this.value + '{{ passthrough_except('arch') }}';">
+          <option value="all" {{ 'selected' if not arch else '' }}>all</option>
+          {% for arch_item in arches %}
+          <option value="{{ arch_item }}" {{ 'selected' if arch_item == arch else '' }}>{{ arch_item }}</option>
+          {% endfor %}
+        </select>
+        <svg focusable="false" class="cds--select__arrow" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 22L6 12l1.4-1.4 8.6 8.6 8.6-8.6L26 12z"/></svg>
+      </div>
+    </div>
+  </form>
+
+  {% if totalHosts %}
+  {{ pagination()|safe }}
+  {% endif %}
+
+  <div class="cds--data-table-container">
+    <table class="cds--data-table cds--data-table--zebra">
+      <thead>
+        <tr>
+          <th scope="col"><a href="hosts?order={{ toggleOrder('id') }}{{ passthrough_except('order') }}">ID</a> {{ sortImage('id') }}</th>
+          <th scope="col"><a href="hosts?order={{ toggleOrder('name') }}{{ passthrough_except('order') }}">Name</a> {{ sortImage('name') }}</th>
+          <th scope="col"><a href="hosts?order={{ toggleOrder('arches') }}{{ passthrough_except('order') }}">Arches</a> {{ sortImage('arches') }}</th>
+          <th scope="col"><a href="hosts?order={{ toggleOrder('channels') }}{{ passthrough_except('order') }}">Channels</a> {{ sortImage('channels') }}</th>
+          <th scope="col"><a href="hosts?order={{ toggleOrder('enabled') }}{{ passthrough_except('order') }}">Enabled?</a> {{ sortImage('enabled') }}</th>
+          <th scope="col"><a href="hosts?order={{ toggleOrder('ready') }}{{ passthrough_except('order') }}">Ready?</a> {{ sortImage('ready') }}</th>
+          <th scope="col"><a href="hosts?order={{ toggleOrder('task_load') }}{{ passthrough_except('order') }}">Load</a> {{ sortImage('task_load') }}</th>
+          <th scope="col"><a href="hosts?order={{ toggleOrder('capacity') }}{{ passthrough_except('order') }}">Cap.</a> {{ sortImage('capacity') }}</th>
+          <th scope="col"><a href="hosts?order={{ toggleOrder('last_update') }}{{ passthrough_except('order') }}">Last Update</a> {{ sortImage('last_update') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if len(hosts) > 0 %}
+        {% for host in hosts %}
+        <tr>
           <td>{{ host.id }}</td>
           <td><a href="hostinfo?hostID={{ host.id }}">{{ host.name }}</a></td>
           <td>{{ host.arches }}</td>
           <td>
-              {% for channame, chan_id, chan_enabled in zip(host.channels, host.channels_id, host.channels_enabled) %}
-                <a href="channelinfo?channelID={{ chan_id }}" class="{{ chan_enabled }}">{{ channame }}</a>
-              {% endfor %}
+            {% for channame, chan_id, chan_enabled in zip(host.channels, host.channels_id, host.channels_enabled) %}
+            <a href="channelinfo?channelID={{ chan_id }}" class="{{ chan_enabled }}">{{ channame }}</a>
+            {% endfor %}
           </td>
           <td class="{{ str(bool(host.enabled)).lower() }}">{{ util.imageTag('yes') if host.enabled else util.imageTag('no') }}</td>
           <td class="{{ str(bool(host.ready)).lower() }}">{{ util.imageTag('yes') if host.ready else util.imageTag('no') }}</td>
@@ -135,35 +155,18 @@ in {{ channel }} channel
           <td>{{ host.capacity }}</td>
           <td>{{ util.formatTime(host.last_update) }}</td>
         </tr>
-      {% endfor %}
-    {% else %}
-      <tr class="row-odd">
-        <td colspan="9">No hosts</td>
-      </tr>
-    {% endif %}
-    <tr>
-      <td class="paginate" colspan="9">
-        {% if len(hostPages) > 1 %}
-        <form class="pageJump" action="">
-          Page:
-          <select onchange="javascript: window.location = 'hosts?start=' + this.value * {{ hostRange }} + '{{ passthrough_except() }}';">
-            {% for pageNum in hostPages %}
-            <option value="{{ pageNum }}"{{ ' selected' if pageNum == hostCurrentPage else '' }}>{{ pageNum + 1 }}</option>
-            {% endfor %}
-          </select>
-        </form>
+        {% endfor %}
+        {% else %}
+        <tr>
+          <td colspan="9">No hosts</td>
+        </tr>
         {% endif %}
-        {% if hostStart > 0 %}
-        <a href="hosts?start={{ hostStart - hostRange }}{{ passthrough_except() }}">&lt;&lt;&lt;</a>
-        {% endif %}
-        {% if totalHosts != 0 %}
-        <strong>Hosts {{ hostStart + 1 }} through {{ hostStart + hostCount }} of {{ totalHosts }}</strong>
-        {% endif %}
-        {% if hostStart + hostCount < totalHosts %}
-        <a href="hosts?start={{ hostStart + hostRange }}{{ passthrough_except() }}">&gt;&gt;&gt;</a>
-        {% endif %}
-      </td>
-    </tr>
-  </table>
+      </tbody>
+    </table>
+  </div>
+
+  {% if totalHosts %}
+  {{ pagination()|safe }}
+  {% endif %}
 
 {% endblock %}

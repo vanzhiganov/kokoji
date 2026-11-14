@@ -10,6 +10,37 @@ buildrootID={{ buildroot.id }}
   {% endif %}
 {% endmacro %}
 
+{% macro pagination() %}
+  <div class="cds--pagination">
+    <div class="cds--pagination__left">
+      {% if len(archivePages) > 1 %}
+      <div class="cds--select cds--select--inline">
+        <label class="cds--label" for="archivePage">Page</label>
+        <div class="cds--select-input__wrapper">
+          <select id="archivePage" class="cds--select-input" onchange="javascript: window.location = 'archivelist?{{ getID()|safe }}&start=' + this.value * {{ archiveRange }} + '{{ passthrough('order', 'type') }}';">
+            {% for pageNum in archivePages %}
+            <option value="{{ pageNum }}"{{ ' selected' if pageNum == archiveCurrentPage else '' }}>{{ pageNum + 1 }}</option>
+            {% endfor %}
+          </select>
+          <svg focusable="false" class="cds--select__arrow" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 22L6 12l1.4-1.4 8.6 8.6 8.6-8.6L26 12z"/></svg>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+    <div class="cds--pagination__right">
+      {% if totalArchives != 0 %}
+      <span class="cds--pagination__items-count">{{ archiveStart + 1 }}&ndash;{{ archiveStart + archiveCount }} of {{ totalArchives }}</span>
+      {% endif %}
+      {% if archiveStart > 0 %}
+      <a class="cds--btn cds--btn--ghost cds--btn--sm" href="archivelist?{{ getID()|safe }}&start={{ archiveStart - archiveRange }}{{ passthrough('order', 'type') }}">Previous</a>
+      {% endif %}
+      {% if archiveStart + archiveCount < totalArchives %}
+      <a class="cds--btn cds--btn--ghost cds--btn--sm" href="archivelist?{{ getID()|safe }}&start={{ archiveStart + archiveRange }}{{ passthrough('order', 'type') }}">Next</a>
+      {% endif %}
+    </div>
+  </div>
+{% endmacro %}
+
   {% if type == 'component' %}
   <h4>Component Archives of buildroot <a href="buildrootinfo?buildrootID={{ buildroot.id }}">{{ util.brLabel(buildroot) }}</a></h4>
   {% elif type == 'image' %}
@@ -18,76 +49,40 @@ buildrootID={{ buildroot.id }}
   <h4>Archives built in buildroot <a href="buildrootinfo?buildrootID={{ buildroot.id }}">{{ util.brLabel(buildroot) }}</a></h4>
   {% endif %}
 
-  <table class="data-list">
-    <tr>
-      <td class="paginate" colspan="{{ '3' if type == 'component' else '2' }}">
-        {% if len(archivePages) > 1 %}
-        <form class="pageJump">
-          Page:
-          <select onchange="javascript: window.location = 'archivelist?{{ getID()|safe }}&start=' + this.value * {{ archiveRange }} + '{{ passthrough('order', 'type') }}';">
-            {% for pageNum in archivePages %}
-            <option value="{{ pageNum }}"{{ ' selected' if pageNum == archiveCurrentPage else '' }}>{{ pageNum + 1 }}</option>
-            {% endfor %}
-          </select>
-        </form>
+  {{ pagination()|safe }}
+
+  <div class="cds--data-table-container">
+    <table class="cds--data-table cds--data-table--zebra">
+      <thead>
+        <tr>
+          <th scope="col"><a href="archivelist?{{ getID()|safe }}&order={{ toggleOrder('filename') }}{{ passthrough('type') }}">Filename</a> {{ sortImage('filename') }}</th>
+          <th scope="col"><a href="archivelist?{{ getID()|safe }}&order={{ toggleOrder('type_name') }}{{ passthrough('type') }}">Type</a> {{ sortImage('type_name') }}</th>
+          {% if type == 'component' %}
+          <th scope="col"><a href="archivelist?{{ getID()|safe }}&order={{ toggleOrder('project') }}{{ passthrough('type') }}">Build Dependency?</a> {{ sortImage('project') }}</th>
+          {% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% if len(archives) > 0 %}
+        {% for archive in archives %}
+        <tr>
+          <td><a href="archiveinfo?archiveID={{ archive.id }}">{{ archive.filename }}</a></td>
+          <td>{{ archive.type_name }}</td>
+          {% if type == 'component' %}
+          {% set project = archive.project and 'yes' or 'no' %}
+          <td class="{{ project }}">{{ util.imageTag(project) }}</td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+        {% else %}
+        <tr>
+          <td colspan="{{ '3' if type == 'component' else '2' }}">No Archives</td>
+        </tr>
         {% endif %}
-        {% if archiveStart > 0 %}
-        <a href="archivelist?{{ getID()|safe }}&start={{ archiveStart - archiveRange }}{{ passthrough('order', 'type') }}">&lt;&lt;&lt;</a>
-        {% endif %}
-        {% if totalArchives != 0 %}
-        <strong>Archives {{ archiveStart + 1 }} through {{ archiveStart + archiveCount }} of {{ totalArchives }}</strong>
-        {% endif %}
-        {% if archiveStart + archiveCount < totalArchives %}
-        <a href="archivelist?{{ getID()|safe }}&start={{ archiveStart + archiveRange }}{{ passthrough('order', 'type') }}">&gt;&gt;&gt;</a>
-        {% endif %}
-      </td>
-    </tr>
-    <tr class="list-header">
-      <th><a href="archivelist?{{ getID()|safe }}&order={{ toggleOrder('filename') }}{{ passthrough('type') }}">Filename</a> {{ sortImage('filename') }}</th>
-      <th><a href="archivelist?{{ getID()|safe }}&order={{ toggleOrder('type_name') }}{{ passthrough('type') }}">Type</a> {{ sortImage('type_name') }}</th>
-      {% if type == 'component' %}
-      <th><a href="archivelist?{{ getID()|safe }}&order={{ toggleOrder('project') }}{{ passthrough('type') }}">Build Dependency?</a> {{ sortImage('project') }}</th>
-      {% endif %}
-    </tr>
-    {% if len(archives) > 0 %}
-    {% for archive in archives %}
-    <tr class="{{ rowToggle() }}">
-      <td><a href="archiveinfo?archiveID={{ archive.id }}">{{ archive.filename }}</a></td>
-      <td>{{ archive.type_name }}</td>
-      {% if type == 'component' %}
-      {% set project = archive.project and 'yes' or 'no' %}
-      <td class="{{ project }}">{{ util.imageTag(project) }}</td>
-      {% endif %}
-    </tr>
-    {% endfor %}
-    {% else %}
-    <tr class="row-odd">
-      <td colspan="{{ '3' if type == 'component' else '2' }}">No Archives</td>
-    </tr>
-    {% endif %}
-    <tr>
-      <td class="paginate" colspan="{{ '3' if type == 'component' else '2' }}">
-        {% if len(archivePages) > 1 %}
-        <form class="pageJump">
-          Page:
-          <select onchange="javascript: window.location = 'archivelist?{{ getID()|safe }}&start=' + this.value * {{ archiveRange }} + '{{ passthrough('order', 'type') }}';">
-            {% for pageNum in archivePages %}
-            <option value="{{ pageNum }}"{{ ' selected' if pageNum == archiveCurrentPage else '' }}>{{ pageNum + 1 }}</option>
-            {% endfor %}
-          </select>
-        </form>
-        {% endif %}
-        {% if archiveStart > 0 %}
-        <a href="archivelist?{{ getID()|safe }}&start={{ archiveStart - archiveRange }}{{ passthrough('order', 'type') }}">&lt;&lt;&lt;</a>
-        {% endif %}
-        {% if totalArchives != 0 %}
-        <strong>Archives {{ archiveStart + 1 }} through {{ archiveStart + archiveCount }} of {{ totalArchives }}</strong>
-        {% endif %}
-        {% if archiveStart + archiveCount < totalArchives %}
-        <a href="archivelist?{{ getID()|safe }}&start={{ archiveStart + archiveRange }}{{ passthrough('order', 'type') }}">&gt;&gt;&gt;</a>
-        {% endif %}
-      </td>
-    </tr>
-  </table>
+      </tbody>
+    </table>
+  </div>
+
+  {{ pagination()|safe }}
 
 {% endblock %}

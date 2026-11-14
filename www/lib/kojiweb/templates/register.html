@@ -6,33 +6,36 @@
 
   <div id="registerForm">
     {% if registerInfo %}
-    <div class="success">{{ registerInfo }}</div>
-    <br/>
+    <div class="cds--inline-notification cds--inline-notification--success" role="status">
+      <div class="cds--inline-notification__details">
+        <p class="cds--inline-notification__subtitle">{{ registerInfo }}</p>
+      </div>
+    </div>
     {% endif %}
     {% if registerError %}
-    <div class="error">{{ registerError }}</div>
-    <br/>
+    <div class="cds--inline-notification cds--inline-notification--error" role="alert">
+      <div class="cds--inline-notification__details">
+        <p class="cds--inline-notification__subtitle">{{ registerError }}</p>
+      </div>
+    </div>
     {% endif %}
-    <form action="register" method="post">
+    <form action="register" method="post" class="koji-form">
       <input type="hidden" name="a" value="{{ authToken }}"/>
-      <table>
-        <tr>
-          <td><label for="username">Username:</label></td>
-          <td><input type="text" id="username" name="username"/></td>
-        </tr>
-        <tr>
-          <td><label for="password">Password:</label></td>
-          <td><input type="password" id="password" name="password"/></td>
-        </tr>
-        <tr>
-          <td><label for="confirm_password">Confirm password:</label></td>
-          <td><input type="password" id="confirm_password" name="confirm_password"/></td>
-        </tr>
-        <tr>
-          <td></td>
-          <td><input type="submit" value="Register"/></td>
-        </tr>
-      </table>
+      <div class="cds--form-item">
+        <label class="cds--label" for="username">Username:</label>
+        <input type="text" id="username" name="username" class="cds--text-input"/>
+      </div>
+      <div class="cds--form-item">
+        <label class="cds--label" for="password">Password:</label>
+        <input type="password" id="password" name="password" class="cds--text-input"/>
+      </div>
+      <div class="cds--form-item">
+        <label class="cds--label" for="confirm_password">Confirm password:</label>
+        <input type="password" id="confirm_password" name="confirm_password" class="cds--text-input"/>
+      </div>
+      <div class="cds--form-item">
+        <button type="submit" class="cds--btn cds--btn--primary">Register</button>
+      </div>
     </form>
     <p>Already have an account? <a href="login">Login</a></p>
   </div>

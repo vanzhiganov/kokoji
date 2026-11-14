@@ -16,84 +16,101 @@ owned by <a href="userinfo?userID={{ user.id }}">{{ user.name }}</a>
 {% endif %}
 {% endmacro %}
 
-  <h4>{{ getDescription()|safe }}</h4>
-
-  <table class="data-list">
-    {% if tag %}
-    <tr>
-      <td colspan="5">
-        <table class="nested">
-          <tr><td>
-          <strong>Inherited</strong>:
-          </td><td>
-          <select name="inherited" class="filterlist" onchange="javascript: window.location = 'packages?inherited=' + this.value + '{{ passthrough_except('inherited') }}';">
-            <option value="1" {{ 'selected' if inherited else '' }}>yes</option>
-            <option value="0" {{ 'selected' if not inherited else '' }}>no</option>
-          </select>
-          </td></tr>
-          <tr><td>
-          <strong>With blocked</strong>:
-          </td><td>
-          <select name="blocked" class="filterlist" onchange="javascript: window.location = 'packages?blocked=' + this.value + '{{ passthrough_except('blocked') }}';">
-            <option value="1" {{ 'selected' if blocked else '' }}>yes</option>
-            <option value="0" {{ 'selected' if not blocked else '' }}>no</option>
-          </select>
-          </td></tr>
-        </table>
-    </tr>
-    {% endif %}
-    <tr>
-      <td class="charlist" colspan="{{ '5' if tag or user else '2' }}">
-        {% for char in chars %}
-        {% if prefix == char %}
-        <strong>{{ char }}</strong>
-        {% else %}
-        <a href="packages?prefix={{ char }}{{ passthrough('userID', 'tagID', 'order', 'inherited', 'blocked') }}">{{ char }}</a>
-        {% endif %}
-        |
-        {% endfor %}
-        {% if prefix %}
-        <a href="packages?{{ passthrough('userID', 'tagID', 'order', 'inherited', 'blocked', prefix='') }}">all</a>
-        {% else %}
-        <strong>all</strong>
-        {% endif %}
-      </td>
-    </tr>
-    <tr>
-      <td class="paginate" colspan="{{ '5' if tag or user else '2' }}">
-        {% if len(packagePages) > 1 %}
-        <form class="pageJump" action="">
-          Page:
-          <select onchange="javascript: window.location = 'packages?start=' + this.value * {{ packageRange }} + '{{ passthrough('userID', 'tagID', 'order', 'prefix', 'inherited', 'blocked') }}';">
+{% macro pagination() %}
+  <div class="cds--pagination">
+    <div class="cds--pagination__left">
+      {% if len(packagePages) > 1 %}
+      <div class="cds--select cds--select--inline">
+        <label class="cds--label" for="packagePage">Page</label>
+        <div class="cds--select-input__wrapper">
+          <select id="packagePage" class="cds--select-input" onchange="javascript: window.location = 'packages?start=' + this.value * {{ packageRange }} + '{{ passthrough('userID', 'tagID', 'order', 'prefix', 'inherited', 'blocked') }}';">
             {% for pageNum in packagePages %}
             <option value="{{ pageNum }}"{{ ' selected' if pageNum == packageCurrentPage else '' }}>{{ pageNum + 1 }}</option>
             {% endfor %}
           </select>
-        </form>
-        {% endif %}
-        {% if packageStart > 0 %}
-        <a href="packages?start={{ packageStart - packageRange }}{{ passthrough('userID', 'tagID', 'order', 'prefix', 'inherited', 'blocked') }}">&lt;&lt;&lt;</a>
-        {% endif %}
-        {% if totalPackages != 0 %}
-        <strong>Packages {{ packageStart + 1 }} through {{ packageStart + packageCount }} of {{ totalPackages }}</strong>
-        {% endif %}
-        {% if packageStart + packageCount < totalPackages %}
-        <a href="packages?start={{ packageStart + packageRange }}{{ passthrough('userID', 'tagID', 'order', 'prefix', 'inherited', 'blocked') }}">&gt;&gt;&gt;</a>
-        {% endif %}
-      </td>
-    </tr>
-    <tr class="list-header">
-      <th><a href="packages?order={{ toggleOrder('package_id') }}{{ passthrough('userID', 'tagID', 'prefix', 'inherited', 'blocked') }}">ID</a> {{ sortImage('package_id') }}</th>
-      <th><a href="packages?order={{ toggleOrder('package_name') }}{{ passthrough('userID', 'tagID', 'prefix', 'inherited', 'blocked') }}">Name</a> {{ sortImage('package_name') }}</th>
-      {% if tag or user %}
-        <th><a href="packages?order={{ toggleOrder('tag_name') }}{{ passthrough('userID', 'tagID', 'prefix', 'inherited', 'blocked') }}">Tag</a> {{ sortImage('tag_name') }}</th>
-        <th><a href="packages?order={{ toggleOrder('owner_name') }}{{ passthrough('userID', 'tagID', 'prefix', 'inherited', 'blocked') }}">Owner</a> {{ sortImage('owner_name') }}</th>
-        <th><a href="packages?order={{ toggleOrder('blocked') }}{{ passthrough('userID', 'tagID', 'prefix', 'inherited', 'blocked') }}">Included?</a> {{ sortImage('blocked') }}</th>
+          <svg focusable="false" class="cds--select__arrow" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 22L6 12l1.4-1.4 8.6 8.6 8.6-8.6L26 12z"/></svg>
+        </div>
+      </div>
       {% endif %}
-    </tr>
-    {% if len(packages) > 0 %}
-      {% for package in packages %}
-        <tr class="{{ rowToggle() }}">
+    </div>
+    <div class="cds--pagination__right">
+      {% if totalPackages != 0 %}
+      <span class="cds--pagination__items-count">{{ packageStart + 1 }}&ndash;{{ packageStart + packageCount }} of {{ totalPackages }}</span>
+      {% endif %}
+      {% if packageStart > 0 %}
+      <a class="cds--btn cds--btn--ghost cds--btn--sm" href="packages?start={{ packageStart - packageRange }}{{ passthrough('userID', 'tagID', 'order', 'prefix', 'inherited', 'blocked') }}">Previous</a>
+      {% endif %}
+      {% if packageStart + packageCount < totalPackages %}
+      <a class="cds--btn cds--btn--ghost cds--btn--sm" href="packages?start={{ packageStart + packageRange }}{{ passthrough('userID', 'tagID', 'order', 'prefix', 'inherited', 'blocked') }}">Next</a>
+      {% endif %}
+    </div>
+  </div>
+{% endmacro %}
+
+  <h4>{{ getDescription()|safe }}</h4>
+
+  {% if tag %}
+  <form action="packages" class="koji-filters">
+    <div class="cds--select cds--select--inline">
+      <label class="cds--label" for="filterInherited">Inherited</label>
+      <div class="cds--select-input__wrapper">
+        <select id="filterInherited" name="inherited" class="cds--select-input" onchange="javascript: window.location = 'packages?inherited=' + this.value + '{{ passthrough_except('inherited') }}';">
+          <option value="1" {{ 'selected' if inherited else '' }}>yes</option>
+          <option value="0" {{ 'selected' if not inherited else '' }}>no</option>
+        </select>
+        <svg focusable="false" class="cds--select__arrow" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 22L6 12l1.4-1.4 8.6 8.6 8.6-8.6L26 12z"/></svg>
+      </div>
+    </div>
+    <div class="cds--select cds--select--inline">
+      <label class="cds--label" for="filterBlocked">With blocked</label>
+      <div class="cds--select-input__wrapper">
+        <select id="filterBlocked" name="blocked" class="cds--select-input" onchange="javascript: window.location = 'packages?blocked=' + this.value + '{{ passthrough_except('blocked') }}';">
+          <option value="1" {{ 'selected' if blocked else '' }}>yes</option>
+          <option value="0" {{ 'selected' if not blocked else '' }}>no</option>
+        </select>
+        <svg focusable="false" class="cds--select__arrow" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 22L6 12l1.4-1.4 8.6 8.6 8.6-8.6L26 12z"/></svg>
+      </div>
+    </div>
+  </form>
+  {% endif %}
+
+  <div class="koji-charlist">
+    {% for char in chars %}
+    {% if prefix == char %}
+    <strong>{{ char }}</strong>
+    {% else %}
+    <a href="packages?prefix={{ char }}{{ passthrough('userID', 'tagID', 'order', 'inherited', 'blocked') }}">{{ char }}</a>
+    {% endif %}
+    |
+    {% endfor %}
+    {% if prefix %}
+    <a href="packages?{{ passthrough('userID', 'tagID', 'order', 'inherited', 'blocked', prefix='') }}">all</a>
+    {% else %}
+    <strong>all</strong>
+    {% endif %}
+  </div>
+
+  {% if totalPackages %}
+  {{ pagination()|safe }}
+  {% endif %}
+
+  <div class="cds--data-table-container">
+    <table class="cds--data-table cds--data-table--zebra">
+      <thead>
+        <tr>
+          <th scope="col"><a href="packages?order={{ toggleOrder('package_id') }}{{ passthrough('userID', 'tagID', 'prefix', 'inherited', 'blocked') }}">ID</a> {{ sortImage('package_id') }}</th>
+          <th scope="col"><a href="packages?order={{ toggleOrder('package_name') }}{{ passthrough('userID', 'tagID', 'prefix', 'inherited', 'blocked') }}">Name</a> {{ sortImage('package_name') }}</th>
+          {% if tag or user %}
+          <th scope="col"><a href="packages?order={{ toggleOrder('tag_name') }}{{ passthrough('userID', 'tagID', 'prefix', 'inherited', 'blocked') }}">Tag</a> {{ sortImage('tag_name') }}</th>
+          <th scope="col"><a href="packages?order={{ toggleOrder('owner_name') }}{{ passthrough('userID', 'tagID', 'prefix', 'inherited', 'blocked') }}">Owner</a> {{ sortImage('owner_name') }}</th>
+          <th scope="col"><a href="packages?order={{ toggleOrder('blocked') }}{{ passthrough('userID', 'tagID', 'prefix', 'inherited', 'blocked') }}">Included?</a> {{ sortImage('blocked') }}</th>
+          {% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% if len(packages) > 0 %}
+        {% for package in packages %}
+        <tr>
           <td>{{ package.package_id }}</td>
           <td><a href="packageinfo?packageID={{ package.package_id }}">{{ package.package_name }}</a></td>
           {% if tag or user %}
@@ -102,35 +119,18 @@ owned by <a href="userinfo?userID={{ user.id }}">{{ user.name }}</a>
           <td class="{{ str(not package.blocked).lower() }}">{{ util.imageTag('no') if package.blocked else util.imageTag('yes') }}</td>
           {% endif %}
         </tr>
-      {% endfor %}
-    {% else %}
-      <tr class="row-odd">
-        <td colspan="{{ '5' if tag or user else '2' }}">No packages</td>
-      </tr>
-    {% endif %}
-    <tr>
-      <td class="paginate" colspan="{{ '5' if tag or user else '2' }}">
-        {% if len(packagePages) > 1 %}
-        <form class="pageJump" action="">
-          Page:
-          <select onchange="javascript: window.location = 'packages?start=' + this.value * {{ packageRange }} + '{{ passthrough('userID', 'tagID', 'order', 'prefix', 'inherited', 'blocked') }}';">
-            {% for pageNum in packagePages %}
-            <option value="{{ pageNum }}"{{ ' selected' if pageNum == packageCurrentPage else '' }}>{{ pageNum + 1 }}</option>
-            {% endfor %}
-          </select>
-        </form>
+        {% endfor %}
+        {% else %}
+        <tr>
+          <td colspan="{{ '5' if tag or user else '2' }}">No packages</td>
+        </tr>
         {% endif %}
-        {% if packageStart > 0 %}
-        <a href="packages?start={{ packageStart - packageRange }}{{ passthrough('userID', 'tagID', 'order', 'prefix', 'inherited', 'blocked') }}">&lt;&lt;&lt;</a>
-        {% endif %}
-        {% if totalPackages != 0 %}
-        <strong>Packages {{ packageStart + 1 }} through {{ packageStart + packageCount }} of {{ totalPackages }}</strong>
-        {% endif %}
-        {% if packageStart + packageCount < totalPackages %}
-        <a href="packages?start={{ packageStart + packageRange }}{{ passthrough('userID', 'tagID', 'order', 'prefix', 'inherited', 'blocked') }}">&gt;&gt;&gt;</a>
-        {% endif %}
-      </td>
-    </tr>
-  </table>
+      </tbody>
+    </table>
+  </div>
+
+  {% if totalPackages %}
+  {{ pagination()|safe }}
+  {% endif %}
 
 {% endblock %}

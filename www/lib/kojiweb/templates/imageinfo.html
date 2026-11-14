@@ -4,54 +4,59 @@
 
 <h4>Information for image <a href="imageinfo?imageID={{ image.id }}">{{ image.filename }}</a></h4>
 
-<table>
-  <tr>
-    <th>ID</th><td>{{ image.id }}</td>
-  </tr>
-  <tr>
-    <th>File Name</th><td>{{ image.filename }}</a></td>
-  </tr>
-  <tr>
-    <th>File Size</th><td><span title="{{ util.formatThousands(image.filesize) }}">{{ util.formatNatural(image.filesize) }}</span></td>
-  </tr>
-  <tr>
-    <th>Arch</th><td>{{ image.arch }}</td>
-  </tr>
-  <tr>
-    <th>Media Type</th><td>{{ image.mediatype }}</td>
-  </tr>
-  <tr>
-    {% if len(image.hash) == 32 %}
-      <th>Digest (md5)</th><td>{{ image.hash }}</td>
-    {% elif len(image.hash) == 40 %}
-      <th>Digest (sha1)</th><td>{{ image.hash }}</td>
-    {% elif len(image.hash) == 64 %}
-      <th>Digest (sha256)</th><td>{{ image.hash }}</td>
-    {% elif len(image.hash) == 96 %}
-      <th>Digest (sha384)</th><td>{{ image.hash }}</td>
-    {% elif len(image.hash) == 128 %}
-      <th>Digest (sha512)</th><td>{{ image.hash }}</td>
-    {% else %}
-      <th>Hash </th><td>{{ image.hash }}</td>
-    {% endif %}
-  </tr>
-  <tr>
-    <th>Task</th><td><a href="taskinfo?taskID={{ task.id }}" class="task{{ util.taskState(task.state) }}">{{ koji.taskLabel(task) }}</a></td>
-  </tr>
-  <tr>
-    <th>Buildroot</th><td><a href="buildrootinfo?buildrootID={{ buildroot.id }}">/var/lib/mock/{{ buildroot.tag_name }}-{{ buildroot.id }}-{{ buildroot.repo_id }}</a></td>
-  </tr>
-  <tr>
-    <th colspan="2"><a href="rpmlist?imageID={{ image.id }}&amp;type=image" title="RPMs that where installed into the LiveCD">Included RPMs</a></th>
-  </tr>
-  <tr>
-    <th colspan="2"><a href="{{ imageBase }}/{{ image.filename }}">Download Image</a> (<a href="{{ imageBase }}/data/logs/{{ image.arch }}/">build logs</a>)</th>
-  </tr>
-  {% if image.get('xmlfile', None) %}
-  <tr>
-    <th colspan="2"><a href="{{ imageBase }}/{{ image.xmlfile }}">Download XML Description</a></th>
-  </tr>
-  {% endif %}
-</table>
+<div class="cds--structured-list">
+  <div class="cds--structured-list-tbody">
+    <div class="cds--structured-list-row">
+      <div class="cds--structured-list-td">ID</div>
+      <div class="cds--structured-list-td">{{ image.id }}</div>
+    </div>
+    <div class="cds--structured-list-row">
+      <div class="cds--structured-list-td">File Name</div>
+      <div class="cds--structured-list-td">{{ image.filename }}</div>
+    </div>
+    <div class="cds--structured-list-row">
+      <div class="cds--structured-list-td">File Size</div>
+      <div class="cds--structured-list-td"><span title="{{ util.formatThousands(image.filesize) }}">{{ util.formatNatural(image.filesize) }}</span></div>
+    </div>
+    <div class="cds--structured-list-row">
+      <div class="cds--structured-list-td">Arch</div>
+      <div class="cds--structured-list-td">{{ image.arch }}</div>
+    </div>
+    <div class="cds--structured-list-row">
+      <div class="cds--structured-list-td">Media Type</div>
+      <div class="cds--structured-list-td">{{ image.mediatype }}</div>
+    </div>
+    <div class="cds--structured-list-row">
+      {% if len(image.hash) == 32 %}
+      <div class="cds--structured-list-td">Digest (md5)</div>
+      {% elif len(image.hash) == 40 %}
+      <div class="cds--structured-list-td">Digest (sha1)</div>
+      {% elif len(image.hash) == 64 %}
+      <div class="cds--structured-list-td">Digest (sha256)</div>
+      {% elif len(image.hash) == 96 %}
+      <div class="cds--structured-list-td">Digest (sha384)</div>
+      {% elif len(image.hash) == 128 %}
+      <div class="cds--structured-list-td">Digest (sha512)</div>
+      {% else %}
+      <div class="cds--structured-list-td">Hash </div>
+      {% endif %}
+      <div class="cds--structured-list-td">{{ image.hash }}</div>
+    </div>
+    <div class="cds--structured-list-row">
+      <div class="cds--structured-list-td">Task</div>
+      <div class="cds--structured-list-td"><a href="taskinfo?taskID={{ task.id }}" class="task{{ util.taskState(task.state) }}">{{ koji.taskLabel(task) }}</a></div>
+    </div>
+    <div class="cds--structured-list-row">
+      <div class="cds--structured-list-td">Buildroot</div>
+      <div class="cds--structured-list-td"><a href="buildrootinfo?buildrootID={{ buildroot.id }}">/var/lib/mock/{{ buildroot.tag_name }}-{{ buildroot.id }}-{{ buildroot.repo_id }}</a></div>
+    </div>
+  </div>
+</div>
+
+<p><a href="rpmlist?imageID={{ image.id }}&amp;type=image" title="RPMs that where installed into the LiveCD">Included RPMs</a></p>
+<p><a href="{{ imageBase }}/{{ image.filename }}">Download Image</a> (<a href="{{ imageBase }}/data/logs/{{ image.arch }}/">build logs</a>)</p>
+{% if image.get('xmlfile', None) %}
+<p><a href="{{ imageBase }}/{{ image.xmlfile }}">Download XML Description</a></p>
+{% endif %}
 
 {% endblock %}

@@ -4,173 +4,190 @@
 
   <h4>Information for tag <a href="taginfo?tagID={{ tag.id }}">{{ tag.name }}</a></h4>
 
-  <table>
-    {% if child and 'tag' in perms %}
-    <tr>
-      <th colspan="2"><a href="tagparent?tagID={{ child.id }}&parentID={{ tag.id }}&action=add{{ koji_authToken() }}">Add {{ tag.name }} as parent of {{ child.name }}</a></th>
-    </tr>
-    {% endif %}
-    <tr>
-      <th>Name</th><td>{{ tag.name }}</td>
-    </tr>
-    <tr>
-      <th>ID</th><td>{{ tag.id }}</td>
-    </tr>
-    <tr>
-      <th>Arches</th><td>{{ tag.arches }}</td>
-    </tr>
-    <tr>
-      <th>Locked</th><td class="{{ str(not tag.locked).lower() }}">{{ 'yes' if tag.locked else 'no' }}</td>
-    </tr>
-    <tr>
-      <th>Permission</th><td>{{ allPerms[tag.perm_id] if tag.perm_id else 'none' }}</td>
-    </tr>
-    {% if mavenEnabled %}
-    <tr>
-      <th>Maven Support?</th><td class="{{ str(tag.maven_support).lower() }}">{{ 'yes' if tag.maven_support else 'no' }}</td>
-    </tr>
-    <tr>
-      <th>Include All Maven Builds?</th><td class="{{ str(tag.maven_include_all).lower() }}">{{ 'yes' if tag.maven_include_all else 'no' }}</td>
-    </tr>
-    {% endif %}
-    <tr>
-      <th>Inheritance</th>
-      <td class="tree">
-        <span class="root">{{ tag.name }}</span>
-        {% set numParents = len(inheritance) %}
-        {% set ns = namespace(maxDepth=0) %}
-        {% set TRUNC_DEPTH = 7 %}
-        <ul>
-          {% for parent in inheritance %}
-          {% set iter = loop.index %}
-          {% set nextDepth = (iter < numParents and inheritance[iter].currdepth or 1) %}
-          {% set depth = parent.currdepth %}
-          {% if depth > ns.maxDepth %}
-          {% set ns.maxDepth = depth %}
-          {% endif %}
-          {% if depth == TRUNC_DEPTH and not all %}
-          <li><span class="treeBranch"><span class="treeToggle treeLabel">...</span></span></li>
-          <li class="hidden">
-          {% elif len(tagsByChild[parent.child_id]) > 1 %}
-          <li class="sibling">
-          {% else %}
-          <li>
-          {% endif %}
-          {% set _ = tagsByChild[parent.child_id].pop() %}
-            <span class="treeBranch">
-              <span class="treeLabel">
-                <a href="taginfo?tagID={{ parent.parent_id }}">{{ parent.name }}</a>
-                {% if depth == 1 and 'tag' in perms %}
-                <span class="treeLink">(<a href="tagparent?tagID={{ tag.id }}&parentID={{ parent.parent_id }}&action=edit{{ koji_authToken() }}">edit</a>) (<a href="tagparent?tagID={{ tag.id }}&parentID={{ parent.parent_id }}&action=remove{{ koji_authToken() }}">remove</a>)</span>
-                {% endif %}
-              </span>
-            </span>
-           {% if nextDepth > depth %}
-          <ul>
-          {% else %}
-          </li>
-          {% endif %}
-          {% for _ in range(depth - nextDepth) %}
-          </ul>
-          </li>
-          {% endfor %}
-          {% endfor %}
-        </ul>
-      </td>
-    </tr>
-    {% if ns.maxDepth >= TRUNC_DEPTH %}
-    <tr>
-      <td colspan="2">
-        {% if all %}
-        <a href="taginfo?tagID={{ tag.id }}{{ passthrough('inherited') }}">Show abbreviated tree</a>
-        {% else %}
-        <a href="taginfo?tagID={{ tag.id }}{{ passthrough('inherited') }}&all=1">Show full tree</a>
-        {% endif %}
-      </td>
-    </tr>
-    {% endif %}
-    {% if 'tag' in perms %}
-    <tr>
-      <td colspan="2"><a href="tags?childID={{ tag.id }}">Add parent</a></td>
-    </tr>
-    {% endif %}
-    {% if external_repos %}
-    <tr>
-      <th>External&nbsp;repos</th>
-      <td>
-        {% for external_repo in external_repos %}
-        <a href="externalrepoinfo?extrepoID={{ external_repo.external_repo_id }}">{{ external_repo.external_repo_name }}</a> [{{ external_repo.merge_mode }}]
-        {% if external_repo.tag_id != tag.id %}
-        <span class="smaller">(inherited from <a href="taginfo?tagID={{ external_repo.tag_id }}">{{ external_repo.tag_name }}</a>)</span>
-        {% endif %}
-        <br/>
-        {% endfor %}
-      </td>
-    </tr>
-    {% endif %}
-    <tr>
-      <th>Repo&nbsp;created</th>
-      <td>
-      {% if repo %}
-        <a href="repoinfo?repoID={{ repo.id }}">{{ util.formatTimeRSS(repo.create_ts) }}</a>
+  <div class="cds--structured-list">
+    <div class="cds--structured-list-tbody">
+      {% if child and 'tag' in perms %}
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">
+          <a class="cds--btn cds--btn--ghost cds--btn--sm" href="tagparent?tagID={{ child.id }}&parentID={{ tag.id }}&action=add{{ koji_authToken() }}">Add {{ tag.name }} as parent of {{ child.name }}</a>
+        </div>
+      </div>
       {% endif %}
-      </td>
-    </tr>
-    <tr>
-      <th>Packages</th>
-      <td><a href="packages?blocked=0&tagID={{ tag.id }}">{{ numPackages }}</a></td>
-    </tr>
-    <tr>
-      <th>Packages (blocked packages included)</th>
-      <td><a href="packages?tagID={{ tag.id }}">{{ numPackagesBlocked }}</a></td>
-    </tr>
-    <tr>
-      <th>Builds</th>
-      <td><a href="builds?tagID={{ tag.id }}">{{ numBuilds }}</a></td>
-    </tr>
-    <tr>
-      <th>Targets building from this tag</th>
-      <td>
-        {% if len(srcTargets) %}
-        {% for target in srcTargets %}
-        <a href="buildtargetinfo?name={{ quote(target.name) }}">{{ target.name }}</a><br/>
-        {% endfor %}
-        {% else %}
-        No build targets
-        {% endif %}
-      </td>
-    </tr>
-    <tr>
-      <th>Targets building to this tag</th>
-      <td>
-        {% if len(destTargets) %}
-        {% for target in destTargets %}
-        <a href="buildtargetinfo?name={{ quote(target.name) }}">{{ target.name }}</a><br/>
-        {% endfor %}
-        {% else %}
-        No build targets
-        {% endif %}
-      </td>
-    </tr>
-    {% if 'tag' in perms %}
-    <tr>
-      <td colspan="2"><a href="tagedit?tagID={{ tag.id }}{{ koji_authToken() }}">Edit tag</a></td>
-    </tr>
-    <tr>
-      <td colspan="2"><a href="tagdelete?tagID={{ tag.id }}{{ koji_authToken() }}">Delete tag</a></td>
-    </tr>
-    {% endif %}
-    {% if tag.get('extra') %}
-    <tr>
-        <th>Extra options:</th>
-    </tr>
-    {% for key in tag['extra'] %}
-    <tr>
-        <th>{{ key }}</th>
-        <td>{{ pprint.pformat(tag['extra'][key]) }}</td>
-    </tr>
-    {% endfor %}
-    {% endif %}
-  </table>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Name</div>
+        <div class="cds--structured-list-td">{{ tag.name }}</div>
+      </div>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">ID</div>
+        <div class="cds--structured-list-td">{{ tag.id }}</div>
+      </div>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Arches</div>
+        <div class="cds--structured-list-td">{{ tag.arches }}</div>
+      </div>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Locked</div>
+        <div class="cds--structured-list-td {{ str(not tag.locked).lower() }}">{{ 'yes' if tag.locked else 'no' }}</div>
+      </div>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Permission</div>
+        <div class="cds--structured-list-td">{{ allPerms[tag.perm_id] if tag.perm_id else 'none' }}</div>
+      </div>
+      {% if mavenEnabled %}
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Maven Support?</div>
+        <div class="cds--structured-list-td {{ str(tag.maven_support).lower() }}">{{ 'yes' if tag.maven_support else 'no' }}</div>
+      </div>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Include All Maven Builds?</div>
+        <div class="cds--structured-list-td {{ str(tag.maven_include_all).lower() }}">{{ 'yes' if tag.maven_include_all else 'no' }}</div>
+      </div>
+      {% endif %}
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Inheritance</div>
+        <div class="cds--structured-list-td tree">
+          <span class="root">{{ tag.name }}</span>
+          {% set numParents = len(inheritance) %}
+          {% set ns = namespace(maxDepth=0) %}
+          {% set TRUNC_DEPTH = 7 %}
+          <ul>
+            {% for parent in inheritance %}
+            {% set iter = loop.index %}
+            {% set nextDepth = (iter < numParents and inheritance[iter].currdepth or 1) %}
+            {% set depth = parent.currdepth %}
+            {% if depth > ns.maxDepth %}
+            {% set ns.maxDepth = depth %}
+            {% endif %}
+            {% if depth == TRUNC_DEPTH and not all %}
+            <li><span class="treeBranch"><span class="treeToggle treeLabel">...</span></span></li>
+            <li class="hidden">
+            {% elif len(tagsByChild[parent.child_id]) > 1 %}
+            <li class="sibling">
+            {% else %}
+            <li>
+            {% endif %}
+            {% set _ = tagsByChild[parent.child_id].pop() %}
+              <span class="treeBranch">
+                <span class="treeLabel">
+                  <a href="taginfo?tagID={{ parent.parent_id }}">{{ parent.name }}</a>
+                  {% if depth == 1 and 'tag' in perms %}
+                  <span class="treeLink">(<a href="tagparent?tagID={{ tag.id }}&parentID={{ parent.parent_id }}&action=edit{{ koji_authToken() }}">edit</a>) (<a href="tagparent?tagID={{ tag.id }}&parentID={{ parent.parent_id }}&action=remove{{ koji_authToken() }}">remove</a>)</span>
+                  {% endif %}
+                </span>
+              </span>
+             {% if nextDepth > depth %}
+            <ul>
+            {% else %}
+            </li>
+            {% endif %}
+            {% for _ in range(depth - nextDepth) %}
+            </ul>
+            </li>
+            {% endfor %}
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+      {% if ns.maxDepth >= TRUNC_DEPTH %}
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">
+          {% if all %}
+          <a class="cds--btn cds--btn--ghost cds--btn--sm" href="taginfo?tagID={{ tag.id }}{{ passthrough('inherited') }}">Show abbreviated tree</a>
+          {% else %}
+          <a class="cds--btn cds--btn--ghost cds--btn--sm" href="taginfo?tagID={{ tag.id }}{{ passthrough('inherited') }}&all=1">Show full tree</a>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+      {% if 'tag' in perms %}
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">
+          <a class="cds--btn cds--btn--ghost cds--btn--sm" href="tags?childID={{ tag.id }}">Add parent</a>
+        </div>
+      </div>
+      {% endif %}
+      {% if external_repos %}
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">External&nbsp;repos</div>
+        <div class="cds--structured-list-td">
+          {% for external_repo in external_repos %}
+          <a href="externalrepoinfo?extrepoID={{ external_repo.external_repo_id }}">{{ external_repo.external_repo_name }}</a> [{{ external_repo.merge_mode }}]
+          {% if external_repo.tag_id != tag.id %}
+          <span class="smaller">(inherited from <a href="taginfo?tagID={{ external_repo.tag_id }}">{{ external_repo.tag_name }}</a>)</span>
+          {% endif %}
+          <br/>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Repo&nbsp;created</div>
+        <div class="cds--structured-list-td">
+          {% if repo %}
+          <a href="repoinfo?repoID={{ repo.id }}">{{ util.formatTimeRSS(repo.create_ts) }}</a>
+          {% endif %}
+        </div>
+      </div>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Packages</div>
+        <div class="cds--structured-list-td"><a href="packages?blocked=0&tagID={{ tag.id }}">{{ numPackages }}</a></div>
+      </div>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Packages (blocked packages included)</div>
+        <div class="cds--structured-list-td"><a href="packages?tagID={{ tag.id }}">{{ numPackagesBlocked }}</a></div>
+      </div>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Builds</div>
+        <div class="cds--structured-list-td"><a href="builds?tagID={{ tag.id }}">{{ numBuilds }}</a></div>
+      </div>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Targets building from this tag</div>
+        <div class="cds--structured-list-td">
+          {% if len(srcTargets) %}
+          {% for target in srcTargets %}
+          <a href="buildtargetinfo?name={{ quote(target.name) }}">{{ target.name }}</a><br/>
+          {% endfor %}
+          {% else %}
+          No build targets
+          {% endif %}
+        </div>
+      </div>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Targets building to this tag</div>
+        <div class="cds--structured-list-td">
+          {% if len(destTargets) %}
+          {% for target in destTargets %}
+          <a href="buildtargetinfo?name={{ quote(target.name) }}">{{ target.name }}</a><br/>
+          {% endfor %}
+          {% else %}
+          No build targets
+          {% endif %}
+        </div>
+      </div>
+      {% if 'tag' in perms %}
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">
+          <a class="cds--btn cds--btn--ghost cds--btn--sm" href="tagedit?tagID={{ tag.id }}{{ koji_authToken() }}">Edit tag</a>
+        </div>
+      </div>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">
+          <a class="cds--btn cds--btn--danger--ghost cds--btn--sm" href="tagdelete?tagID={{ tag.id }}{{ koji_authToken() }}">Delete tag</a>
+        </div>
+      </div>
+      {% endif %}
+      {% if tag.get('extra') %}
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Extra options:</div>
+      </div>
+      {% for key in tag['extra'] %}
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">{{ key }}</div>
+        <div class="cds--structured-list-td">{{ pprint.pformat(tag['extra'][key]) }}</div>
+      </div>
+      {% endfor %}
+      {% endif %}
+    </div>
+  </div>
 
 {% endblock %}

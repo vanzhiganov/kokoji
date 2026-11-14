@@ -4,28 +4,33 @@
 
   <h4>Information for external repo <a href="externalrepoinfo?extrepoID={{ extRepo.id }}">{{ extRepo.name }}</a></h4>
 
-  <table>
-    <tr>
-      <th>Name</th><td>{{ extRepo.name }}</td>
-    </tr>
-    <tr>
-      <th>ID</th><td>{{ extRepo.id }}</td>
-    </tr>
-    <tr>
-      <th>URL</th><td><a href="{{ extRepo.url }}">{{ extRepo.url }}</a></td>
-    </tr>
-    <tr>
-      <th>Tags using this external repo</th>
-      <td>
-        {% if len(repoTags) %}
-        {% for tag in repoTags %}
-        <a href="taginfo?tagID={{ tag.tag_id }}">{{ tag.tag_name }}</a><br/>
-        {% endfor %}
-        {% else %}
-        No tags
-        {% endif %}
-      </td>
-    </tr>
-  </table>
+  <div class="cds--structured-list">
+    <div class="cds--structured-list-tbody">
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Name</div>
+        <div class="cds--structured-list-td">{{ extRepo.name }}</div>
+      </div>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">ID</div>
+        <div class="cds--structured-list-td">{{ extRepo.id }}</div>
+      </div>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">URL</div>
+        <div class="cds--structured-list-td"><a href="{{ extRepo.url }}">{{ extRepo.url }}</a></div>
+      </div>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Tags using this external repo</div>
+        <div class="cds--structured-list-td">
+          {% if len(repoTags) %}
+          {% for tag in repoTags %}
+          <a href="taginfo?tagID={{ tag.tag_id }}">{{ tag.tag_name }}</a><br/>
+          {% endfor %}
+          {% else %}
+          No tags
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
 
 {% endblock %}

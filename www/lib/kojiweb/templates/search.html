@@ -1,117 +1,129 @@
 {% extends "base.html" %}
 {% block content %}
 
-
+{% macro pagination() %}
+  <div class="cds--pagination">
+    <div class="cds--pagination__left">
+      {% if len(resultPages) > 1 %}
+      <div class="cds--select cds--select--inline">
+        <label class="cds--label" for="resultPage">Page</label>
+        <div class="cds--select-input__wrapper">
+          <select id="resultPage" class="cds--select-input" onchange="javascript: window.location = 'search?start=' + this.value * {{ resultRange }} + '{{ passthrough('order', 'terms', 'type', 'match') }}';">
+            {% for pageNum in resultPages %}
+            <option value="{{ pageNum }}"{{ ' selected' if pageNum == resultCurrentPage else '' }}>{{ pageNum + 1 }}</option>
+            {% endfor %}
+          </select>
+          <svg focusable="false" class="cds--select__arrow" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 22L6 12l1.4-1.4 8.6 8.6 8.6-8.6L26 12z"/></svg>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+    <div class="cds--pagination__right">
+      {% if totalResults != 0 %}
+      <span class="cds--pagination__items-count">Results {{ resultStart + 1 }} through {{ resultStart + resultCount }} of {{ totalResults }}</span>
+      {% endif %}
+      {% if resultStart > 0 %}
+      <a class="cds--btn cds--btn--ghost cds--btn--sm" href="search?start={{ resultStart - resultRange }}{{ passthrough('order', 'terms', 'type', 'match') }}">Previous</a>
+      {% endif %}
+      {% if resultStart + resultCount < totalResults %}
+      <a class="cds--btn cds--btn--ghost cds--btn--sm" href="search?start={{ resultStart + resultRange }}{{ passthrough('order', 'terms', 'type', 'match') }}">Next</a>
+      {% endif %}
+    </div>
+  </div>
+{% endmacro %}
 
   <h4>Search</h4>
-  <form action="search">
-    <table>
-      <tr>
-        {% if error %}
-        <tr><td colspan="5" class="error">{{ error }}</td></tr>
-        {% endif %}
-        <th>Search</th>
-        <td><input type="text" name="terms" value="{{ terms }}"/></td>
-        <td>
-          <select name="type">
-            <option {{ toggleSelected(type, "package") }} value="package">Packages</option>
-            <option {{ toggleSelected(type, "build") }} value="build">Builds</option>
-            <option {{ toggleSelected(type, "tag") }} value="tag">Tags</option>
-            <option {{ toggleSelected(type, "target") }} value="target">Build Targets</option>
-            <option {{ toggleSelected(type, "user") }} value="user">Users</option>
-            <option {{ toggleSelected(type, "host") }} value="host">Hosts</option>
-            <option {{ toggleSelected(type, "rpm") }} value="rpm">RPMs</option>
-            {% if mavenEnabled %}
-            <option {{ toggleSelected(type, "maven") }} value="maven">Maven Artifacts</option>
-            {% endif %}
-            {% if winEnabled %}
-            <option {{ toggleSelected(type, "win") }} value="win">Windows Artifacts</option>
-            {% endif %}
-          </select>
-        </td>
-        <td>
-          {% if not varExists('match') %}
-             {% set match='glob' %}
+
+  {% if error %}
+  <div class="cds--inline-notification cds--inline-notification--error" role="alert">
+    <div class="cds--inline-notification__details">
+      <p class="cds--inline-notification__subtitle">{{ error }}</p>
+    </div>
+  </div>
+  {% endif %}
+
+  <form action="search" class="koji-filters">
+    <div class="cds--form-item">
+      <label class="cds--label" for="searchTerms">Search</label>
+      <input type="text" id="searchTerms" name="terms" value="{{ terms }}" class="cds--text-input"/>
+    </div>
+    <div class="cds--select cds--select--inline">
+      <label class="cds--label cds--visually-hidden" for="searchResultType">Search type</label>
+      <div class="cds--select-input__wrapper">
+        <select id="searchResultType" name="type" class="cds--select-input">
+          <option {{ toggleSelected(type, "package") }} value="package">Packages</option>
+          <option {{ toggleSelected(type, "build") }} value="build">Builds</option>
+          <option {{ toggleSelected(type, "tag") }} value="tag">Tags</option>
+          <option {{ toggleSelected(type, "target") }} value="target">Build Targets</option>
+          <option {{ toggleSelected(type, "user") }} value="user">Users</option>
+          <option {{ toggleSelected(type, "host") }} value="host">Hosts</option>
+          <option {{ toggleSelected(type, "rpm") }} value="rpm">RPMs</option>
+          {% if mavenEnabled %}
+          <option {{ toggleSelected(type, "maven") }} value="maven">Maven Artifacts</option>
           {% endif %}
-          <input type="radio" name="match" value="glob" {{ toggleSelected(match, "glob", True) }} id="radioglob"/><abbr title="? will match any single character, * will match any sequence of zero or more characters" id="abbrglob">glob</abbr>
-          <input type="radio" name="match" value="regexp" {{ toggleSelected(match, "regexp", True) }} id="radioregexp"/><abbr title="full POSIX regular expressions" id="abbrregexp">regexp</abbr>
-          <input type="radio" name="match" value="exact" {{ toggleSelected(match, "exact", True) }} id="radioexact"/><abbr title="exact matches only" id="abbrexact">exact</abbr>
-        </td>
-        <td colspan="2"><input type="submit" value="Search"/></td>
-      </tr>
-      <tr>
-        <td>&nbsp;</td>
-      </tr>
-    </table>
+          {% if winEnabled %}
+          <option {{ toggleSelected(type, "win") }} value="win">Windows Artifacts</option>
+          {% endif %}
+        </select>
+        <svg focusable="false" class="cds--select__arrow" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 22L6 12l1.4-1.4 8.6 8.6 8.6-8.6L26 12z"/></svg>
+      </div>
+    </div>
+    <fieldset class="cds--fieldset">
+      <legend class="cds--label cds--visually-hidden">Match type</legend>
+      {% if not varExists('match') %}
+         {% set match='glob' %}
+      {% endif %}
+      <div class="cds--radio-button-wrapper">
+        <input type="radio" class="cds--radio-button" name="match" value="glob" {{ toggleSelected(match, "glob", True) }} id="radioglob"/>
+        <label for="radioglob" class="cds--radio-button__label"><span class="cds--radio-button__appearance"></span><span class="cds--radio-button__label-text"><abbr title="? will match any single character, * will match any sequence of zero or more characters" id="abbrglob">glob</abbr></span></label>
+      </div>
+      <div class="cds--radio-button-wrapper">
+        <input type="radio" class="cds--radio-button" name="match" value="regexp" {{ toggleSelected(match, "regexp", True) }} id="radioregexp"/>
+        <label for="radioregexp" class="cds--radio-button__label"><span class="cds--radio-button__appearance"></span><span class="cds--radio-button__label-text"><abbr title="full POSIX regular expressions" id="abbrregexp">regexp</abbr></span></label>
+      </div>
+      <div class="cds--radio-button-wrapper">
+        <input type="radio" class="cds--radio-button" name="match" value="exact" {{ toggleSelected(match, "exact", True) }} id="radioexact"/>
+        <label for="radioexact" class="cds--radio-button__label"><span class="cds--radio-button__appearance"></span><span class="cds--radio-button__label-text"><abbr title="exact matches only" id="abbrexact">exact</abbr></span></label>
+      </div>
+    </fieldset>
+    <button type="submit" class="cds--btn cds--btn--primary">Search</button>
   </form>
 
 
 {% if varExists('results') %}
 
-  <table class="data-list">
-    <tr>
-      <td class="paginate" colspan="2">
-        {% if len(resultPages) > 1 %}
-        <form class="pageJump" action="">
-          Page:
-          <select onchange="javascript: window.location = 'search?start=' + this.value * {{ resultRange }} + '{{ passthrough('order', 'terms', 'type', 'match') }}';">
-            {% for pageNum in resultPages %}
-            <option value="{{ pageNum }}"{{ ' selected' if pageNum == resultCurrentPage else '' }}>{{ pageNum + 1 }}</option>
-            {% endfor %}
-          </select>
-        </form>
+  {% if totalResults %}
+  {{ pagination()|safe }}
+  {% endif %}
+
+  <div class="cds--data-table-container">
+    <table class="cds--data-table cds--data-table--zebra">
+      <thead>
+        <tr>
+          <th scope="col"><a href="search?order={{ toggleOrder('id') }}{{ passthrough('terms', 'type', 'match') }}">ID</a> {{ sortImage('id') }}</th>
+          <th scope="col"><a href="search?order={{ toggleOrder('name') }}{{ passthrough('terms', 'type', 'match') }}">Name</a> {{ sortImage('name') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if len(results) > 0 %}
+        {% for result in results %}
+        <tr>
+          <td>{{ result.id }}</td>
+          <td><a href="{{ infoURL % result }}">{{ result.name }}</a></td>
+        </tr>
+        {% endfor %}
+        {% else %}
+        <tr>
+          <td colspan="2">No search results</td>
+        </tr>
         {% endif %}
-        {% if resultStart > 0 %}
-        <a href="search?start={{ resultStart - resultRange }}{{ passthrough('order', 'terms', 'type', 'match') }}">&lt;&lt;&lt;</a>
-        {% endif %}
-        {% if totalResults != 0 %}
-        <strong>Results {{ resultStart + 1 }} through {{ resultStart + resultCount }} of {{ totalResults }}</strong>
-        {% endif %}
-        {% if resultStart + resultCount < totalResults %}
-        <a href="search?start={{ resultStart + resultRange }}{{ passthrough('order', 'terms', 'type', 'match') }}">&gt;&gt;&gt;</a>
-        {% endif %}
-      </td>
-    </tr>
-    <tr class="list-header">
-      <th><a href="search?order={{ toggleOrder('id') }}{{ passthrough('terms', 'type', 'match') }}">ID</a> {{ sortImage('id') }}</th>
-      <th><a href="search?order={{ toggleOrder('name') }}{{ passthrough('terms', 'type', 'match') }}">Name</a> {{ sortImage('name') }}</th>
-    </tr>
-    {% if len(results) > 0 %}
-    {% for result in results %}
-    <tr class="{{ rowToggle() }}">
-      <td>{{ result.id }}</td>
-      <td><a href="{{ infoURL % result }}">{{ result.name }}</a></td>
-    </tr>
-    {% endfor %}
-    {% else %}
-    <tr class="row-odd">
-      <td colspan="2">No search results</td>
-    </tr>
-    {% endif %}
-    <tr>
-      <td class="paginate" colspan="2">
-        {% if len(resultPages) > 1 %}
-        <form class="pageJump" action="">
-          Page:
-          <select onchange="javascript: window.location = 'search?start=' + this.value * {{ resultRange }} + '{{ passthrough('order', 'terms', 'type', 'match') }}';">
-            {% for pageNum in resultPages %}
-            <option value="{{ pageNum }}"{{ ' selected' if pageNum == resultCurrentPage else '' }}>{{ pageNum + 1 }}</option>
-            {% endfor %}
-          </select>
-        </form>
-        {% endif %}
-        {% if resultStart > 0 %}
-        <a href="search?start={{ resultStart - resultRange }}{{ passthrough('order', 'terms', 'type', 'match') }}">&lt;&lt;&lt;</a>
-        {% endif %}
-        {% if totalResults != 0 %}
-        <strong>Results {{ resultStart + 1 }} through {{ resultStart + resultCount }} of {{ totalResults }}</strong>
-        {% endif %}
-        {% if resultStart + resultCount < totalResults %}
-        <a href="search?start={{ resultStart + resultRange }}{{ passthrough('order', 'terms', 'type', 'match') }}">&gt;&gt;&gt;</a>
-        {% endif %}
-      </td>
-    </tr>
-  </table>
+      </tbody>
+    </table>
+  </div>
+
+  {% if totalResults %}
+  {{ pagination()|safe }}
+  {% endif %}
 {% endif %}
 
 {% endblock %}

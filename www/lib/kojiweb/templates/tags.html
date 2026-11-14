@@ -1,76 +1,72 @@
 {% extends "base.html" %}
 {% block content %}
 
-
-  <h4>Tags</h4>
-  <table class="data-list">
-    <tr>
-      <td class="paginate" colspan="2">
-        {% if len(tagPages) > 1 %}
-        <form class="pageJump" action="">
-          Page:
-          <select onchange="javascript: window.location = 'tags?start=' + this.value * {{ tagRange }} + '{{ passthrough('userID', 'tagID', 'order', 'childID') }}';">
+{% macro pagination() %}
+  <div class="cds--pagination">
+    <div class="cds--pagination__left">
+      {% if len(tagPages) > 1 %}
+      <div class="cds--select cds--select--inline">
+        <label class="cds--label" for="tagPage">Page</label>
+        <div class="cds--select-input__wrapper">
+          <select id="tagPage" class="cds--select-input" onchange="javascript: window.location = 'tags?start=' + this.value * {{ tagRange }} + '{{ passthrough('userID', 'tagID', 'order', 'childID') }}';">
             {% for pageNum in tagPages %}
             <option value="{{ pageNum }}"{{ ' selected' if pageNum == tagCurrentPage else '' }}>{{ pageNum + 1 }}</option>
             {% endfor %}
           </select>
-        </form>
-        {% endif %}
-        {% if tagStart > 0 %}
-        <a href="tags?start={{ tagStart - tagRange }}{{ passthrough('userID', 'tagID', 'order', 'childID') }}">&lt;&lt;&lt;</a>
-        {% endif %}
-        {% if totalTags != 0 %}
-        <strong>Tags {{ tagStart + 1 }} through {{ tagStart + tagCount }} of {{ totalTags }}</strong>
-        {% endif %}
-        {% if tagStart + tagCount < totalTags %}
-        <a href="tags?start={{ tagStart + tagRange }}{{ passthrough('userID', 'tagID', 'order', 'childID') }}">&gt;&gt;&gt;</a>
-        {% endif %}
-      </td>
-    </tr>
-    <tr class="list-header">
-      <th><a href="tags?order={{ toggleOrder('id') }}">ID</a> {{ sortImage('id') }}</th>
-      <th><a href="tags?order={{ toggleOrder('name') }}">Name</a> {{ sortImage('name') }}</th>
-    </tr>
-    {% if len(tags) > 0 %}
-      {% for tag in tags %}
-        <tr class="{{ rowToggle() }}">
+          <svg focusable="false" class="cds--select__arrow" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 22L6 12l1.4-1.4 8.6 8.6 8.6-8.6L26 12z"/></svg>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+    <div class="cds--pagination__right">
+      {% if totalTags != 0 %}
+      <span class="cds--pagination__items-count">Tags {{ tagStart + 1 }} through {{ tagStart + tagCount }} of {{ totalTags }}</span>
+      {% endif %}
+      {% if tagStart > 0 %}
+      <a class="cds--btn cds--btn--ghost cds--btn--sm" href="tags?start={{ tagStart - tagRange }}{{ passthrough('userID', 'tagID', 'order', 'childID') }}">Previous</a>
+      {% endif %}
+      {% if tagStart + tagCount < totalTags %}
+      <a class="cds--btn cds--btn--ghost cds--btn--sm" href="tags?start={{ tagStart + tagRange }}{{ passthrough('userID', 'tagID', 'order', 'childID') }}">Next</a>
+      {% endif %}
+    </div>
+  </div>
+{% endmacro %}
+
+  <h4>Tags</h4>
+
+  {{ pagination()|safe }}
+
+  <div class="cds--data-table-container">
+    <table class="cds--data-table cds--data-table--zebra">
+      <thead>
+        <tr>
+          <th scope="col"><a href="tags?order={{ toggleOrder('id') }}">ID</a> {{ sortImage('id') }}</th>
+          <th scope="col"><a href="tags?order={{ toggleOrder('name') }}">Name</a> {{ sortImage('name') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if len(tags) > 0 %}
+        {% for tag in tags %}
+        <tr>
           <td>{{ tag.id }}</td>
           <td><a href="taginfo?tagID={{ tag.id }}{{ passthrough('childID') }}">{{ tag.name }}</a></td>
         </tr>
-      {% endfor %}
-    {% else %}
-      <tr class="row-odd">
-        <td colspan="2">No tags</td>
-      </tr>
-    {% endif %}
-    <tr>
-      <td class="paginate" colspan="2">
-        {% if len(tagPages) > 1 %}
-        <form class="pageJump" action="">
-          Page:
-          <select onchange="javascript: window.location = 'tags?start=' + this.value * {{ tagRange }} + '{{ passthrough('userID', 'tagID', 'order', 'childID') }}';">
-            {% for pageNum in tagPages %}
-            <option value="{{ pageNum }}"{{ ' selected' if pageNum == tagCurrentPage else '' }}>{{ pageNum + 1 }}</option>
-            {% endfor %}
-          </select>
-        </form>
+        {% endfor %}
+        {% else %}
+        <tr>
+          <td colspan="2">No tags</td>
+        </tr>
         {% endif %}
-        {% if tagStart > 0 %}
-        <a href="tags?start={{ tagStart - tagRange }}{{ passthrough('userID', 'tagID', 'order', 'childID') }}">&lt;&lt;&lt;</a>
-        {% endif %}
-        {% if totalTags != 0 %}
-        <strong>Tags {{ tagStart + 1 }} through {{ tagStart + tagCount }} of {{ totalTags }}</strong>
-        {% endif %}
-        {% if tagStart + tagCount < totalTags %}
-        <a href="tags?start={{ tagStart + tagRange }}{{ passthrough('userID', 'tagID', 'order', 'childID') }}">&gt;&gt;&gt;</a>
-        {% endif %}
-      </td>
-    </tr>
-  </table>
+      </tbody>
+    </table>
+  </div>
+
+  {{ pagination()|safe }}
 
   {% if 'tag' in perms %}
-  <br/>
-  <a href="tagcreate{{ koji_authToken(first=True) }}">Create new Tag</a>
+  <div class="cds--btn-set">
+    <a class="cds--btn cds--btn--primary cds--btn--sm" href="tagcreate{{ koji_authToken(first=True) }}">Create new Tag</a>
+  </div>
   {% endif %}
 
 {% endblock %}

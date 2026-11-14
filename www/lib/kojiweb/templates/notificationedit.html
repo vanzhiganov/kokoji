@@ -8,49 +8,50 @@
   <h4>Create notification</h4>
   {% endif %}
 
-  <form action="{{ 'notificationedit' if notif else 'notificationcreate' }}">
+  <form action="{{ 'notificationedit' if notif else 'notificationcreate' }}" class="cds--form">
     {{ koji_authToken(form=True) }}
     {% if notif %}
     <input type="hidden" name="notificationID" value="{{ notif.id }}"/>
     {% endif %}
-    <table>
-      <tr>
-        <th>Package</th>
-        <td>
-          <select name="package">
-            <option value="all"{{ ' selected' if notif and not notif.package_id else '' }}>all</option>
-            {% for package in packages %}
-            <option value="{{ package.package_id }}"{{ ' selected' if notif and notif.package_id == package.package_id else '' }}>{{ package.package_name }}</option>
-            {% endfor %}
-          </select>
-        </td>
-      </tr>
-      <tr>
-        <th>Tag</th>
-        <td>
-          <select name="tag">
-            <option value="all"{{ ' selected' if notif and not notif.tag_id else '' }}>all</option>
-            {% for tag in tags %}
-            <option value="{{ tag.id }}"{{ ' selected' if notif and notif.tag_id == tag.id else '' }}>{{ tag.name }}</option>
-            {% endfor %}
-          </select>
-        </td>
-      </tr>
-      <tr>
-        <th>Success Only?</th>
-        <td><input type="checkbox" name="success_only" value="yes"{{ ' checked="checked"' if notif and notif.success_only else '' }}/></td>
-      </tr>
-      <tr>
-        <td>
-          {% if notif %}
-          <button type="submit" name="save" value="Save">Save</button>
-          {% else %}
-          <button type="submit" name="add" value="Add">Add</button>
-          {% endif %}
-        </td>
-        <td><button type="submit" name="cancel" value="Cancel">Cancel</button></td>
-      </tr>
-    </table>
+    <div class="cds--select cds--select--inline">
+      <label class="cds--label" for="package">Package</label>
+      <div class="cds--select-input__wrapper">
+        <select id="package" name="package" class="cds--select-input">
+          <option value="all"{{ ' selected' if notif and not notif.package_id else '' }}>all</option>
+          {% for package in packages %}
+          <option value="{{ package.package_id }}"{{ ' selected' if notif and notif.package_id == package.package_id else '' }}>{{ package.package_name }}</option>
+          {% endfor %}
+        </select>
+        <svg focusable="false" class="cds--select__arrow" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 22L6 12l1.4-1.4 8.6 8.6 8.6-8.6L26 12z"/></svg>
+      </div>
+    </div>
+    <div class="cds--select cds--select--inline">
+      <label class="cds--label" for="tag">Tag</label>
+      <div class="cds--select-input__wrapper">
+        <select id="tag" name="tag" class="cds--select-input">
+          <option value="all"{{ ' selected' if notif and not notif.tag_id else '' }}>all</option>
+          {% for tag in tags %}
+          <option value="{{ tag.id }}"{{ ' selected' if notif and notif.tag_id == tag.id else '' }}>{{ tag.name }}</option>
+          {% endfor %}
+        </select>
+        <svg focusable="false" class="cds--select__arrow" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 22L6 12l1.4-1.4 8.6 8.6 8.6-8.6L26 12z"/></svg>
+      </div>
+    </div>
+    <div class="cds--form-item cds--checkbox-wrapper">
+      <input type="checkbox" id="success_only" name="success_only" value="yes" class="cds--checkbox"{{ ' checked="checked"' if notif and notif.success_only else '' }}/>
+      <label class="cds--checkbox-label" for="success_only">
+        <span class="cds--checkbox-label-text">Success Only?</span>
+      </label>
+    </div>
+
+    <div class="cds--btn-set">
+      {% if notif %}
+      <button type="submit" name="save" value="Save" class="cds--btn cds--btn--primary">Save</button>
+      {% else %}
+      <button type="submit" name="add" value="Add" class="cds--btn cds--btn--primary">Add</button>
+      {% endif %}
+      <button type="submit" name="cancel" value="Cancel" class="cds--btn cds--btn--secondary">Cancel</button>
+    </div>
   </form>
 
 {% endblock %}

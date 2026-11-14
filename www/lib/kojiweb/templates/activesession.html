@@ -3,26 +3,32 @@
 {% block content %}
 
 <h4>Active sessions for {{ loggedInUser.name }} user</h4>
-<br>
-  <table class="data-list">
-     <tr class="list-header">
-      <th><a href="activesession?order={{ toggleOrder('id') }}{{ passthrough_except('order') }}">Session ID</a> {{ sortImage('id') }}</th>
-      <th><a href="activesession?order={{ toggleOrder('hostip') }}{{ passthrough_except('order') }}">Client IP</a> {{ sortImage('hostip') }}</th>
-      <th><a href="activesession?order={{ toggleOrder('authtype') }}{{ passthrough_except('order') }}">Auth type</a> {{ sortImage('authtype') }}</th>
-      <th><a href="activesession?order={{ toggleOrder('start_time') }}{{ passthrough_except('order') }}">Session start time</a> {{ sortImage('start_time') }}</th>
-      <th><a href="activesession?order={{ toggleOrder('start_time') }}{{ passthrough_except('order') }}">Length session</a> {{ sortImage('start_time') }}</th>
-      <th><a href="activesession?order={{ toggleOrder('id') }}{{ passthrough_except('order') }}">Logout?</a> {{ sortImage('id') }}</th>
-   </tr>
-    {% for act in activesess %}
-    <tr class="{{ rowToggle() }}">
-      <td>{{ act.id }}</td>
-      <td>{{ act.hostip }}</td>
-      <td>{{ act.authtype }}</td>
-      <td>{{ util.formatTimeLong(act.start_time) }}</td>
-      <td>{{ act.lengthSession }} days</td>
-      <td><a href="activesessiondelete?sessionID={{ act.id }}{{ koji_authToken() }}">Logout</a></td>
-    </tr>
-    {% endfor %}
+
+<div class="cds--data-table-container">
+  <table class="cds--data-table cds--data-table--zebra">
+    <thead>
+      <tr>
+        <th scope="col"><a href="activesession?order={{ toggleOrder('id') }}{{ passthrough_except('order') }}">Session ID</a> {{ sortImage('id') }}</th>
+        <th scope="col"><a href="activesession?order={{ toggleOrder('hostip') }}{{ passthrough_except('order') }}">Client IP</a> {{ sortImage('hostip') }}</th>
+        <th scope="col"><a href="activesession?order={{ toggleOrder('authtype') }}{{ passthrough_except('order') }}">Auth type</a> {{ sortImage('authtype') }}</th>
+        <th scope="col"><a href="activesession?order={{ toggleOrder('start_time') }}{{ passthrough_except('order') }}">Session start time</a> {{ sortImage('start_time') }}</th>
+        <th scope="col"><a href="activesession?order={{ toggleOrder('start_time') }}{{ passthrough_except('order') }}">Length session</a> {{ sortImage('start_time') }}</th>
+        <th scope="col"><a href="activesession?order={{ toggleOrder('id') }}{{ passthrough_except('order') }}">Logout?</a> {{ sortImage('id') }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for act in activesess %}
+      <tr>
+        <td>{{ act.id }}</td>
+        <td>{{ act.hostip }}</td>
+        <td>{{ act.authtype }}</td>
+        <td>{{ util.formatTimeLong(act.start_time) }}</td>
+        <td>{{ act.lengthSession }} days</td>
+        <td><a class="cds--btn cds--btn--ghost cds--btn--sm" href="activesessiondelete?sessionID={{ act.id }}{{ koji_authToken() }}">Logout</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
   </table>
+</div>
 
 {% endblock %}

@@ -4,57 +4,70 @@
 
   <h4>Information for channel <a href="channelinfo?channelID={{ channel.id }}">{{ channel.name }}</a></h4>
 
-  <table>
-    <tr>
-      <th>Name</th><td>{{ channel.name }}</td>
-    </tr>
-    <tr>
-      <th>ID</th><td>{{ channel.id }}</td>
-    </tr>
-    <tr>
-      <th>Description</th><td>{{ channel.description }}</td>
-    </tr>
-    <tr>
+  <div class="cds--structured-list">
+    <div class="cds--structured-list-tbody">
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Name</div>
+        <div class="cds--structured-list-td">{{ channel.name }}</div>
+      </div>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">ID</div>
+        <div class="cds--structured-list-td">{{ channel.id }}</div>
+      </div>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Description</div>
+        <div class="cds--structured-list-td">{{ channel.description }}</div>
+      </div>
       {% set enabled = channel.enabled and 'yes' or 'no' %}
-      <th>Enabled?</th>
-      <td class="{{ enabled }}">
-        {{ util.imageTag(enabled) }}
-      </td>
-    </tr>
-    <tr>
-      <th>Comment</th><td>{{ channel.comment }}</td>
-    </tr>
-    <tr>
-      <th>Active Tasks</th><td><a href="tasks?view=flat&channelID={{ channel.id }}">{{ taskCount }}</a></td>
-    </tr>
-    <tr>
-      <th>Hosts</th>
-      <td>
-      {% if len(hosts) > 0 %}
-      <table class="data-list">
-        <tr class="list-header">
-          <th>Hostname</th>
-          <th>Enabled</th>
-          <th>Ready</th>
-        </tr>
-      {% for host in hosts %}
-        <tr class="{{ rowToggle() }}">
-          <td><a href="hostinfo?hostID={{ host.id }}">{{ host.name }}</a></td>
-          <td class="{{ str(bool(host.enabled)).lower() }}">{{ util.imageTag('yes') if host.enabled else util.imageTag('no') }}</td>
-          <td class="{{ str(bool(host.ready)).lower() }}">{{ util.imageTag('yes') if host.ready else util.imageTag('no') }}</td>
-        </tr>
-      {% endfor %}
-        <tr>
-          <th>Total</th>
-          <td>{{ enabled_hosts }}</td>
-          <td>{{ ready_hosts }}</td>
-        </tr>
-      </table>
-      {% else %}
-      No hosts
-      {% endif %}
-      </td>
-    </tr>
-  </table>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Enabled?</div>
+        <div class="cds--structured-list-td {{ enabled }}">
+          {{ util.imageTag(enabled) }}
+        </div>
+      </div>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Comment</div>
+        <div class="cds--structured-list-td">{{ channel.comment }}</div>
+      </div>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Active Tasks</div>
+        <div class="cds--structured-list-td"><a href="tasks?view=flat&channelID={{ channel.id }}">{{ taskCount }}</a></div>
+      </div>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Hosts</div>
+        <div class="cds--structured-list-td">
+          {% if len(hosts) > 0 %}
+          <div class="cds--data-table-container">
+            <table class="cds--data-table cds--data-table--zebra">
+              <thead>
+                <tr>
+                  <th scope="col">Hostname</th>
+                  <th scope="col">Enabled</th>
+                  <th scope="col">Ready</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for host in hosts %}
+                <tr>
+                  <td><a href="hostinfo?hostID={{ host.id }}">{{ host.name }}</a></td>
+                  <td class="{{ str(bool(host.enabled)).lower() }}">{{ util.imageTag('yes') if host.enabled else util.imageTag('no') }}</td>
+                  <td class="{{ str(bool(host.ready)).lower() }}">{{ util.imageTag('yes') if host.ready else util.imageTag('no') }}</td>
+                </tr>
+                {% endfor %}
+                <tr>
+                  <th scope="row">Total</th>
+                  <td>{{ enabled_hosts }}</td>
+                  <td>{{ ready_hosts }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+          No hosts
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
 
 {% endblock %}

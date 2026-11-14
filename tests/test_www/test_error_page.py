@@ -53,14 +53,14 @@ class TestTracebackNotRendered(ErrorTemplateTestCase):
         for level in (0, 1, 2):
             out = self.render(level, '')
             self.assertNotIn(TRACEBACK, out)
-            self.assertNotIn('<pre>', out)
+            self.assertNotIn('<pre', out)
 
     def test_present_when_tb_long_has_content(self):
         # this is the PythonDebug case -- opt in and you get the traceback
         for level in (0, 1, 2):
             out = self.render(level, TRACEBACK)
             self.assertIn(TRACEBACK, out)
-            self.assertIn('<pre>', out)
+            self.assertIn('<pre', out)
 
     def test_no_css_hiding(self):
         # nothing should be hidden-but-present anywhere in the output

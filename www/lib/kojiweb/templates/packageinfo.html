@@ -4,124 +4,133 @@
 
   <h4>Information for package <a href="packageinfo?packageID={{ package.id }}">{{ package.name }}</a></h4>
 
-  <table>
-    <tr>
-      <th>Name</th><td>{{ package.name }}</td>
-    </tr>
-    <tr>
-      <th>ID</th><td>{{ package.id }}</td>
-    </tr>
-    
-    <tr>
-      <th id="buildlist">Builds</th>
-      <td class="container">
-        {% if len(builds) > 0 %}
-        <table class="nested data-list">
-          <tr>
-            <td class="paginate" colspan="4">
+  <div class="cds--structured-list">
+    <div class="cds--structured-list-tbody">
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Name</div>
+        <div class="cds--structured-list-td">{{ package.name }}</div>
+      </div>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">ID</div>
+        <div class="cds--structured-list-td">{{ package.id }}</div>
+      </div>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td" id="buildlist">Builds</div>
+        <div class="cds--structured-list-td">
+          {% if len(builds) > 0 %}
+          <div class="cds--data-table-container">
+            <table class="cds--data-table cds--data-table--zebra">
+              <thead>
+                <tr>
+                  <th scope="col"><a href="packageinfo?buildOrder={{ toggleOrder('nvr', 'buildOrder') }}{{ passthrough('packageID', 'tagOrder', 'tagStart') }}#buildlist">NVR</a> {{ sortImage('nvr', 'buildOrder') }}</th>
+                  <th scope="col"><a href="packageinfo?buildOrder={{ toggleOrder('owner_name', 'buildOrder') }}{{ passthrough('packageID', 'tagOrder', 'tagStart') }}#buildlist">Built by</a> {{ sortImage('owner_name', 'buildOrder') }}</th>
+                  <th scope="col"><a href="packageinfo?buildOrder={{ toggleOrder('completion_time', 'buildOrder') }}{{ passthrough('packageID', 'tagOrder', 'tagStart') }}#buildlist">Finished</a> {{ sortImage('completion_time', 'buildOrder') }}</th>
+                  <th scope="col"><a href="packageinfo?buildOrder={{ toggleOrder('state', 'buildOrder') }}{{ passthrough('packageID', 'tagOrder', 'tagStart') }}#buildlist">State</a> {{ sortImage('state', 'buildOrder') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for build in builds %}
+                <tr>
+                  <td><a href="buildinfo?buildID={{ build.build_id }}">{{ build.nvr }}</a></td>
+                  <td class="user-{{ build.owner_name }}"><a href="userinfo?userID={{ build.owner_id }}">{{ build.owner_name }}</a></td>
+                  <td>{{ util.formatTime(build.completion_ts) }}</td>
+                  {% set stateName = util.stateName(build.state) %}
+                  <td class="{{ stateName }}">{{ util.stateImage(build.state) }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          <div class="cds--pagination">
+            <div class="cds--pagination__left">
               {% if len(buildPages) > 1 %}
-              <form class="pageJump" action="">
-                Page:
-                <select onchange="javascript: window.location = 'packageinfo?buildStart=' + this.value * {{ buildRange }} + '{{ passthrough('packageID', 'buildOrder', 'tagOrder', 'tagStart') }}#buildlist';">
-                  {% for pageNum in buildPages %}
-                  <option value="{{ pageNum }}"{{ ' selected' if pageNum == buildCurrentPage else '' }}>{{ pageNum + 1 }}</option>
-                  {% endfor %}
-                </select>
-              </form>
+              <div class="cds--select cds--select--inline">
+                <label class="cds--label" for="buildPage">Page</label>
+                <div class="cds--select-input__wrapper">
+                  <select id="buildPage" class="cds--select-input" onchange="javascript: window.location = 'packageinfo?buildStart=' + this.value * {{ buildRange }} + '{{ passthrough('packageID', 'buildOrder', 'tagOrder', 'tagStart') }}#buildlist';">
+                    {% for pageNum in buildPages %}
+                    <option value="{{ pageNum }}"{{ ' selected' if pageNum == buildCurrentPage else '' }}>{{ pageNum + 1 }}</option>
+                    {% endfor %}
+                  </select>
+                  <svg focusable="false" class="cds--select__arrow" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 22L6 12l1.4-1.4 8.6 8.6 8.6-8.6L26 12z"/></svg>
+                </div>
+              </div>
               {% endif %}
+            </div>
+            <div class="cds--pagination__right">
+              <span class="cds--pagination__items-count">{{ buildStart + 1 }}&ndash;{{ buildStart + buildCount }} of {{ totalBuilds }}</span>
               {% if buildStart > 0 %}
-              <a href="packageinfo?buildStart={{ buildStart - buildRange }}{{ passthrough('packageID', 'buildOrder', 'tagOrder', 'tagStart') }}#buildlist">&lt;&lt;&lt;</a>
+              <a class="cds--btn cds--btn--ghost cds--btn--sm" href="packageinfo?buildStart={{ buildStart - buildRange }}{{ passthrough('packageID', 'buildOrder', 'tagOrder', 'tagStart') }}#buildlist">Previous</a>
               {% endif %}
-              <strong>{{ buildStart + 1 }} through {{ buildStart + buildCount }} of {{ totalBuilds }}</strong>
               {% if buildStart + buildCount < totalBuilds %}
-              <a href="packageinfo?buildStart={{ buildStart + buildRange }}{{ passthrough('packageID', 'buildOrder', 'tagOrder', 'tagStart') }}#buildlist">&gt;&gt;&gt;</a>
+              <a class="cds--btn cds--btn--ghost cds--btn--sm" href="packageinfo?buildStart={{ buildStart + buildRange }}{{ passthrough('packageID', 'buildOrder', 'tagOrder', 'tagStart') }}#buildlist">Next</a>
               {% endif %}
-            </td>
-          </tr>
-          <tr class="list-header">
-            <th><a href="packageinfo?buildOrder={{ toggleOrder('nvr', 'buildOrder') }}{{ passthrough('packageID', 'tagOrder', 'tagStart') }}#buildlist">NVR</a> {{ sortImage('nvr', 'buildOrder') }}</th>
-            <th><a href="packageinfo?buildOrder={{ toggleOrder('owner_name', 'buildOrder') }}{{ passthrough('packageID', 'tagOrder', 'tagStart') }}#buildlist">Built by</a> {{ sortImage('owner_name', 'buildOrder') }}</th>
-            <th><a href="packageinfo?buildOrder={{ toggleOrder('completion_time', 'buildOrder') }}{{ passthrough('packageID', 'tagOrder', 'tagStart') }}#buildlist">Finished</a> {{ sortImage('completion_time', 'buildOrder') }}</th>
-            <th><a href="packageinfo?buildOrder={{ toggleOrder('state', 'buildOrder') }}{{ passthrough('packageID', 'tagOrder', 'tagStart') }}#buildlist">State</a> {{ sortImage('state', 'buildOrder') }}</th>
-          </tr>
-          {% for build in builds %}
-          <tr class="{{ rowToggle() }}">
-            <td><a href="buildinfo?buildID={{ build.build_id }}">{{ build.nvr }}</a></td>
-            <td class="user-{{ build.owner_name }}"><a href="userinfo?userID={{ build.owner_id }}">{{ build.owner_name }}</a></td>
-            <td>{{ util.formatTime(build.completion_ts) }}</td>
-            {% set stateName = util.stateName(build.state) %}
-            <td class="{{ stateName }}">{{ util.stateImage(build.state) }}</td>
-          </tr>
-          {% endfor %}
-        </table>
-        {% if buildStart > 0 %}
-        <a href="packageinfo?buildStart={{ buildStart - buildRange }}{{ passthrough('packageID', 'buildOrder', 'tagOrder', 'tagStart') }}#buildlist">&lt;&lt;&lt;</a>
-        {% endif %}
-        <strong>Builds {{ buildStart + 1 }} through {{ buildStart + buildCount }} of {{ totalBuilds }}</strong>
-        {% if buildStart + buildCount < totalBuilds %}
-        <a href="packageinfo?buildStart={{ buildStart + buildRange }}{{ passthrough('packageID', 'buildOrder', 'tagOrder', 'tagStart') }}#buildlist">&gt;&gt;&gt;</a>
-        {% endif %}
-        {% else %}
-        No builds
-        {% endif %}
-      </td>
-    </tr>
-    
-    <tr>
-      <th id="taglist">Tags</th>
-      <td class="container">
-        {% if len(tags) > 0 %}
-        <table class="nested data-list">
-          <tr>
-            <td class="paginate" colspan="4">
+            </div>
+          </div>
+          {% else %}
+          No builds
+          {% endif %}
+        </div>
+      </div>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td" id="taglist">Tags</div>
+        <div class="cds--structured-list-td">
+          {% if len(tags) > 0 %}
+          <div class="cds--data-table-container">
+            <table class="cds--data-table cds--data-table--zebra">
+              <thead>
+                <tr>
+                  <th scope="col"><a href="packageinfo?tagOrder={{ toggleOrder('name', 'tagOrder') }}{{ passthrough('packageID', 'buildOrder', 'buildStart') }}#taglist">Name</a> {{ sortImage('name', 'tagOrder') }}</th>
+                  <th scope="col"><a href="packageinfo?tagOrder={{ toggleOrder('owner_name', 'tagOrder') }}{{ passthrough('packageID', 'buildOrder', 'buildStart') }}#taglist">Owner</a> {{ sortImage('owner_name', 'tagOrder') }}</th>
+                  <th scope="col"><a href="packageinfo?tagOrder={{ toggleOrder('blocked', 'tagOrder') }}{{ passthrough('packageID', 'buildOrder', 'buildStart') }}#taglist">Included?</a> {{ sortImage('blocked', 'tagOrder') }}</th>
+                  <th scope="col"><a href="packageinfo?tagOrder={{ toggleOrder('extra_arches', 'tagOrder') }}{{ passthrough('packageID', 'buildOrder', 'buildStart') }}#taglist">Extra Arches</a> {{ sortImage('extra_arches', 'tagOrder') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for tag in tags %}
+                <tr>
+                  <td><a href="taginfo?tagID={{ tag.id }}">{{ tag.name }}</a></td>
+                  <td><a href="userinfo?userID={{ tag.owner_id }}">{{ tag.owner_name }}</a></td>
+                  {% set included = tag.blocked and 'no' or 'yes' %}
+                  <td>{{ util.imageTag(included) }}</td>
+                  <td>{{ tag.extra_arches }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          <div class="cds--pagination">
+            <div class="cds--pagination__left">
               {% if len(tagPages) > 1 %}
-              <form class="pageJump" action="">
-                Page:
-                <select onchange="javascript: window.location = 'packageinfo?tagStart=' + this.value * {{ tagRange }} + '{{ passthrough('packageID', 'tagOrder', 'buildOrder', 'buildStart') }}#taglist';">
-                  {% for pageNum in tagPages %}
-                  <option value="{{ pageNum }}"{{ ' selected' if pageNum == tagCurrentPage else '' }}>{{ pageNum + 1 }}</option>
-                  {% endfor %}
-                </select>
-              </form>
+              <div class="cds--select cds--select--inline">
+                <label class="cds--label" for="tagPage">Page</label>
+                <div class="cds--select-input__wrapper">
+                  <select id="tagPage" class="cds--select-input" onchange="javascript: window.location = 'packageinfo?tagStart=' + this.value * {{ tagRange }} + '{{ passthrough('packageID', 'tagOrder', 'buildOrder', 'buildStart') }}#taglist';">
+                    {% for pageNum in tagPages %}
+                    <option value="{{ pageNum }}"{{ ' selected' if pageNum == tagCurrentPage else '' }}>{{ pageNum + 1 }}</option>
+                    {% endfor %}
+                  </select>
+                  <svg focusable="false" class="cds--select__arrow" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 22L6 12l1.4-1.4 8.6 8.6 8.6-8.6L26 12z"/></svg>
+                </div>
+              </div>
               {% endif %}
+            </div>
+            <div class="cds--pagination__right">
+              <span class="cds--pagination__items-count">{{ tagStart + 1 }}&ndash;{{ tagStart + tagCount }} of {{ totalTags }}</span>
               {% if tagStart > 0 %}
-              <a href="packageinfo?tagStart={{ tagStart - tagRange }}{{ passthrough('packageID', 'tagOrder', 'buildOrder', 'buildStart') }}#taglist">&lt;&lt;&lt;</a>
+              <a class="cds--btn cds--btn--ghost cds--btn--sm" href="packageinfo?tagStart={{ tagStart - tagRange }}{{ passthrough('packageID', 'tagOrder', 'buildOrder', 'buildStart') }}#taglist">Previous</a>
               {% endif %}
-              <strong>{{ tagStart + 1 }} through {{ tagStart + tagCount }} of {{ totalTags }}</strong>
               {% if tagStart + tagCount < totalTags %}
-              <a href="packageinfo?tagStart={{ tagStart + tagRange }}{{ passthrough('packageID', 'tagOrder', 'buildOrder', 'buildStart') }}#taglist">&gt;&gt;&gt;</a>
+              <a class="cds--btn cds--btn--ghost cds--btn--sm" href="packageinfo?tagStart={{ tagStart + tagRange }}{{ passthrough('packageID', 'tagOrder', 'buildOrder', 'buildStart') }}#taglist">Next</a>
               {% endif %}
-            </td>
-          </tr>
-          <tr class="list-header">
-            <th><a href="packageinfo?tagOrder={{ toggleOrder('name', 'tagOrder') }}{{ passthrough('packageID', 'buildOrder', 'buildStart') }}#taglist">Name</a> {{ sortImage('name', 'tagOrder') }}</th>
-            <th><a href="packageinfo?tagOrder={{ toggleOrder('owner_name', 'tagOrder') }}{{ passthrough('packageID', 'buildOrder', 'buildStart') }}#taglist">Owner</a> {{ sortImage('owner_name', 'tagOrder') }}</th>
-            <th><a href="packageinfo?tagOrder={{ toggleOrder('blocked', 'tagOrder') }}{{ passthrough('packageID', 'buildOrder', 'buildStart') }}#taglist">Included?</a> {{ sortImage('blocked', 'tagOrder') }}</th>
-            <th><a href="packageinfo?tagOrder={{ toggleOrder('extra_arches', 'tagOrder') }}{{ passthrough('packageID', 'buildOrder', 'buildStart') }}#taglist">Extra Arches</a> {{ sortImage('extra_arches', 'tagOrder') }}</th>
-          </tr>
-          {% for tag in tags %}
-          <tr class="{{ rowToggle() }}">
-            <td><a href="taginfo?tagID={{ tag.id }}">{{ tag.name }}</a></td>
-            <td><a href="userinfo?userID={{ tag.owner_id }}">{{ tag.owner_name }}</a></td>
-            {% set included = tag.blocked and 'no' or 'yes' %}
-            <td>{{ util.imageTag(included) }}</td>
-            <td>{{ tag.extra_arches }}</td>
-          </tr>
-          {% endfor %}
-        </table>
-        {% if tagStart > 0 %}
-        <a href="packageinfo?tagStart={{ tagStart - tagRange }}{{ passthrough('packageID', 'tagOrder', 'buildOrder', 'buildStart') }}#taglist">&lt;&lt;&lt;</a>
-        {% endif %}
-        <strong>Tags {{ tagStart + 1 }} through {{ tagStart + tagCount }} of {{ totalTags }}</strong>
-        {% if tagStart + tagCount < totalTags %}
-        <a href="packageinfo?tagStart={{ tagStart + tagRange }}{{ passthrough('packageID', 'tagOrder', 'buildOrder', 'buildStart') }}#taglist">&gt;&gt;&gt;</a>
-        {% endif %}
-        {% else %}
-        No tags
-        {% endif %}
-      </td>
-    </tr>
-    
-  </table>
+            </div>
+          </div>
+          {% else %}
+          No tags
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
 
 {% endblock %}

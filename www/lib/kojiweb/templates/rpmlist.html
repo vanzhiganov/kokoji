@@ -20,6 +20,37 @@ colspan="2"
   {% endif %}
 {% endmacro %}
 
+{% macro pagination() %}
+  <div class="cds--pagination">
+    <div class="cds--pagination__left">
+      {% if len(rpmPages) > 1 %}
+      <div class="cds--select cds--select--inline">
+        <label class="cds--label" for="rpmPage">Page</label>
+        <div class="cds--select-input__wrapper">
+          <select id="rpmPage" class="cds--select-input" onchange="javascript: window.location = 'rpmlist?{{ getID()|safe }}&start=' + this.value * {{ rpmRange }} + '{{ passthrough('order', 'type') }}';">
+            {% for pageNum in rpmPages %}
+            <option value="{{ pageNum }}"{{ ' selected' if pageNum == rpmCurrentPage else '' }}>{{ pageNum + 1 }}</option>
+            {% endfor %}
+          </select>
+          <svg focusable="false" class="cds--select__arrow" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 22L6 12l1.4-1.4 8.6 8.6 8.6-8.6L26 12z"/></svg>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+    <div class="cds--pagination__right">
+      {% if totalRpms != 0 %}
+      <span class="cds--pagination__items-count">RPMs {{ rpmStart + 1 }} through {{ rpmStart + rpmCount }} of {{ totalRpms }}</span>
+      {% endif %}
+      {% if rpmStart > 0 %}
+      <a class="cds--btn cds--btn--ghost cds--btn--sm" href="rpmlist?{{ getID()|safe }}&start={{ rpmStart - rpmRange }}{{ passthrough('order', 'type') }}">Previous</a>
+      {% endif %}
+      {% if rpmStart + rpmCount < totalRpms %}
+      <a class="cds--btn cds--btn--ghost cds--btn--sm" href="rpmlist?{{ getID()|safe }}&start={{ rpmStart + rpmRange }}{{ passthrough('order', 'type') }}">Next</a>
+      {% endif %}
+    </div>
+  </div>
+{% endmacro %}
+
   {% if type == 'component' %}
   <h4>Component RPMs of buildroot <a href="buildrootinfo?buildrootID={{ buildroot.id }}">{{ util.brLabel(buildroot) }}</a></h4>
   {% elif type == 'image' %}
@@ -28,85 +59,53 @@ colspan="2"
   <h4>RPMs built in buildroot <a href="buildrootinfo?buildrootID={{ buildroot.id }}">{{ util.brLabel(buildroot) }}</a></h4>
   {% endif %}
 
-  <table class="data-list">
-    <tr>
-      <td class="paginate" {{ getColspan()|safe }}>
-        {% if len(rpmPages) > 1 %}
-        <form class="pageJump" action="">
-          Page:
-          <select onchange="javascript: window.location = 'rpmlist?{{ getID()|safe }}&start=' + this.value * {{ rpmRange }} + '{{ passthrough('order', 'type') }}';">
-            {% for pageNum in rpmPages %}
-            <option value="{{ pageNum }}"{{ ' selected' if pageNum == rpmCurrentPage else '' }}>{{ pageNum + 1 }}</option>
-            {% endfor %}
-          </select>
-        </form>
+  {% if totalRpms %}
+  {{ pagination()|safe }}
+  {% endif %}
+
+  <div class="cds--data-table-container">
+    <table class="cds--data-table cds--data-table--zebra">
+      <thead>
+        <tr>
+          <th scope="col"><a href="rpmlist?{{ getID()|safe }}&order={{ toggleOrder('nvr') }}{{ passthrough('type') }}">NVR</a> {{ sortImage('nvr') }}</th>
+          {% if type in ['component', 'image'] %}
+          <th scope="col"><a href="rpmlist?{{ getID()|safe }}&order={{ toggleOrder('external_repo_name') }}{{ passthrough('type') }}">Origin</a> {{ sortImage('external_repo_name') }}</th>
+          {% endif %}
+          {% if type == 'component' %}
+          <th scope="col"><a href="rpmlist?{{ getID()|safe }}&order={{ toggleOrder('is_update') }}{{ passthrough('type') }}">Update?</a> {{ sortImage('is_update') }}</th>
+          {% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% if len(rpms) > 0 %}
+        {% for rpm in rpms %}
+        <tr>
+          {% set epoch = (rpm.epoch != None and str(rpm.epoch) + ':' or '') %}
+          <td>{{ util.formatRPM(rpm) }}</td>
+          {% if type in ['component', 'image'] %}
+          {% if rpm.external_repo_id == 0 %}
+          <td>internal</td>
+          {% else %}
+          <td><a href="externalrepoinfo?extrepoID={{ rpm.external_repo_id }}">{{ rpm.external_repo_name }}</a></td>
+          {% endif %}
+          {% endif %}
+          {% if type == 'component' %}
+          {% set update = rpm.is_update and 'yes' or 'no' %}
+          <td class="{{ update }}">{{ util.imageTag(update) }}</td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+        {% else %}
+        <tr>
+          <td {{ getColspan()|safe }}>No RPMs</td>
+        </tr>
         {% endif %}
-        {% if rpmStart > 0 %}
-        <a href="rpmlist?{{ getID()|safe }}&start={{ rpmStart - rpmRange }}{{ passthrough('order', 'type') }}">&lt;&lt;&lt;</a>
-        {% endif %}
-        {% if totalRpms != 0 %}
-        <strong>RPMs {{ rpmStart + 1 }} through {{ rpmStart + rpmCount }} of {{ totalRpms }}</strong>
-        {% endif %}
-        {% if rpmStart + rpmCount < totalRpms %}
-        <a href="rpmlist?{{ getID()|safe }}&start={{ rpmStart + rpmRange }}{{ passthrough('order', 'type') }}">&gt;&gt;&gt;</a>
-        {% endif %}
-      </td>
-    </tr>
-    <tr class="list-header">
-      <th><a href="rpmlist?{{ getID()|safe }}&order={{ toggleOrder('nvr') }}{{ passthrough('type') }}">NVR</a> {{ sortImage('nvr') }}</th>
-      {% if type in ['component', 'image'] %}
-      <th><a href="rpmlist?{{ getID()|safe }}&order={{ toggleOrder('external_repo_name') }}{{ passthrough('type') }}">Origin</a> {{ sortImage('external_repo_name') }}</th>
-      {% endif %}
-      {% if type == 'component' %}
-      <th><a href="rpmlist?{{ getID()|safe }}&order={{ toggleOrder('is_update') }}{{ passthrough('type') }}">Update?</a> {{ sortImage('is_update') }}</th>
-      {% endif %}
-    </tr>
-    {% if len(rpms) > 0 %}
-    {% for rpm in rpms %}
-    <tr class="{{ rowToggle() }}">
-      {% set epoch = (rpm.epoch != None and str(rpm.epoch) + ':' or '') %}
-      <td>{{ util.formatRPM(rpm) }}</td>
-      {% if type in ['component', 'image'] %}
-      {% if rpm.external_repo_id == 0 %}
-      <td>internal</td>
-      {% else %}
-      <td><a href="externalrepoinfo?extrepoID={{ rpm.external_repo_id }}">{{ rpm.external_repo_name }}</a></td>
-      {% endif %}
-      {% endif %}
-      {% if type == 'component' %}
-      {% set update = rpm.is_update and 'yes' or 'no' %}
-      <td class="{{ update }}">{{ util.imageTag(update) }}</td>
-      {% endif %}
-    </tr>
-    {% endfor %}
-    {% else %}
-    <tr class="row-odd">
-      <td {{ getColspan()|safe }}>No RPMs</td>
-    </tr>
-    {% endif %}
-    <tr>
-      <td class="paginate" {{ getColspan()|safe }}>
-        {% if len(rpmPages) > 1 %}
-        <form class="pageJump" action="">
-          Page:
-          <select onchange="javascript: window.location = 'rpmlist?{{ getID()|safe }}&start=' + this.value * {{ rpmRange }} + '{{ passthrough('order', 'type') }}';">
-            {% for pageNum in rpmPages %}
-            <option value="{{ pageNum }}"{{ ' selected' if pageNum == rpmCurrentPage else '' }}>{{ pageNum + 1 }}</option>
-            {% endfor %}
-          </select>
-        </form>
-        {% endif %}
-        {% if rpmStart > 0 %}
-        <a href="rpmlist?{{ getID()|safe }}&start={{ rpmStart - rpmRange }}{{ passthrough('order', 'type') }}">&lt;&lt;&lt;</a>
-        {% endif %}
-        {% if totalRpms != 0 %}
-        <strong>RPMs {{ rpmStart + 1 }} through {{ rpmStart + rpmCount }} of {{ totalRpms }}</strong>
-        {% endif %}
-        {% if rpmStart + rpmCount < totalRpms %}
-        <a href="rpmlist?{{ getID()|safe }}&start={{ rpmStart + rpmRange }}{{ passthrough('order', 'type') }}">&gt;&gt;&gt;</a>
-        {% endif %}
-      </td>
-    </tr>
-  </table>
+      </tbody>
+    </table>
+  </div>
+
+  {% if totalRpms %}
+  {{ pagination()|safe }}
+  {% endif %}
 
 {% endblock %}

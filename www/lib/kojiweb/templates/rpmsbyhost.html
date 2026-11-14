@@ -1,105 +1,101 @@
 {% extends "base.html" %}
 {% block content %}
 
+{% macro pagination() %}
+  <div class="cds--pagination">
+    <div class="cds--pagination__left">
+      {% if len(hostPages) > 1 %}
+      <div class="cds--select cds--select--inline">
+        <label class="cds--label" for="hostPage">Page</label>
+        <div class="cds--select-input__wrapper">
+          <select id="hostPage" class="cds--select-input" onchange="javascript: window.location = 'rpmsbyhost?start=' + this.value * {{ hostRange }} + '{{ passthrough('order', 'hostArch', 'rpmArch') }}';">
+            {% for pageNum in hostPages %}
+            <option value="{{ pageNum }}"{{ ' selected' if pageNum == hostCurrentPage else '' }}>{{ pageNum + 1 }}</option>
+            {% endfor %}
+          </select>
+          <svg focusable="false" class="cds--select__arrow" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 22L6 12l1.4-1.4 8.6 8.6 8.6-8.6L26 12z"/></svg>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+    <div class="cds--pagination__right">
+      {% if totalHosts != 0 %}
+      <span class="cds--pagination__items-count">Hosts {{ hostStart + 1 }} through {{ hostStart + hostCount }} of {{ totalHosts }}</span>
+      {% endif %}
+      {% if hostStart > 0 %}
+      <a class="cds--btn cds--btn--ghost cds--btn--sm" href="rpmsbyhost?start={{ hostStart - hostRange }}{{ passthrough('order', 'hostArch', 'rpmArch') }}">Previous</a>
+      {% endif %}
+      {% if hostStart + hostCount < totalHosts %}
+      <a class="cds--btn cds--btn--ghost cds--btn--sm" href="rpmsbyhost?start={{ hostStart + hostRange }}{{ passthrough('order', 'hostArch', 'rpmArch') }}">Next</a>
+      {% endif %}
+    </div>
+  </div>
+{% endmacro %}
 
   <h4>{{ rpmArch + ' ' if rpmArch else '' }}RPMs by Host{{ ' (%s)' % hostArch if hostArch else '' }}</h4>
-  <table class="data-list">
-    <tr>
-      <td class="archlist" colspan="3">
-        <strong>Host arch:</strong> {% for arch in hostArchList %}
-        {% if arch == hostArch %}
-        <strong>{{ arch }}</strong> |
-        {% else %}
-        <a href="rpmsbyhost?hostArch={{ arch }}{{ passthrough('order', 'rpmArch') }}">{{ arch }}</a> |
-        {% endif %}
-        {% endfor %}
-        {% if hostArch %}
-        <a href="rpmsbyhost?{{ passthrough('order', 'rpmArch', prefix='') }}">all</a>
-        {% else %}
-        <strong>all</strong>
-        {% endif %}
-      </td>
-    </tr>
-    <tr>
-      <td class="archlist" colspan="3">
-        <strong>RPM arch:</strong> {% for arch in rpmArchList %}
-        {% if arch == rpmArch %}
-        <strong>{{ arch }}</strong> |
-        {% else %}
-        <a href="rpmsbyhost?rpmArch={{ arch }}{{ passthrough('order', 'hostArch') }}">{{ arch }}</a> |
-        {% endif %}
-        {% endfor %}
-        {% if rpmArch %}
-        <a href="rpmsbyhost?{{ passthrough('order', 'hostArch', prefix='') }}">all</a>
-        {% else %}
-        <strong>all</strong>
-        {% endif %}
-      </td>
-    </tr>
-    <tr>
-      <td class="paginate" colspan="3">
-        {% if len(hostPages) > 1 %}
-        <form class="pageJump" action="">
-          Page:
-          <select onchange="javascript: window.location = 'rpmsbyhost?start=' + this.value * {{ hostRange }} + '{{ passthrough('order', 'hostArch', 'rpmArch') }}';">
-            {% for pageNum in hostPages %}
-            <option value="{{ pageNum }}"{{ ' selected' if pageNum == hostCurrentPage else '' }}>{{ pageNum + 1 }}</option>
-            {% endfor %}
-          </select>
-        </form>
-        {% endif %}
-        {% if hostStart > 0 %}
-        <a href="rpmsbyhost?start={{ hostStart - hostRange }}{{ passthrough('order', 'hostArch', 'rpmArch') }}">&lt;&lt;&lt;</a>
-        {% endif %}
-        {% if totalHosts != 0 %}
-        <strong>Hosts {{ hostStart + 1 }} through {{ hostStart + hostCount }} of {{ totalHosts }}</strong>
-        {% endif %}
-        {% if hostStart + hostCount < totalHosts %}
-        <a href="rpmsbyhost?start={{ hostStart + hostRange }}{{ passthrough('order', 'hostArch', 'rpmArch') }}">&gt;&gt;&gt;</a>
-        {% endif %}
-      </td>
-    </tr>
-    <tr class="list-header">
-      <th><a href="rpmsbyhost?order={{ toggleOrder('name') }}{{ passthrough('hostArch', 'rpmArch') }}">Name</a> {{ sortImage('name') }}</th>
-      <th><a href="rpmsbyhost?order={{ toggleOrder('rpms') }}{{ passthrough('hostArch', 'rpmArch') }}">RPMs</a> {{ sortImage('rpms') }}</th>
-      <th>&nbsp;</th>
-    </tr>
-    {% if len(hosts) > 0 %}
-    {% for host in hosts %}
-    <tr class="{{ rowToggle() }}">
-      <td><a href="hostinfo?hostID={{ host.id }}">{{ host.name }}</a></td>
-      <td width="{{ graphWidth + 5 }}"><img src="{{ util.themePath('images/1px.gif') }}" width="{{ increment * host.rpms }}" height="15" class="graphrow" alt="graph row"/></td>
-      <td>{{ host.rpms }}</td>
-    </tr>
-    {% endfor %}
+
+  <p>
+    <strong>Host arch:</strong> {% for arch in hostArchList %}
+    {% if arch == hostArch %}
+    <strong>{{ arch }}</strong> |
     {% else %}
-    <tr class="row-odd">
-      <td colspan="3">No hosts</td>
-    </tr>
+    <a href="rpmsbyhost?hostArch={{ arch }}{{ passthrough('order', 'rpmArch') }}">{{ arch }}</a> |
     {% endif %}
-    <tr>
-      <td class="paginate" colspan="3">
-        {% if len(hostPages) > 1 %}
-        <form class="pageJump" action="">
-          Page:
-          <select onchange="javascript: window.location = 'rpmsbyhost?start=' + this.value * {{ hostRange }} + '{{ passthrough('order', 'hostArch', 'rpmArch') }}';">
-            {% for pageNum in hostPages %}
-            <option value="{{ pageNum }}"{{ ' selected' if pageNum == hostCurrentPage else '' }}>{{ pageNum + 1 }}</option>
-            {% endfor %}
-          </select>
-        </form>
+    {% endfor %}
+    {% if hostArch %}
+    <a href="rpmsbyhost?{{ passthrough('order', 'rpmArch', prefix='') }}">all</a>
+    {% else %}
+    <strong>all</strong>
+    {% endif %}
+  </p>
+  <p>
+    <strong>RPM arch:</strong> {% for arch in rpmArchList %}
+    {% if arch == rpmArch %}
+    <strong>{{ arch }}</strong> |
+    {% else %}
+    <a href="rpmsbyhost?rpmArch={{ arch }}{{ passthrough('order', 'hostArch') }}">{{ arch }}</a> |
+    {% endif %}
+    {% endfor %}
+    {% if rpmArch %}
+    <a href="rpmsbyhost?{{ passthrough('order', 'hostArch', prefix='') }}">all</a>
+    {% else %}
+    <strong>all</strong>
+    {% endif %}
+  </p>
+
+  {% if totalHosts %}
+  {{ pagination()|safe }}
+  {% endif %}
+
+  <div class="cds--data-table-container">
+    <table class="cds--data-table cds--data-table--zebra">
+      <thead>
+        <tr>
+          <th scope="col"><a href="rpmsbyhost?order={{ toggleOrder('name') }}{{ passthrough('hostArch', 'rpmArch') }}">Name</a> {{ sortImage('name') }}</th>
+          <th scope="col"><a href="rpmsbyhost?order={{ toggleOrder('rpms') }}{{ passthrough('hostArch', 'rpmArch') }}">RPMs</a> {{ sortImage('rpms') }}</th>
+          <th scope="col">&nbsp;</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if len(hosts) > 0 %}
+        {% for host in hosts %}
+        <tr>
+          <td><a href="hostinfo?hostID={{ host.id }}">{{ host.name }}</a></td>
+          <td width="{{ graphWidth + 5 }}"><img src="{{ util.themePath('images/1px.gif') }}" width="{{ increment * host.rpms }}" height="15" class="graphrow" alt="graph row"/></td>
+          <td>{{ host.rpms }}</td>
+        </tr>
+        {% endfor %}
+        {% else %}
+        <tr>
+          <td colspan="3">No hosts</td>
+        </tr>
         {% endif %}
-        {% if hostStart > 0 %}
-        <a href="rpmsbyhost?start={{ hostStart - hostRange }}{{ passthrough('order', 'hostArch', 'rpmArch') }}">&lt;&lt;&lt;</a>
-        {% endif %}
-        {% if totalHosts != 0 %}
-        <strong>Hosts {{ hostStart + 1 }} through {{ hostStart + hostCount }} of {{ totalHosts }}</strong>
-        {% endif %}
-        {% if hostStart + hostCount < totalHosts %}
-        <a href="rpmsbyhost?start={{ hostStart + hostRange }}{{ passthrough('order', 'hostArch', 'rpmArch') }}">&gt;&gt;&gt;</a>
-        {% endif %}
-      </td>
-    </tr>
-  </table>
+      </tbody>
+    </table>
+  </div>
+
+  {% if totalHosts %}
+  {{ pagination()|safe }}
+  {% endif %}
 
 {% endblock %}

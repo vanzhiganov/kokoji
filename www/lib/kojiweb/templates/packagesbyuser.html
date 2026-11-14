@@ -1,73 +1,68 @@
 {% extends "base.html" %}
 {% block content %}
 
+{% macro pagination() %}
+  <div class="cds--pagination">
+    <div class="cds--pagination__left">
+      {% if len(userPages) > 1 %}
+      <div class="cds--select cds--select--inline">
+        <label class="cds--label" for="userPage">Page</label>
+        <div class="cds--select-input__wrapper">
+          <select id="userPage" class="cds--select-input" onchange="javascript: window.location = 'packagesbyuser?start=' + this.value * {{ userRange }} + '{{ passthrough('order') }}';">
+            {% for pageNum in userPages %}
+            <option value="{{ pageNum }}"{{ ' selected' if pageNum == userCurrentPage else '' }}>{{ pageNum + 1 }}</option>
+            {% endfor %}
+          </select>
+          <svg focusable="false" class="cds--select__arrow" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 22L6 12l1.4-1.4 8.6 8.6 8.6-8.6L26 12z"/></svg>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+    <div class="cds--pagination__right">
+      {% if totalUsers != 0 %}
+      <span class="cds--pagination__items-count">Users {{ userStart + 1 }} through {{ userStart + userCount }} of {{ totalUsers }}</span>
+      {% endif %}
+      {% if userStart > 0 %}
+      <a class="cds--btn cds--btn--ghost cds--btn--sm" href="packagesbyuser?start={{ userStart - userRange }}{{ passthrough('order') }}">Previous</a>
+      {% endif %}
+      {% if userStart + userCount < totalUsers %}
+      <a class="cds--btn cds--btn--ghost cds--btn--sm" href="packagesbyuser?start={{ userStart + userRange }}{{ passthrough('order') }}">Next</a>
+      {% endif %}
+    </div>
+  </div>
+{% endmacro %}
 
   <h4>Packages by User</h4>
-  <table class="data-list">
-    <tr>
-      <td class="paginate" colspan="3">
-        {% if len(userPages) > 1 %}
-        <form class="pageJump" action="">
-          Page:
-          <select onchange="javascript: window.location = 'packagesbyuser?start=' + this.value * {{ userRange }} + '{{ passthrough('order') }}';">
-            {% for pageNum in userPages %}
-            <option value="{{ pageNum }}"{{ ' selected' if pageNum == userCurrentPage else '' }}>{{ pageNum + 1 }}</option>
-            {% endfor %}
-          </select>
-        </form>
+
+  {{ pagination()|safe }}
+
+  <div class="cds--data-table-container">
+    <table class="cds--data-table cds--data-table--zebra">
+      <thead>
+        <tr>
+          <th scope="col"><a href="packagesbyuser?order={{ toggleOrder('name') }}">Name</a> {{ sortImage('name') }}</th>
+          <th scope="col"><a href="packagesbyuser?order={{ toggleOrder('packages') }}">Packages</a> {{ sortImage('packages') }}</th>
+          <th scope="col">&nbsp;</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if len(users) > 0 %}
+        {% for user in users %}
+        <tr>
+          <td><a href="userinfo?userID={{ user.id }}">{{ user.name }}</a></td>
+          <td width="{{ graphWidth + 5 }}"><img src="{{ util.themePath('images/1px.gif') }}" width="{{ increment * user.packages }}" height="15" class="graphrow" alt="graph row"/></td>
+          <td>{{ user.packages }}</td>
+        </tr>
+        {% endfor %}
+        {% else %}
+        <tr>
+          <td colspan="3">No users</td>
+        </tr>
         {% endif %}
-        {% if userStart > 0 %}
-        <a href="packagesbyuser?start={{ userStart - userRange }}{{ passthrough('order') }}">&lt;&lt;&lt;</a>
-        {% endif %}
-        {% if totalUsers != 0 %}
-        <strong>Users {{ userStart + 1 }} through {{ userStart + userCount }} of {{ totalUsers }}</strong>
-        {% endif %}
-        {% if userStart + userCount < totalUsers %}
-        <a href="packagesbyuser?start={{ userStart + userRange }}{{ passthrough('order') }}">&gt;&gt;&gt;</a>
-        {% endif %}
-      </td>
-    </tr>
-    <tr class="list-header">
-      <th><a href="packagesbyuser?order={{ toggleOrder('name') }}">Name</a> {{ sortImage('name') }}</th>
-      <th><a href="packagesbyuser?order={{ toggleOrder('packages') }}">Packages</a> {{ sortImage('packages') }}</th>
-      <th>&nbsp;</th>
-    </tr>
-    {% if len(users) > 0 %}
-    {% for user in users %}
-    <tr class="{{ rowToggle() }}">
-      <td><a href="userinfo?userID={{ user.id }}">{{ user.name }}</a></td>
-      <td width="{{ graphWidth + 5 }}"><img src="{{ util.themePath('images/1px.gif') }}" width="{{ increment * user.packages }}" height="15" class="graphrow" alt="graph row"/></td>
-      <td>{{ user.packages }}</td>
-    </tr>
-    {% endfor %}
-    {% else %}
-    <tr class="row-odd">
-      <td colspan="3">No users</td>
-    </tr>
-    {% endif %}
-    <tr>
-      <td class="paginate" colspan="3">
-        {% if len(userPages) > 1 %}
-        <form class="pageJump" action="">
-          Page:
-          <select onchange="javascript: window.location = 'packagesbyuser?start=' + this.value * {{ userRange }} + '{{ passthrough('order') }}';">
-            {% for pageNum in userPages %}
-            <option value="{{ pageNum }}"{{ ' selected' if pageNum == userCurrentPage else '' }}>{{ pageNum + 1 }}</option>
-            {% endfor %}
-          </select>
-        </form>
-        {% endif %}
-        {% if userStart > 0 %}
-        <a href="packagesbyuser?start={{ userStart - userRange }}{{ passthrough('order') }}">&lt;&lt;&lt;</a>
-        {% endif %}
-        {% if totalUsers != 0 %}
-        <strong>Users {{ userStart + 1 }} through {{ userStart + userCount }} of {{ totalUsers }}</strong>
-        {% endif %}
-        {% if userStart + userCount < totalUsers %}
-        <a href="packagesbyuser?start={{ userStart + userRange }}{{ passthrough('order') }}">&gt;&gt;&gt;</a>
-        {% endif %}
-      </td>
-    </tr>
-  </table>
+      </tbody>
+    </table>
+  </div>
+
+  {{ pagination()|safe }}
 
 {% endblock %}

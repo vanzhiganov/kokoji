@@ -1,89 +1,84 @@
 {% extends "base.html" %}
 {% block content %}
 
+{% macro pagination() %}
+  <div class="cds--pagination">
+    <div class="cds--pagination__left">
+      {% if len(hostPages) > 1 %}
+      <div class="cds--select cds--select--inline">
+        <label class="cds--label" for="hostPage">Page</label>
+        <div class="cds--select-input__wrapper">
+          <select id="hostPage" class="cds--select-input" onchange="javascript: window.location = 'tasksbyhost?start=' + this.value * {{ hostRange }} + '{{ passthrough('order', 'hostArch') }}';">
+            {% for pageNum in hostPages %}
+            <option value="{{ pageNum }}"{{ ' selected' if pageNum == hostCurrentPage else '' }}>{{ pageNum + 1 }}</option>
+            {% endfor %}
+          </select>
+          <svg focusable="false" class="cds--select__arrow" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 22L6 12l1.4-1.4 8.6 8.6 8.6-8.6L26 12z"/></svg>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+    <div class="cds--pagination__right">
+      {% if totalHosts != 0 %}
+      <span class="cds--pagination__items-count">Hosts {{ hostStart + 1 }} through {{ hostStart + hostCount }} of {{ totalHosts }}</span>
+      {% endif %}
+      {% if hostStart > 0 %}
+      <a class="cds--btn cds--btn--ghost cds--btn--sm" href="tasksbyhost?start={{ hostStart - hostRange }}{{ passthrough('order', 'hostArch') }}">Previous</a>
+      {% endif %}
+      {% if hostStart + hostCount < totalHosts %}
+      <a class="cds--btn cds--btn--ghost cds--btn--sm" href="tasksbyhost?start={{ hostStart + hostRange }}{{ passthrough('order', 'hostArch') }}">Next</a>
+      {% endif %}
+    </div>
+  </div>
+{% endmacro %}
 
   <h4>Tasks by Host{{ ' (%s)' % hostArch if hostArch else '' }}</h4>
-  <table class="data-list">
-    <tr>
-      <td class="archlist" colspan="3">
-        <strong>Host arch:</strong> {% for arch in hostArchList %}
-        {% if arch == hostArch %}
-        <strong>{{ arch }}</strong> |
-        {% else %}
-        <a href="tasksbyhost?hostArch={{ arch }}{{ passthrough('order') }}">{{ arch }}</a> |
-        {% endif %}
-        {% endfor %}
-        {% if hostArch %}
-        <a href="tasksbyhost?{{ passthrough('order', prefix='') }}">all</a>
-        {% else %}
-        <strong>all</strong>
-        {% endif %}
-      </td>
-    </tr>
-    <tr>
-      <td class="paginate" colspan="3">
-        {% if len(hostPages) > 1 %}
-        <form class="pageJump" action="">
-          Page:
-          <select onchange="javascript: window.location = 'tasksbyhost?start=' + this.value * {{ hostRange }} + '{{ passthrough('order', 'hostArch') }}';">
-            {% for pageNum in hostPages %}
-            <option value="{{ pageNum }}"{{ ' selected' if pageNum == hostCurrentPage else '' }}>{{ pageNum + 1 }}</option>
-            {% endfor %}
-          </select>
-        </form>
-        {% endif %}
-        {% if hostStart > 0 %}
-        <a href="tasksbyhost?start={{ hostStart - hostRange }}{{ passthrough('order', 'hostArch') }}">&lt;&lt;&lt;</a>
-        {% endif %}
-        {% if totalHosts != 0 %}
-        <strong>Hosts {{ hostStart + 1 }} through {{ hostStart + hostCount }} of {{ totalHosts }}</strong>
-        {% endif %}
-        {% if hostStart + hostCount < totalHosts %}
-        <a href="tasksbyhost?start={{ hostStart + hostRange }}{{ passthrough('order', 'hostArch') }}">&gt;&gt;&gt;</a>
-        {% endif %}
-      </td>
-    </tr>
-    <tr class="list-header">
-      <th><a href="tasksbyhost?order={{ toggleOrder('name') }}{{ passthrough('hostArch') }}">Name</a> {{ sortImage('name') }}</th>
-      <th><a href="tasksbyhost?order={{ toggleOrder('tasks') }}{{ passthrough('hostArch') }}">Tasks</a> {{ sortImage('tasks') }}</th>
-      <th>&nbsp;</th>
-    </tr>
-    {% if len(hosts) > 0 %}
-    {% for host in hosts %}
-    <tr class="{{ rowToggle() }}">
-      <td><a href="hostinfo?hostID={{ host.id }}">{{ host.name }}</a></td>
-      <td width="{{ graphWidth + 5 }}"><img src="{{ util.themePath('images/1px.gif') }}" width="{{ increment * host.tasks }}" height="15" class="graphrow" alt="graph row"/></td>
-      <td>{{ host.tasks }}</td>
-    </tr>
-    {% endfor %}
+
+  <nav class="koji-links" aria-label="Filter hosts by arch">
+    <span class="cds--label">Host arch:</span>
+    {% for arch in hostArchList %}
+    {% if arch == hostArch %}
+    <strong>{{ arch }}</strong>
     {% else %}
-    <tr class="row-odd">
-      <td colspan="3">No hosts</td>
-    </tr>
+    <a href="tasksbyhost?hostArch={{ arch }}{{ passthrough('order') }}">{{ arch }}</a>
     {% endif %}
-    <tr>
-      <td class="paginate" colspan="3">
-        {% if len(hostPages) > 1 %}
-        <form class="pageJump" action="">
-          Page:
-          <select onchange="javascript: window.location = 'tasksbyhost?start=' + this.value * {{ hostRange }} + '{{ passthrough('order', 'hostArch') }}';">
-            {% for pageNum in hostPages %}
-            <option value="{{ pageNum }}"{{ ' selected' if pageNum == hostCurrentPage else '' }}>{{ pageNum + 1 }}</option>
-            {% endfor %}
-          </select>
-        </form>
+    {% endfor %}
+    {% if hostArch %}
+    <a href="tasksbyhost?{{ passthrough('order', prefix='') }}">all</a>
+    {% else %}
+    <strong>all</strong>
+    {% endif %}
+  </nav>
+
+  {{ pagination()|safe }}
+
+  <div class="cds--data-table-container">
+    <table class="cds--data-table cds--data-table--zebra">
+      <thead>
+        <tr>
+          <th scope="col"><a href="tasksbyhost?order={{ toggleOrder('name') }}{{ passthrough('hostArch') }}">Name</a> {{ sortImage('name') }}</th>
+          <th scope="col"><a href="tasksbyhost?order={{ toggleOrder('tasks') }}{{ passthrough('hostArch') }}">Tasks</a> {{ sortImage('tasks') }}</th>
+          <th scope="col">&nbsp;</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if len(hosts) > 0 %}
+        {% for host in hosts %}
+        <tr>
+          <td><a href="hostinfo?hostID={{ host.id }}">{{ host.name }}</a></td>
+          <td width="{{ graphWidth + 5 }}"><img src="{{ util.themePath('images/1px.gif') }}" width="{{ increment * host.tasks }}" height="15" class="graphrow" alt="graph row"/></td>
+          <td>{{ host.tasks }}</td>
+        </tr>
+        {% endfor %}
+        {% else %}
+        <tr>
+          <td colspan="3">No hosts</td>
+        </tr>
         {% endif %}
-        {% if hostStart > 0 %}
-        <a href="tasksbyhost?start={{ hostStart - hostRange }}{{ passthrough('order', 'hostArch') }}">&lt;&lt;&lt;</a>
-        {% endif %}
-        {% if totalHosts != 0 %}
-        <strong>Hosts {{ hostStart + 1 }} through {{ hostStart + hostCount }} of {{ totalHosts }}</strong>
-        {% endif %}
-        {% if hostStart + hostCount < totalHosts %}
-        <a href="tasksbyhost?start={{ hostStart + hostRange }}{{ passthrough('order', 'hostArch') }}">&gt;&gt;&gt;</a>
-        {% endif %}
-      </td>
-    </tr>
-  </table>
+      </tbody>
+    </table>
+  </div>
+
+  {{ pagination()|safe }}
 
 {% endblock %}

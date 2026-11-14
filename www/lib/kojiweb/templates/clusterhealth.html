@@ -9,7 +9,7 @@
 {% endmacro %}
 
 <style>
-  span {
+  .graph span {
     display: inline-block;
     box-sizing: border-box;
     height: 100%;
@@ -37,48 +37,57 @@
 </style>
 
   <h4>Cluster health</h4>
-  <table class="data-list">
-    <tr style="text-align: left">
-      <td colspan="3">
-        <form action="">
-          Architecture:
-          <select onchange="javascript: window.location = 'clusterhealth?arch=' + this.value + '{{ passthrough('order') }}';">
-            {{ printOption('__all__', 'all')|safe }}
-            {% for arch in arches %}
-            {{ printOption(arch)|safe }}
-            {% endfor %}
-          </select>
-        </form>
-      </td>
-    </tr>
-    <tr class="list-header">
-      <th>Channel</th>
-      <th>Load/Capacity</th>
-      <th>Builder readiness</th>
-    </tr>
-    {% for channel in channels %}
-    {% if channel['enabled_channel'] %}
-    <tr>
-      <th>
-          <a href="channelinfo?channelID={{ channel['id'] }}">{{ channel['name'] }}</a>
-      </th>
-      <td width="{{ graphWidth }}" class="graph">
-        {% if channel['capacityPerc'] %}
-        <span style="width: {{ channel['capacityPerc'] }}%">
-          <span style="width: {{ channel['perc_load'] }}%" class="busy" title="Load: {{ int(channel['load']) }}"></span>
-          <span style="width: {{ 100 - channel['perc_load'] }}%" class="free" title="Free capacity: {{ int(channel['capacity'] - channel['load']) }}">{{ int(100 - channel['perc_load']) }}%&nbsp;</span>
-        </span>
+
+  <form action="" class="koji-filters">
+    <div class="cds--select cds--select--inline">
+      <label class="cds--label" for="filterArch">Architecture</label>
+      <div class="cds--select-input__wrapper">
+        <select id="filterArch" class="cds--select-input" onchange="javascript: window.location = 'clusterhealth?arch=' + this.value + '{{ passthrough('order') }}';">
+          {{ printOption('__all__', 'all')|safe }}
+          {% for arch in arches %}
+          {{ printOption(arch)|safe }}
+          {% endfor %}
+        </select>
+        <svg focusable="false" class="cds--select__arrow" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 22L6 12l1.4-1.4 8.6 8.6 8.6-8.6L26 12z"/></svg>
+      </div>
+    </div>
+  </form>
+
+  <div class="cds--data-table-container">
+    <table class="cds--data-table cds--data-table--zebra">
+      <thead>
+        <tr>
+          <th scope="col">Channel</th>
+          <th scope="col">Load/Capacity</th>
+          <th scope="col">Builder readiness</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for channel in channels %}
+        {% if channel['enabled_channel'] %}
+        <tr>
+          <th scope="row">
+              <a href="channelinfo?channelID={{ channel['id'] }}">{{ channel['name'] }}</a>
+          </th>
+          <td width="{{ graphWidth }}" class="graph">
+            {% if channel['capacityPerc'] %}
+            <span style="width: {{ channel['capacityPerc'] }}%">
+              <span style="width: {{ channel['perc_load'] }}%" class="busy" title="Load: {{ int(channel['load']) }}"></span>
+              <span style="width: {{ 100 - channel['perc_load'] }}%" class="free" title="Free capacity: {{ int(channel['capacity'] - channel['load']) }}">{{ int(100 - channel['perc_load']) }}%&nbsp;</span>
+            </span>
+            {% endif %}
+          </td>
+          <td width="{{ graphWidth }}" class="graph">
+            <span style="width: {{ channel['enabledPerc'] }}%">
+              <span style="width: {{ 100 - channel['perc_ready'] }}%" class="busy" title="Busy builders: {{ channel['enabled'] - channel['ready'] }}"></span>
+              <span style="width: {{ channel['perc_ready'] }}%" class="free" title="Ready builders: {{ channel['ready'] }}">{{ int(channel['ready']) }}&nbsp;</span>
+            </span>
+          </td>
+        </tr>
         {% endif %}
-      </td>
-      <td width="{{ graphWidth }}" class="graph">
-        <span style="width: {{ channel['enabledPerc'] }}%">
-          <span style="width: {{ 100 - channel['perc_ready'] }}%" class="busy" title="Busy builders: {{ channel['enabled'] - channel['ready'] }}"></span>
-          <span style="width: {{ channel['perc_ready'] }}%" class="free" title="Ready builders: {{ channel['ready'] }}"">{{ int(channel['ready']) }}&nbsp;</span>
-        </span>
-      </td>
-    </tr>
-    {% endif %}
-    {% endfor %}
-  </table>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 
 {% endblock %}

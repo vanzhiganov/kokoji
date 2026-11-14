@@ -27,34 +27,69 @@ in tag <a href="taginfo?tagID={{ tag.id }}">{{ tag.name }}</a>
 {% endif %}
 {% endmacro %}
 
+{% macro pagination() %}
+  <div class="cds--pagination">
+    <div class="cds--pagination__left">
+      {% if len(buildPages) > 1 %}
+      <div class="cds--select cds--select--inline">
+        <label class="cds--label" for="buildPage">Page</label>
+        <div class="cds--select-input__wrapper">
+          <select id="buildPage" class="cds--select-input" onchange="javascript: window.location = 'builds?start=' + this.value * {{ buildRange }} + '{{ passthrough_except() }}';">
+            {% for pageNum in buildPages %}
+            <option value="{{ pageNum }}"{{ ' selected' if pageNum == buildCurrentPage else '' }}>{{ pageNum + 1 }}</option>
+            {% endfor %}
+          </select>
+          <svg focusable="false" class="cds--select__arrow" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 22L6 12l1.4-1.4 8.6 8.6 8.6-8.6L26 12z"/></svg>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+    <div class="cds--pagination__right">
+      {% if totalBuilds != 0 %}
+      <span class="cds--pagination__items-count">{{ buildStart + 1 }}&ndash;{{ buildStart + buildCount }} of {{ totalBuilds }}</span>
+      {% endif %}
+      {% if buildStart > 0 %}
+      <a class="cds--btn cds--btn--ghost cds--btn--sm" href="builds?start={{ buildStart - buildRange }}{{ passthrough_except() }}">Previous</a>
+      {% endif %}
+      {% if buildStart + buildCount < totalBuilds %}
+      <a class="cds--btn cds--btn--ghost cds--btn--sm" href="builds?start={{ buildStart + buildRange }}{{ passthrough_except() }}">Next</a>
+      {% endif %}
+    </div>
+  </div>
+{% endmacro %}
+
   <h4>{{ getDescription()|safe }}</h4>
 
-  <table class="data-list">
-    <tr>
-      <td colspan="{{ '6' if tag else '5' }}">
-        <table class="nested">
-        <tr><td>
-        {% if tag %}
-        <strong>Latest</strong>:
-        </td><td>
-        <select name="latest" class="filterlist" onchange="javascript: window.location = 'builds?latest=' + this.value + '{{ passthrough_except('latest') }}';">
+  <form action="builds" class="koji-filters">
+    {% if tag %}
+    <div class="cds--select cds--select--inline">
+      <label class="cds--label" for="filterLatest">Latest</label>
+      <div class="cds--select-input__wrapper">
+        <select id="filterLatest" name="latest" class="cds--select-input" onchange="javascript: window.location = 'builds?latest=' + this.value + '{{ passthrough_except('latest') }}';">
           <option value="1" {{ 'selected' if latest else '' }}>yes</option>
           <option value="0" {{ 'selected' if not latest else '' }}>no</option>
         </select>
-        {% else %}
-        <strong>State</strong>:
-        </td><td>
-        <select name="state" class="filterlist" onchange="javascript: window.location = 'builds?state=' + this.value + '{{ passthrough_except('state') }}';">
+        <svg focusable="false" class="cds--select__arrow" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 22L6 12l1.4-1.4 8.6 8.6 8.6-8.6L26 12z"/></svg>
+      </div>
+    </div>
+    {% else %}
+    <div class="cds--select cds--select--inline">
+      <label class="cds--label" for="filterState">State</label>
+      <div class="cds--select-input__wrapper">
+        <select id="filterState" name="state" class="cds--select-input" onchange="javascript: window.location = 'builds?state=' + this.value + '{{ passthrough_except('state') }}';">
           <option value="all">all</option>
           {% for stateOpt in ['BUILDING', 'COMPLETE', 'FAILED', 'CANCELED'] %}
           <option value="{{ koji.BUILD_STATES[stateOpt] }}" {{ 'selected' if state == koji.BUILD_STATES[stateOpt] else '' }}>{{ stateOpt.lower() }}</option>
           {% endfor %}
         </select>
-        {% endif %}
-        </td><td>
-        <strong>Built by</strong>:
-        </td><td>
-        <select name="userID" class="filterlist" onchange="javascript: window.location = 'builds?userID=' + this.value + '{{ passthrough_except('userID') }}';">
+        <svg focusable="false" class="cds--select__arrow" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 22L6 12l1.4-1.4 8.6 8.6 8.6-8.6L26 12z"/></svg>
+      </div>
+    </div>
+    {% endif %}
+    <div class="cds--select cds--select--inline">
+      <label class="cds--label" for="filterUser">Built by</label>
+      <div class="cds--select-input__wrapper">
+        <select id="filterUser" name="userID" class="cds--select-input" onchange="javascript: window.location = 'builds?userID=' + this.value + '{{ passthrough_except('userID') }}';">
           <option value="" {{ 'selected' if not user else '' }}>everyone</option>
           {% if loggedInUser %}
           <option value="{{ loggedInUser.name }}">me</option>
@@ -63,86 +98,72 @@ in tag <a href="taginfo?tagID={{ tag.id }}">{{ tag.name }}</a>
           <option value="{{ userOption.name }}" {{ 'selected' if userOption.name == (user and user.name or None) else '' }}>{{ userOption.name }}</option>
           {% endfor %}
         </select>
-        </td></tr>
-        <tr>
-        <td>
-        <strong>Type</strong>:
-        </td>
-        <td>
-        <select name="type" class="filterlist" onchange="javascript: window.location='builds?type=' + this.value + '{{ passthrough_except('type') }}';">
+        <svg focusable="false" class="cds--select__arrow" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 22L6 12l1.4-1.4 8.6 8.6 8.6-8.6L26 12z"/></svg>
+      </div>
+    </div>
+    <div class="cds--select cds--select--inline">
+      <label class="cds--label" for="filterType">Type</label>
+      <div class="cds--select-input__wrapper">
+        <select id="filterType" name="type" class="cds--select-input" onchange="javascript: window.location='builds?type=' + this.value + '{{ passthrough_except('type') }}';">
           <option value="all" {{ 'selected' if not type else '' }}>all</option>
           {% for btype in btypes %}
           <option value="{{ btype }}" {{ 'selected' if type == btype else '' }}>{{ btype }}</option>
           {% endfor %}
         </select>
-        </td>
-        {% if tag %}
-        <td>
-        <strong>Inherited</strong>:
-        </td><td>
-        <select name="inherited" class="filterlist" onchange="javascript: window.location = 'builds?inherited=' + this.value + '{{ passthrough_except('inherited') }}';">
+        <svg focusable="false" class="cds--select__arrow" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 22L6 12l1.4-1.4 8.6 8.6 8.6-8.6L26 12z"/></svg>
+      </div>
+    </div>
+    {% if tag %}
+    <div class="cds--select cds--select--inline">
+      <label class="cds--label" for="filterInherited">Inherited</label>
+      <div class="cds--select-input__wrapper">
+        <select id="filterInherited" name="inherited" class="cds--select-input" onchange="javascript: window.location = 'builds?inherited=' + this.value + '{{ passthrough_except('inherited') }}';">
           <option value="1" {{ 'selected' if inherited else '' }}>yes</option>
           <option value="0" {{ 'selected' if not inherited else '' }}>no</option>
         </select>
-        </td>
-        {% endif %}
+        <svg focusable="false" class="cds--select__arrow" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 22L6 12l1.4-1.4 8.6 8.6 8.6-8.6L26 12z"/></svg>
+      </div>
+    </div>
+    {% endif %}
+  </form>
+
+  <div class="koji-charlist">
+    {% for char in chars %}
+    {% if prefix == char %}
+    <strong>{{ char }}</strong>
+    {% else %}
+    <a href="builds?prefix={{ char }}{{ passthrough_except('prefix') }}">{{ char }}</a>
+    {% endif %}
+    |
+    {% endfor %}
+    {% if prefix %}
+    <a href="builds?{{ passthrough_except('prefix', prefix='') }}">all</a>
+    {% else %}
+    <strong>all</strong>
+    {% endif %}
+  </div>
+
+  {% if totalBuilds %}
+  {{ pagination()|safe }}
+  {% endif %}
+
+  <div class="cds--data-table-container">
+    <table class="cds--data-table cds--data-table--zebra">
+      <thead>
+        <tr>
+          <th scope="col"><a href="builds?order={{ toggleOrder('build_id') }}{{ passthrough_except('order') }}">ID</a> {{ sortImage('build_id') }}</th>
+          <th scope="col"><a href="builds?order={{ toggleOrder('nvr') }}{{ passthrough_except('order') }}">NVR</a> {{ sortImage('nvr') }}</th>
+          {% if tag %}
+          <th scope="col"><a href="builds?order={{ toggleOrder('tag_name') }}{{ passthrough_except('order') }}">Tag</a> {{ sortImage('tag_name') }}</th>
+          {% endif %}
+          <th scope="col"><a href="builds?order={{ toggleOrder('owner_name') }}{{ passthrough_except('order') }}">Built by</a> {{ sortImage('owner_name') }}</th>
+          <th scope="col"><a href="builds?order={{ toggleOrder('completion_time') }}{{ passthrough_except('order') }}">Finished</a> {{ sortImage('completion_time') }}</th>
+          <th scope="col"><a href="builds?order={{ toggleOrder('state') }}{{ passthrough_except('order') }}">State</a> {{ sortImage('state') }}</th>
         </tr>
-        </table>
-      </td>
-    </tr>
-    <tr>
-      <td class="charlist" colspan="{{ '6' if tag else '5' }}">
-        {% for char in chars %}
-        {% if prefix == char %}
-        <strong>{{ char }}</strong>
-        {% else %}
-        <a href="builds?prefix={{ char }}{{ passthrough_except('prefix') }}">{{ char }}</a>
-        {% endif %}
-        | 
-        {% endfor %}
-        {% if prefix %}
-        <a href="builds?{{ passthrough_except('prefix', prefix='') }}">all</a>
-        {% else %}
-        <strong>all</strong>
-        {% endif %}
-      </td>
-    </tr>
-    <tr>
-      <td class="paginate" colspan="{{ '6' if tag else '5' }}">
-        {% if len(buildPages) > 1 %}
-        <form class="pageJump" action="">
-          Page:
-          <select onchange="javascript: window.location = 'builds?start=' + this.value * {{ buildRange }} + '{{ passthrough_except() }}';">
-            {% for pageNum in buildPages %}
-            <option value="{{ pageNum }}"{{ ' selected' if pageNum == buildCurrentPage else '' }}>{{ pageNum + 1 }}</option>
-            {% endfor %}
-          </select>
-        </form>
-        {% endif %}
-        {% if buildStart > 0 %}
-        <a href="builds?start={{ buildStart - buildRange }}{{ passthrough_except() }}">&lt;&lt;&lt;</a>
-        {% endif %}
-        {% if totalBuilds != 0 %}
-        <strong>Builds {{ buildStart + 1 }} through {{ buildStart + buildCount }} of {{ totalBuilds }}</strong>
-        {% endif %}
-        {% if buildStart + buildCount < totalBuilds %}
-        <a href="builds?start={{ buildStart + buildRange }}{{ passthrough_except() }}">&gt;&gt;&gt;</a>
-        {% endif %}
-      </td>
-    </tr>
-    <tr class="list-header">
-      <th><a href="builds?order={{ toggleOrder('build_id') }}{{ passthrough_except('order') }}">ID</a> {{ sortImage('build_id') }}</th>
-      <th><a href="builds?order={{ toggleOrder('nvr') }}{{ passthrough_except('order') }}">NVR</a> {{ sortImage('nvr') }}</th>
-      {% if tag %}
-      <th><a href="builds?order={{ toggleOrder('tag_name') }}{{ passthrough_except('order') }}">Tag</a> {{ sortImage('tag_name') }}</th>
-      {% endif %}
-      <th><a href="builds?order={{ toggleOrder('owner_name') }}{{ passthrough_except('order') }}">Built by</a> {{ sortImage('owner_name') }}</th>
-      <th><a href="builds?order={{ toggleOrder('completion_time') }}{{ passthrough_except('order') }}">Finished</a> {{ sortImage('completion_time') }}</th>
-      <th><a href="builds?order={{ toggleOrder('state') }}{{ passthrough_except('order') }}">State</a> {{ sortImage('state') }}</th>
-    </tr>
-    {% if len(builds) > 0 %}
-      {% for build in builds %}
-        <tr class="{{ rowToggle() }}">
+      </thead>
+      <tbody>
+        {% for build in builds %}
+        <tr>
           <td>{{ build.build_id }}</td>
           <td><a href="buildinfo?buildID={{ build.build_id }}">{{ koji.buildLabel(build) }}</a></td>
           {% if tag %}
@@ -153,35 +174,18 @@ in tag <a href="taginfo?tagID={{ tag.id }}">{{ tag.name }}</a>
           {% set stateName = util.stateName(build.state) %}
           <td class="{{ stateName }}">{{ util.stateImage(build.state) }}</td>
         </tr>
-      {% endfor %}
-    {% else %}
-      <tr class="row-odd">
-        <td colspan="{{ '6' if tag else '5' }}">No builds</td>
-      </tr>
-    {% endif %}
-    <tr>
-      <td class="paginate" colspan="{{ '6' if tag else '5' }}">
-        {% if len(buildPages) > 1 %}
-        <form class="pageJump" action="">
-          Page:
-          <select onchange="javascript: window.location = 'builds?start=' + this.value * {{ buildRange }} + '{{ passthrough_except() }}';">
-            {% for pageNum in buildPages %}
-            <option value="{{ pageNum }}"{{ ' selected' if pageNum == buildCurrentPage else '' }}>{{ pageNum + 1 }}</option>
-            {% endfor %}
-          </select>
-        </form>
+        {% endfor %}
+        {% if not builds %}
+        <tr>
+          <td colspan="{{ '6' if tag else '5' }}">No builds</td>
+        </tr>
         {% endif %}
-        {% if buildStart > 0 %}
-        <a href="builds?start={{ buildStart - buildRange }}{{ passthrough_except() }}">&lt;&lt;&lt;</a>
-        {% endif %}
-        {% if totalBuilds != 0 %}
-        <strong>Builds {{ buildStart + 1 }} through {{ buildStart + buildCount }} of {{ totalBuilds }}</strong>
-        {% endif %}
-        {% if buildStart + buildCount < totalBuilds %}
-        <a href="builds?start={{ buildStart + buildRange }}{{ passthrough_except() }}">&gt;&gt;&gt;</a>
-        {% endif %}
-      </td>
-    </tr>
-  </table>
+      </tbody>
+    </table>
+  </div>
+
+  {% if totalBuilds %}
+  {{ pagination()|safe }}
+  {% endif %}
 
 {% endblock %}

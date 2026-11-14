@@ -13,51 +13,48 @@
     {% if target %}
     <input type="hidden" name="targetID" value="{{ target.id }}"/>
     {% endif %}
-    <table>
-      <tr>
-        <th>Name</th>
-      <td>
-        <input type="text" name="name" size="50" value="{{ target.name if target else '' }}"/>
-      </td>
-    </tr>
+    <div class="cds--form-item">
+      <label class="cds--label" for="targetName">Name</label>
+      <input id="targetName" type="text" class="cds--text-input" name="name" value="{{ target.name if target else '' }}"/>
+    </div>
     {% if target %}
-    <tr>
-      <th>ID</th><td>{{ target.id }}</td>
-    </tr>
+    <div class="cds--form-item">
+      <span class="cds--label">ID</span>
+      <p>{{ target.id }}</p>
+    </div>
     {% endif %}
-    <tr>
-      <th>Build Tag</th>
-      <td>
-        <select name="buildTag">
+    <div class="cds--form-item cds--select">
+      <label class="cds--label" for="buildTag">Build Tag</label>
+      <div class="cds--select-input__wrapper">
+        <select id="buildTag" name="buildTag" class="cds--select-input">
           <option value="">select tag</option>
           {% for tag in tags %}
           <option value="{{ tag.id }}"{{ ' selected' if target and target.build_tag == tag.id else '' }}>{{ tag.name }}</option>
           {% endfor %}
         </select>
-      </td>
-    </tr>
-    <tr>
-      <th>Destination Tag</th>
-      <td>
-        <select name="destTag">
+        <svg focusable="false" class="cds--select__arrow" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 22L6 12l1.4-1.4 8.6 8.6 8.6-8.6L26 12z"/></svg>
+      </div>
+    </div>
+    <div class="cds--form-item cds--select">
+      <label class="cds--label" for="destTag">Destination Tag</label>
+      <div class="cds--select-input__wrapper">
+        <select id="destTag" name="destTag" class="cds--select-input">
           <option value="">select tag</option>
           {% for tag in tags %}
           <option value="{{ tag.id }}"{{ ' selected' if target and target.dest_tag == tag.id else '' }}>{{ tag.name }}</option>
           {% endfor %}
         </select>
-      </td>
-    </tr>
-    <tr>
-      <td>
-        {% if target %}
-        <button type="submit" name="save" value="Save">Save</button>
-        {% else %}
-        <button type="submit" name="add" value="Add">Add</button>
-        {% endif %}
-      </td>
-      <td><button type="submit" name="cancel" value="Cancel">Cancel</button></td>
-    </tr>
-    </table>
-    </form>
+        <svg focusable="false" class="cds--select__arrow" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 22L6 12l1.4-1.4 8.6 8.6 8.6-8.6L26 12z"/></svg>
+      </div>
+    </div>
+    <div class="cds--btn-set">
+      {% if target %}
+      <button type="submit" name="save" value="Save" class="cds--btn cds--btn--primary">Save</button>
+      {% else %}
+      <button type="submit" name="add" value="Add" class="cds--btn cds--btn--primary">Add</button>
+      {% endif %}
+      <button type="submit" name="cancel" value="Cancel" class="cds--btn cds--btn--secondary">Cancel</button>
+    </div>
+  </form>
 
 {% endblock %}

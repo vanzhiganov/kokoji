@@ -15,9 +15,14 @@
     ('users', 'users', 'Users'),
     ('hosts', 'hosts', 'Hosts'),
     ('reports', 'reports', 'Reports'),
-    ('search', 'search', 'Search'),
+] -%}
+{#('api', 'api', 'API'),#}
+{#('search', 'search', 'Search'),#}
+
+{%- set footer_nav = [
     ('api', 'api', 'API'),
 ] -%}
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -44,8 +49,7 @@
         <ul class="cds--header__menu-bar">
           {% for href, pid, label in koji_nav %}
           <li>
-            <a class="cds--header__menu-item" href="{{ href }}"
-               {% if pageID == pid %}aria-current="page"{% endif %}>{{ label }}</a>
+            <a class="cds--header__menu-item" href="{{ href }}" {% if pageID == pid %}aria-current="page"{% endif %}>{{ label }}</a>
           </li>
           {% endfor %}
         </ul>
@@ -65,8 +69,8 @@
       {% endif %}
     </header>
 
-    <!-- MAIN CONTENT -->
-    <main class="cds--content" id="main-content">
+    <!-- Search bar: second header under the global shell header -->
+    <header class="cds--header" id="searchHeader" aria-label="Search">
       <form action="search" id="headerSearch" role="search" class="cds--layout--size-md">
         <input type="hidden" name="match" value="glob"/>
         <div class="cds--select cds--select--inline">
@@ -106,7 +110,10 @@
         <span class="cds--label">{{ koji.formatTimeLong(currentDate) }}</span>
         {% endif %}
       </form>
+    </header>
 
+    <!-- MAIN CONTENT -->
+    <main class="cds--content" id="main-content">
       {% set extra_nav = read_theme_file('extra-nav.html') %}
       {% if extra_nav %}
       <div>{{ extra_nav }}</div>
@@ -116,11 +123,22 @@
     </main>
 
     <!-- FOOTER -->
-    <footer>
-      <p id="footer">
-        Copyright &copy; 2006-2024 Red Hat, Inc.
-        <a href="https://pagure.io/koji/"><img src="{{ util.themePath('images/powered-by-koji.png') }}" alt="Powered By Koji" id="PoweredByKojiLogo"/></a>
-      </p>
+    <footer class="cds--layer-one koji-footer">
+      <nav aria-label="Footer navigation">
+        <ul class="koji-footer__links">
+          {% for href, pid, label in footer_nav %}
+          <li>
+            <a class="cds--link cds--link--inline" href="{{ href }}"{% if pageID == pid %} aria-current="page"{% endif %}>{{ label }}</a>
+          </li>
+          {% endfor %}
+        </ul>
+      </nav>
+      <div class="koji-footer__meta">
+        <span class="cds--label">Copyright &copy; 2006-2024 Red Hat, Inc.</span>
+        <a class="cds--link" href="https://pagure.io/koji/">
+          <img src="{{ util.themePath('images/powered-by-koji.png') }}" alt="Powered By Koji" class="koji-footer__logo"/>
+        </a>
+      </div>
       {% set extra_footer = read_theme_file('extra-footer.html') %}
       {% if extra_footer %}
       <div>{{ extra_footer }}</div>

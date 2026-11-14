@@ -95,192 +95,206 @@ None
 
   <h4>Information for task <a href="taskinfo?taskID={{ task.id }}">{{ koji.taskLabel(task) }}</a></h4>
 
-  <table>
-    <tr>
-      <th>ID</th><td>{{ task.id }}</td>
-    </tr>
-    <tr>
-      <th>Method</th><td>{{ task.method }}</td>
-    </tr>
-    <tr>
-      <th>Parameters</th>
-      <td>
-        {% for key in sorted(params) %}
-          {% if params[key] is not none %}
-        <strong>{{ key.capitalize().replace('_', ' ') }}</strong>: {{ printValue(key, params[key])|safe }}<br/>
-          {% endif %}
-        {% endfor %}
-        {{ printOpts(opts)|safe }}
-      </td>
-    </tr>
-    <tr>
+  <div class="cds--structured-list">
+    <div class="cds--structured-list-tbody">
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">ID</div>
+        <div class="cds--structured-list-td">{{ task.id }}</div>
+      </div>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Method</div>
+        <div class="cds--structured-list-td">{{ task.method }}</div>
+      </div>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Parameters</div>
+        <div class="cds--structured-list-td">
+          {% for key in sorted(params) %}
+            {% if params[key] is not none %}
+          <strong>{{ key.capitalize().replace('_', ' ') }}</strong>: {{ printValue(key, params[key])|safe }}<br/>
+            {% endif %}
+          {% endfor %}
+          {{ printOpts(opts)|safe }}
+        </div>
+      </div>
       {% set state = util.taskState(task.state) %}
-      <th>State</th>
-      <td class="task{{ state }}">{{ state }}
-      {% if currentUser and ('admin' in perms or task.owner == currentUser.id) %}
-      {% if task.state in (koji.TASK_STATES.FREE, koji.TASK_STATES.OPEN, koji.TASK_STATES.ASSIGNED) %}
-      <span class="adminLink">(<a href="canceltask?taskID={{ task.id }}{{ koji_authToken() }}">cancel</a>)</span>
-      {% elif task.state in (koji.TASK_STATES.CANCELED, koji.TASK_STATES.FAILED) and (not parent) %}
-      <span class="adminLink">(<a href="resubmittask?taskID={{ task.id }}{{ koji_authToken() }}">resubmit</a>)</span>
-      {% endif %}
-      {% endif %}
-      {% if currentUser and 'admin' in perms and task.state in (koji.TASK_STATES.OPEN, koji.TASK_STATES.ASSIGNED) %}
-      <span class="adminLink">(<a href="freetask?taskID={{ task.id }}{{ koji_authToken() }}">free</a>)</span>
-      {% endif %}
-      </td>
-    </tr>
-    {% if taskBuilds %}
-    {% for build in taskBuilds %}
-    <tr>
-      <th>Build</th><td><a href="buildinfo?buildID={{ build.build_id }}">{{ koji.buildLabel(build) }}</a></td>
-    </tr>
-    {% endfor %}
-    {% endif %}
-    <tr>
-      <th>Created</th><td>{{ util.formatTimeLong(task.create_ts) }}</td>
-    </tr>
-    {% if task.start_time %}
-    <tr>
-      <th>Started</th><td>{{ util.formatTimeLong(task.start_ts) }}</td>
-    {% endif %}
-    {% set end_ts = None %}
-    {% if task.state == koji.TASK_STATES.OPEN %}
-    {% if estCompletion %}
-    <tr>
-      <th title="Estimation based on previous builds of same package">Est. Completion</th>
-      <td>{{ util.formatTimeLong(estCompletion) }}</td>
-    </tr>
-    {% endif %}
-    {% elif task.completion_time %}
-    <tr>
-      <th>Completed</th><td>{{ util.formatTimeLong(task.completion_ts) }}</td>
-    </tr>
-    {% set end_ts = task.completion_ts %}
-    {% endif %}
-    {% if not end_ts %}
-    {% set end_ts = koji.util.parseTime(koji.util.encode_datetime(datetime.datetime.utcnow())) %}
-    {% endif %}
-    <tr>
-      <th title="From task's creation">Total time</th>
-      <td>{{ util.formatTimestampDifference(task.create_ts, end_ts) }}</td>
-    </tr>
-    {% if task.start_time %}
-    <tr>
-      <th title="From task's start">Task time</th>
-      <td>{{ util.formatTimestampDifference(task.start_ts, end_ts) }}</td>
-    </tr>
-    {% endif %}
-    <tr>
-      <th>Owner</th>
-      <td>
-        {% if owner %}
-          {% if owner.usertype == koji.USERTYPES['HOST'] %}
-          <a href="hostinfo?userID={{ owner.id }}">{{ owner.name }}</a>
-          {% else %}
-          <a href="userinfo?userID={{ owner.id }}">{{ owner.name }}</a>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">State</div>
+        <div class="cds--structured-list-td task{{ state }}">{{ state }}
+          {% if currentUser and ('admin' in perms or task.owner == currentUser.id) %}
+          {% if task.state in (koji.TASK_STATES.FREE, koji.TASK_STATES.OPEN, koji.TASK_STATES.ASSIGNED) %}
+          <span class="adminLink">(<a href="canceltask?taskID={{ task.id }}{{ koji_authToken() }}">cancel</a>)</span>
+          {% elif task.state in (koji.TASK_STATES.CANCELED, koji.TASK_STATES.FAILED) and (not parent) %}
+          <span class="adminLink">(<a href="resubmittask?taskID={{ task.id }}{{ koji_authToken() }}">resubmit</a>)</span>
           {% endif %}
-        {% endif %}
-      </td>
-    </tr>
-    <tr>
-      <th>Channel</th>
-      <td>
-        {% if task.channel_id %}
-        <a href="channelinfo?channelID={{ task.channel_id }}">{{ channelName }}</a>
-        {% endif %}
-      </td>
-    </tr>
-    <tr>
-      <th>Host</th>
-      <td>
-        {% if task.host_id %}
-        <a href="hostinfo?hostID={{ task.host_id }}">{{ hostName }}</a>
-        {% endif %}
-      </td>
-    </tr>
-    <tr>
-      <th>Arch</th><td>{{ task.arch }}</td>
-    </tr>
-    {% if buildroots %}
-    <tr>
-      <th>Buildroot{{ 's' if len(buildroots) > 1 else '' }}</th>
-      <td>
-        {% for buildroot in buildroots %}
-        <a href="buildrootinfo?buildrootID={{ buildroot.id }}">{{ '' if task.method == 'vmExec' else '/var/lib/mock/' }}{{ buildroot.tag_name }}-{{ buildroot.id }}-{{ buildroot.repo_id }}</a><br/>
-        {% endfor %}
-      </td>
-    </tr>
-    {% endif %}
-    <tr>
-      <th>Parent</th>
-        <td>
-        {% if parent %}
-        <a href="taskinfo?taskID={{ parent.id }}" class="task{{ util.taskState(parent.state) }}">{{ koji.taskLabel(parent) }}</a>
-        {% endif %}
-      </td>
-    </tr>
-    <tr>
-      <th>Descendants</th>
-      <td class="tree">
-        {% if len(descendents[str(task.id)]) > 0 %}
-        {% set taskState = util.taskState(task.state) %}
-        <span class="task{{ taskState }}">{{ util.imageTag(taskState) }}</span>
-        <span class="root">{{ task.method }}</span>
-        {% endif %}
-        {{ printChildren(task.id, descendents)|safe }}
-      </td>
-    </tr>
-    <tr>
-      <th>Waiting?</th><td>{{ 'yes' if task.waiting else 'no' }}</td>
-    </tr>
-    <tr>
-      <th>Awaited?</th><td>{{ 'yes' if task.awaited else 'no' }}</td>
-    </tr>
-    <tr>
-      <th>Priority</th><td>{{ task.priority }}</td>
-    </tr>
-    <tr>
-      <th>Weight</th><td>{{ '%.2f' % task.weight }}</td>
-    </tr>
-    <tr>
-      <th>Result</th>
-      <td>
-      {% if abbr_result_text %}
-        <div id="abbr-result">
-        {{ abbr_result_text }}
+          {% endif %}
+          {% if currentUser and 'admin' in perms and task.state in (koji.TASK_STATES.OPEN, koji.TASK_STATES.ASSIGNED) %}
+          <span class="adminLink">(<a href="freetask?taskID={{ task.id }}{{ koji_authToken() }}">free</a>)</span>
+          {% endif %}
         </div>
-        <div id="full-result">
-        {{ full_result_text }}
-        </div>
-        <a href="#" collapse" id="toggle-abbreviated-result" style="display: none;">Show abbreviated results</a>
-        <a href="#" collapse" id="toggle-full-result" style="display: none;">Show complete results</a>
-      {% else %}
-         <div id="result">
-        {{ full_result_text }}
-        </div>
+      </div>
+      {% if taskBuilds %}
+      {% for build in taskBuilds %}
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Build</div>
+        <div class="cds--structured-list-td"><a href="buildinfo?buildID={{ build.build_id }}">{{ koji.buildLabel(build) }}</a></div>
+      </div>
+      {% endfor %}
       {% endif %}
-      </td>
-    </tr>
-    <tr>
-      <th>Output</th>
-      <td>
-        {% for volume, filename in output %}
-        <a href="{{ pathinfo.task(task.id, volume=volume) }}/{{ quote(filename) }}">{{ filename }}</a>
-           {% if filename.endswith('.log') %}
-           (<a href="getfile?taskID={{ task.id }}&volume={{ volume }}&name={{ quote(filename) }}&offset=-4000">tail</a>)
-           {% endif %}
-        <br/>
-        {% endfor %}
-        {% if not output %}
-            <div title="Not all tasks produce outputs, and task outputs are not retained indefinitely.">No outputs reported</div>
-        {% endif %}
-        {% if task.state not in (koji.TASK_STATES.CLOSED, koji.TASK_STATES.CANCELED, koji.TASK_STATES.FAILED) and  task.method in ('buildSRPMFromSCM', 'buildArch', 'createLiveMedia', 'buildMaven', 'wrapperRPM', 'vmExec', 'createrepo', 'runroot', 'createAppliance', 'createLiveCD') %}
-        <br/>
-        <a href="watchlogs?taskID={{ task.id }}">Watch logs</a>
-        {% endif %}
-      </td>
-    </tr>
-  </table>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Created</div>
+        <div class="cds--structured-list-td">{{ util.formatTimeLong(task.create_ts) }}</div>
+      </div>
+      {% if task.start_time %}
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Started</div>
+        <div class="cds--structured-list-td">{{ util.formatTimeLong(task.start_ts) }}</div>
+      </div>
+      {% endif %}
+      {% set end_ts = None %}
+      {% if task.state == koji.TASK_STATES.OPEN %}
+      {% if estCompletion %}
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td" title="Estimation based on previous builds of same package">Est. Completion</div>
+        <div class="cds--structured-list-td">{{ util.formatTimeLong(estCompletion) }}</div>
+      </div>
+      {% endif %}
+      {% elif task.completion_time %}
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Completed</div>
+        <div class="cds--structured-list-td">{{ util.formatTimeLong(task.completion_ts) }}</div>
+      </div>
+      {% set end_ts = task.completion_ts %}
+      {% endif %}
+      {% if not end_ts %}
+      {% set end_ts = koji.util.parseTime(koji.util.encode_datetime(datetime.datetime.utcnow())) %}
+      {% endif %}
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td" title="From task's creation">Total time</div>
+        <div class="cds--structured-list-td">{{ util.formatTimestampDifference(task.create_ts, end_ts) }}</div>
+      </div>
+      {% if task.start_time %}
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td" title="From task's start">Task time</div>
+        <div class="cds--structured-list-td">{{ util.formatTimestampDifference(task.start_ts, end_ts) }}</div>
+      </div>
+      {% endif %}
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Owner</div>
+        <div class="cds--structured-list-td">
+          {% if owner %}
+            {% if owner.usertype == koji.USERTYPES['HOST'] %}
+            <a href="hostinfo?userID={{ owner.id }}">{{ owner.name }}</a>
+            {% else %}
+            <a href="userinfo?userID={{ owner.id }}">{{ owner.name }}</a>
+            {% endif %}
+          {% endif %}
+        </div>
+      </div>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Channel</div>
+        <div class="cds--structured-list-td">
+          {% if task.channel_id %}
+          <a href="channelinfo?channelID={{ task.channel_id }}">{{ channelName }}</a>
+          {% endif %}
+        </div>
+      </div>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Host</div>
+        <div class="cds--structured-list-td">
+          {% if task.host_id %}
+          <a href="hostinfo?hostID={{ task.host_id }}">{{ hostName }}</a>
+          {% endif %}
+        </div>
+      </div>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Arch</div>
+        <div class="cds--structured-list-td">{{ task.arch }}</div>
+      </div>
+      {% if buildroots %}
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Buildroot{{ 's' if len(buildroots) > 1 else '' }}</div>
+        <div class="cds--structured-list-td">
+          {% for buildroot in buildroots %}
+          <a href="buildrootinfo?buildrootID={{ buildroot.id }}">{{ '' if task.method == 'vmExec' else '/var/lib/mock/' }}{{ buildroot.tag_name }}-{{ buildroot.id }}-{{ buildroot.repo_id }}</a><br/>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Parent</div>
+        <div class="cds--structured-list-td">
+          {% if parent %}
+          <a href="taskinfo?taskID={{ parent.id }}" class="task{{ util.taskState(parent.state) }}">{{ koji.taskLabel(parent) }}</a>
+          {% endif %}
+        </div>
+      </div>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Descendants</div>
+        <div class="cds--structured-list-td tree">
+          {% if len(descendents[str(task.id)]) > 0 %}
+          {% set taskState = util.taskState(task.state) %}
+          <span class="task{{ taskState }}">{{ util.imageTag(taskState) }}</span>
+          <span class="root">{{ task.method }}</span>
+          {% endif %}
+          {{ printChildren(task.id, descendents)|safe }}
+        </div>
+      </div>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Waiting?</div>
+        <div class="cds--structured-list-td">{{ 'yes' if task.waiting else 'no' }}</div>
+      </div>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Awaited?</div>
+        <div class="cds--structured-list-td">{{ 'yes' if task.awaited else 'no' }}</div>
+      </div>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Priority</div>
+        <div class="cds--structured-list-td">{{ task.priority }}</div>
+      </div>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Weight</div>
+        <div class="cds--structured-list-td">{{ '%.2f' % task.weight }}</div>
+      </div>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Result</div>
+        <div class="cds--structured-list-td">
+          {% if abbr_result_text %}
+          <div id="abbr-result">
+          {{ abbr_result_text }}
+          </div>
+          <div id="full-result">
+          {{ full_result_text }}
+          </div>
+          <a href="#" id="toggle-abbreviated-result" style="display: none;">Show abbreviated results</a>
+          <a href="#" id="toggle-full-result" style="display: none;">Show complete results</a>
+          {% else %}
+          <div id="result">
+          {{ full_result_text }}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Output</div>
+        <div class="cds--structured-list-td">
+          {% for volume, filename in output %}
+          <a href="{{ pathinfo.task(task.id, volume=volume) }}/{{ quote(filename) }}">{{ filename }}</a>
+             {% if filename.endswith('.log') %}
+             (<a href="getfile?taskID={{ task.id }}&volume={{ volume }}&name={{ quote(filename) }}&offset=-4000">tail</a>)
+             {% endif %}
+          <br/>
+          {% endfor %}
+          {% if not output %}
+          <div title="Not all tasks produce outputs, and task outputs are not retained indefinitely.">No outputs reported</div>
+          {% endif %}
+          {% if task.state not in (koji.TASK_STATES.CLOSED, koji.TASK_STATES.CANCELED, koji.TASK_STATES.FAILED) and  task.method in ('buildSRPMFromSCM', 'buildArch', 'createLiveMedia', 'buildMaven', 'wrapperRPM', 'vmExec', 'createrepo', 'runroot', 'createAppliance', 'createLiveCD') %}
+          <br/>
+          <a href="watchlogs?taskID={{ task.id }}">Watch logs</a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
 
 {% if abbr_result_text %}
   <script type="text/javascript">

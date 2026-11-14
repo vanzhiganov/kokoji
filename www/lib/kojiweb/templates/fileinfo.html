@@ -7,56 +7,67 @@
   <h4>Information for file <a href="fileinfo?archiveID={{ archive.id }}&amp;filename={{ quote(file.name) }}">{{ file.name }}</a></h4>
   {% endif %}
 
-  <table>
-    <tr>
-      <th>Name</th><td>{{ file.name }}</td>
-    </tr>
-    {% if rpm %}
-    <tr>
-      <th>Digest ({{ file.digest_algo }})</th><td>{{ file.digest }}</td>
-    </tr>
-    {% endif %}
-    <tr>
-      <th>Size</th><td><span title="{{ util.formatThousands(file.size) }}">{{ util.formatNatural(file.size) }}</span></td>
-    </tr>
-    {% if 'mtime' in file and file.mtime %}
-    <tr>
-      <th>Modification time</th><td>{{ util.formatTimeLong(file.mtime) }}</td>
-    </tr>
-    {% endif %}
-    {% if 'user' in file and file.user %}
-    <tr>
-      <th>User</th><td>{{ file.user }}</td>
-    </tr>
-    {% endif %}
-    {% if 'group' in file and file.group %}
-    <tr>
-      <th>Group</th><td>{{ file.group }}</td>
-    </tr>
-    {% endif %}
-    {% if 'mode' in file and file.mode %}
-    <tr>
-      <th>Mode</th><td class="rpmheader">{{ util.formatMode(file.mode) }}</td>
-    </tr>
-    {% endif %}
-    {% if rpm %}
-    <tr>
-      <th>Flags</th>
-      <td>
-        {% for flag in util.formatFileFlags(file.flags) %}
-        {{ flag }}<br/>
-        {% endfor %}
-      </td>
-    </tr>
-    <tr>
+  <div class="cds--structured-list">
+    <div class="cds--structured-list-tbody">
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Name</div>
+        <div class="cds--structured-list-td">{{ file.name }}</div>
+      </div>
+      {% if rpm %}
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Digest ({{ file.digest_algo }})</div>
+        <div class="cds--structured-list-td">{{ file.digest }}</div>
+      </div>
+      {% endif %}
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Size</div>
+        <div class="cds--structured-list-td"><span title="{{ util.formatThousands(file.size) }}">{{ util.formatNatural(file.size) }}</span></div>
+      </div>
+      {% if 'mtime' in file and file.mtime %}
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Modification time</div>
+        <div class="cds--structured-list-td">{{ util.formatTimeLong(file.mtime) }}</div>
+      </div>
+      {% endif %}
+      {% if 'user' in file and file.user %}
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">User</div>
+        <div class="cds--structured-list-td">{{ file.user }}</div>
+      </div>
+      {% endif %}
+      {% if 'group' in file and file.group %}
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Group</div>
+        <div class="cds--structured-list-td">{{ file.group }}</div>
+      </div>
+      {% endif %}
+      {% if 'mode' in file and file.mode %}
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Mode</div>
+        <div class="cds--structured-list-td rpmheader">{{ util.formatMode(file.mode) }}</div>
+      </div>
+      {% endif %}
+      {% if rpm %}
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Flags</div>
+        <div class="cds--structured-list-td">
+          {% for flag in util.formatFileFlags(file.flags) %}
+          {{ flag }}<br/>
+          {% endfor %}
+        </div>
+      </div>
       {% set epoch = (rpm.epoch != None and str(rpm.epoch) + ':' or '') %}
-      <th>RPM</th><td><a href="rpminfo?rpmID={{ rpm.id }}">{{ rpm.name }}-{{ epoch }}{{ rpm.version }}-{{ rpm.release }}.{{ rpm.arch }}.rpm</a></td>
-    </tr>
-    {% elif archive %}
-    <tr>
-      <th>Archive</th><td><a href="archiveinfo?archiveID={{ archive.id }}">{{ archive.filename }}</a></td>
-    </tr>
-    {% endif %}
-  </table>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">RPM</div>
+        <div class="cds--structured-list-td"><a href="rpminfo?rpmID={{ rpm.id }}">{{ rpm.name }}-{{ epoch }}{{ rpm.version }}-{{ rpm.release }}.{{ rpm.arch }}.rpm</a></div>
+      </div>
+      {% elif archive %}
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Archive</div>
+        <div class="cds--structured-list-td"><a href="archiveinfo?archiveID={{ archive.id }}">{{ archive.filename }}</a></div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
 
 {% endblock %}

@@ -4,22 +4,18 @@
 
   <h4>Error</h4>
 
-<div>
-{{ explanation }}
-</div>
+  <div class="cds--inline-notification cds--inline-notification--error" role="alert">
+    <div class="cds--inline-notification__details">
+      <p class="cds--inline-notification__subtitle">{{ explanation }}</p>
+    </div>
+  </div>
 
-{% if debug_level >= 1 %}
-<div>
-{{ tb_short }}
-</div>
-{% endif %}
+  {% if debug_level >= 1 %}
+  <p>{{ tb_short }}</p>
+  {% endif %}
 
-{% if tb_long %}
-<div>
-<pre>
-{{ tb_long }}
-</pre>
-</div>
-{% endif %}
+  {% if tb_long %}
+  <pre class="cds--snippet cds--snippet--multi"><code>{{ tb_long }}</code></pre>
+  {% endif %}
 
 {% endblock %}

@@ -4,42 +4,51 @@
 
   <h4>Information for external buildroot <a href="buildrootinfo?buildrootID={{ buildroot.id }}">{{ util.brLabel(buildroot) }}</a></h4>
 
-  <table>
-    <tr>
-      <th>ID</th><td>{{ buildroot.id }}</td>
-    </tr>
-    <tr>
-      <th>Host OS</th><td>{{ buildroot.host_os }}</td>
-    </tr>
-    <tr>
-      <th>Host Arch</th><td>{{ buildroot.host_arch }}</td>
-    </tr>
-    <tr>
-      <th>Content Generator</th><td>{{ buildroot.cg_name }} ({{ buildroot.cg_version }})</td>
-    </tr>
-    <tr>
-      <th>Container Type</th><td>{{ buildroot.container_type }}</td>
-    </tr>
-    <tr>
-      <th>Container Arch</th><td>{{ buildroot.container_arch }}</td>
-    </tr>
-    {% if buildroot.get('extra') %}
-    <tr>
-      <th>Extra</th><td class="usertext">{{ pformat(buildroot.extra) }}</td>
-    </tr>
-    {% endif %}
-    <tr>
-      <th colspan="2"><a href="rpmlist?buildrootID={{ buildroot.id }}&amp;type=component" title="RPMs that are installed into this buildroot when building packages">Component RPMs</a></th>
-    </tr>
-    <tr>
-      <th colspan="2"><a href="rpmlist?buildrootID={{ buildroot.id }}&amp;type=built" title="RPMs that have been built in this buildroot">Built RPMs</a></th>
-    </tr>
-    <tr>
-      <th colspan="2"><a href="archivelist?buildrootID={{ buildroot.id }}&type=component" title="Archives that are installed into this buildroot when building packages">Component Archives</a></th>
-    </tr>
-    <tr>
-      <th colspan="2"><a href="archivelist?buildrootID={{ buildroot.id }}&type=built" title="Archives that have been built in this buildroot">Built Archives</a></th>
-    </tr>
-  </table>
+  <div class="cds--structured-list">
+    <div class="cds--structured-list-tbody">
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">ID</div>
+        <div class="cds--structured-list-td">{{ buildroot.id }}</div>
+      </div>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Host OS</div>
+        <div class="cds--structured-list-td">{{ buildroot.host_os }}</div>
+      </div>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Host Arch</div>
+        <div class="cds--structured-list-td">{{ buildroot.host_arch }}</div>
+      </div>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Content Generator</div>
+        <div class="cds--structured-list-td">{{ buildroot.cg_name }} ({{ buildroot.cg_version }})</div>
+      </div>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Container Type</div>
+        <div class="cds--structured-list-td">{{ buildroot.container_type }}</div>
+      </div>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Container Arch</div>
+        <div class="cds--structured-list-td">{{ buildroot.container_arch }}</div>
+      </div>
+      {% if buildroot.get('extra') %}
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Extra</div>
+        <div class="cds--structured-list-td usertext">{{ pformat(buildroot.extra) }}</div>
+      </div>
+      {% endif %}
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td"><a href="rpmlist?buildrootID={{ buildroot.id }}&amp;type=component" title="RPMs that are installed into this buildroot when building packages">Component RPMs</a></div>
+      </div>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td"><a href="rpmlist?buildrootID={{ buildroot.id }}&amp;type=built" title="RPMs that have been built in this buildroot">Built RPMs</a></div>
+      </div>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td"><a href="archivelist?buildrootID={{ buildroot.id }}&type=component" title="Archives that are installed into this buildroot when building packages">Component Archives</a></div>
+      </div>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td"><a href="archivelist?buildrootID={{ buildroot.id }}&type=built" title="Archives that have been built in this buildroot">Built Archives</a></div>
+      </div>
+    </div>
+  </div>
 
 {% endblock %}

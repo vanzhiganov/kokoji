@@ -5,24 +5,53 @@
 <h4>Information for repo {{ repo_id }}</h4>
 
 {% if repo %}
-<table>
-  <tr><th>ID</th><td>{{ repo.id }}</td><th></tr>
-  <tr><th>Tag</th><td><a href="taginfo?tagID={{ repo.tag_id }}">{{ repo.tag_name }}</a></td></tr>
-  {% if repo.task_id %}
-  <tr><th>Task ID</th><td><a href="taskinfo?taskID={{ repo.task_id }}">{{ repo.task_id }}</a></td></tr>
-  {% endif %}
-  {% set state = util.repoState(repo.state) %}
-  <tr><th>State</th><td class="repo{{ state }}">{{ state }}</td></tr>
-  <tr><th>Event</th><td>{{ repo.create_event }} ({{ util.formatTimeLong(repo.create_ts) }})</td></tr>
-  {% if repo.state != koji.REPO_STATES['DELETED'] %}
-  <tr><th>URL</th><td><a href="{{ url }}">repodata</a></td></tr>
-  <tr><th>Repo json</th><td><a href="{{ repo_json }}">repo.json</a></td></tr>
-  {% endif %}
-  <tr><th>Dist repo?</th><td class="{{ str(repo.dist).lower() }}">{{ 'yes' if repo.dist else 'no' }}</td></tr>
-  <tr><th>Number of buildroots: </th><td><a href="buildroots?repoID={{ repo.id }}">{{ numBuildroots }}</a></td></tr>
-</table>
+<div class="cds--structured-list">
+  <div class="cds--structured-list-tbody">
+    <div class="cds--structured-list-row">
+      <div class="cds--structured-list-td">ID</div>
+      <div class="cds--structured-list-td">{{ repo.id }}</div>
+    </div>
+    <div class="cds--structured-list-row">
+      <div class="cds--structured-list-td">Tag</div>
+      <div class="cds--structured-list-td"><a href="taginfo?tagID={{ repo.tag_id }}">{{ repo.tag_name }}</a></div>
+    </div>
+    {% if repo.task_id %}
+    <div class="cds--structured-list-row">
+      <div class="cds--structured-list-td">Task ID</div>
+      <div class="cds--structured-list-td"><a href="taskinfo?taskID={{ repo.task_id }}">{{ repo.task_id }}</a></div>
+    </div>
+    {% endif %}
+    {% set state = util.repoState(repo.state) %}
+    <div class="cds--structured-list-row">
+      <div class="cds--structured-list-td">State</div>
+      <div class="cds--structured-list-td repo{{ state }}">{{ state }}</div>
+    </div>
+    <div class="cds--structured-list-row">
+      <div class="cds--structured-list-td">Event</div>
+      <div class="cds--structured-list-td">{{ repo.create_event }} ({{ util.formatTimeLong(repo.create_ts) }})</div>
+    </div>
+    {% if repo.state != koji.REPO_STATES['DELETED'] %}
+    <div class="cds--structured-list-row">
+      <div class="cds--structured-list-td">URL</div>
+      <div class="cds--structured-list-td"><a href="{{ url }}">repodata</a></div>
+    </div>
+    <div class="cds--structured-list-row">
+      <div class="cds--structured-list-td">Repo json</div>
+      <div class="cds--structured-list-td"><a href="{{ repo_json }}">repo.json</a></div>
+    </div>
+    {% endif %}
+    <div class="cds--structured-list-row">
+      <div class="cds--structured-list-td">Dist repo?</div>
+      <div class="cds--structured-list-td {{ str(repo.dist).lower() }}">{{ 'yes' if repo.dist else 'no' }}</div>
+    </div>
+    <div class="cds--structured-list-row">
+      <div class="cds--structured-list-td">Number of buildroots: </div>
+      <div class="cds--structured-list-td"><a href="buildroots?repoID={{ repo.id }}">{{ numBuildroots }}</a></div>
+    </div>
+  </div>
+</div>
 {% else %}
-Repo {{ repo_id }} not found.
+<p>Repo {{ repo_id }} not found.</p>
 {% endif %}
 
 

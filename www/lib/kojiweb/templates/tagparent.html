@@ -11,62 +11,60 @@
   <form action="tagparent">
     {{ koji_authToken(form=True) }}
     <input type="hidden" name="action" value="{{ 'edit' if inheritanceData else 'add' }}"/>
-    <table>
-      <tr>
-        <th>Tag Name</th>
-        <td>
-          {{ tag.name }}
-          <input type="hidden" name="tagID" value="{{ tag.id }}"/>
-        </td>
-      </tr>
-      <tr>
-        <th>Parent Tag Name</th>
-        <td>
-          {{ parent.name }}
-          <input type="hidden" name="parentID" value="{{ parent.id }}"/>
-        </td>
-      </tr>
-      <tr>
-        <th>Priority</th>
-        <td>
-          <input type="text" name="priority" value="{{ inheritanceData.priority if inheritanceData else maxPriority + 1 }}"/>
-        </td>
-      </tr>
-      <tr>
-        <th>Max Depth</th>
-        <td>
-          <input type="text" name="maxdepth" value="{{ inheritanceData.maxdepth if inheritanceData else '' }}"/>
-        </td>
-      </tr>
-      <tr>
-        <th>Intransitive</th>
-        <td>
-          <input type="checkbox" name="intransitive" value="yes" {{ 'checked="checked"' if inheritanceData and inheritanceData.intransitive else '' }}/>
-        </td>
-      </tr>
-      <tr>
-        <th>Packages Only</th>
-        <td>
-          <input type="checkbox" name="noconfig" value="yes" {{ 'checked="checked"' if inheritanceData and inheritanceData.noconfig else '' }}/>
-        </td>
-      </tr>
-      <tr>
-        <th>Package Filter</th>
-        <td>
-          <input type="text" name="pkg_filter" value="{{ inheritanceData.pkg_filter if inheritanceData else '' }}"/>
-        </td>
-      </tr>
-      <tr>
-        <td>
-          {% if inheritanceData %}
-          <button type="submit" name="save" value="Save">Save</button>
-          {% else %}
-          <button type="submit" name="add" value="Add">Add</button>
-          {% endif %}
-        </td>
-        <td><button type="submit" name="cancel" value="Cancel">Cancel</button></td>
-      </tr>
-    </table>
+
+    <div class="cds--form-item">
+      <span class="cds--label">Tag Name</span>
+      <p>
+        {{ tag.name }}
+        <input type="hidden" name="tagID" value="{{ tag.id }}"/>
+      </p>
+    </div>
+
+    <div class="cds--form-item">
+      <span class="cds--label">Parent Tag Name</span>
+      <p>
+        {{ parent.name }}
+        <input type="hidden" name="parentID" value="{{ parent.id }}"/>
+      </p>
+    </div>
+
+    <div class="cds--form-item">
+      <label class="cds--label" for="priority">Priority</label>
+      <input type="text" id="priority" class="cds--text-input" name="priority" value="{{ inheritanceData.priority if inheritanceData else maxPriority + 1 }}"/>
+    </div>
+
+    <div class="cds--form-item">
+      <label class="cds--label" for="maxdepth">Max Depth</label>
+      <input type="text" id="maxdepth" class="cds--text-input" name="maxdepth" value="{{ inheritanceData.maxdepth if inheritanceData else '' }}"/>
+    </div>
+
+    <div class="cds--form-item cds--checkbox-wrapper">
+      <input type="checkbox" id="intransitive" class="cds--checkbox" name="intransitive" value="yes" {{ 'checked="checked"' if inheritanceData and inheritanceData.intransitive else '' }}/>
+      <label class="cds--checkbox-label" for="intransitive">
+        <span class="cds--checkbox-label-text">Intransitive</span>
+      </label>
+    </div>
+
+    <div class="cds--form-item cds--checkbox-wrapper">
+      <input type="checkbox" id="noconfig" class="cds--checkbox" name="noconfig" value="yes" {{ 'checked="checked"' if inheritanceData and inheritanceData.noconfig else '' }}/>
+      <label class="cds--checkbox-label" for="noconfig">
+        <span class="cds--checkbox-label-text">Packages Only</span>
+      </label>
+    </div>
+
+    <div class="cds--form-item">
+      <label class="cds--label" for="pkg_filter">Package Filter</label>
+      <input type="text" id="pkg_filter" class="cds--text-input" name="pkg_filter" value="{{ inheritanceData.pkg_filter if inheritanceData else '' }}"/>
+    </div>
+
+    <div class="cds--btn-set">
+      {% if inheritanceData %}
+      <button type="submit" name="save" value="Save" class="cds--btn cds--btn--primary">Save</button>
+      {% else %}
+      <button type="submit" name="add" value="Add" class="cds--btn cds--btn--primary">Add</button>
+      {% endif %}
+      <button type="submit" name="cancel" value="Cancel" class="cds--btn cds--btn--secondary">Cancel</button>
+    </div>
   </form>
 
 {% endblock %}

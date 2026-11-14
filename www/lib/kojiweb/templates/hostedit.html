@@ -4,54 +4,59 @@
 
   <h4>Edit host {{ host.name }}</h4>
 
-  <form action="hostedit">
+  <form action="hostedit" class="cds--form">
     {{ koji_authToken(form=True) }}
-    <table>
-      <tr>
-        <th>Name</th>
-        <td>{{ host.name }}</td>
-      </tr>
-      <tr>
-        <th>ID</th>
-        <td>
-          {{ host.id }}
-          <input type="hidden" name="hostID" value="{{ host.id }}"/>
-        </td>
-      </tr>
-      <tr>
-        <th>Arches</th>
-        <td><input type="text" name="arches" value="{{ host.arches }}"/></td>
-      </tr>
-      <tr>
-        <th>Capacity</th>
-        <td><input type="text" name="capacity" value="{{ host.capacity }}"/></td>
-      </tr>
-      <tr>
-        <th>Description</th>
-        <td><textarea name="description" rows="6" cols="50">{{ host.description }}</textarea></td>
-      </tr>
-      <tr>
-        <th>Comment</th>
-        <td><textarea name="comment" rows="2" cols="50">{{ host.comment }}</textarea></td>
-      </tr>
-      <tr>
-        <th>Enabled?</th>
-        <td><input type="checkbox" name="enabled" value="yes" {{ 'checked="checked"' if host.enabled else '' }}/>
-      </tr>
-      <tr>
-        <th>Channels</th>
-        <td>
-          <select name="channels" multiple="multiple">
-            {% for channel in allChannels %}
-            <option value="{{ channel.name }}" {{ 'selected' if channel in hostChannels else '' }}>{{ channel.name }}</option>
-            {% endfor %}
-          </select>
-        </td>
-      <tr>
-        <td><button type="submit" name="save" value="Save">Save</button></td>
-        <td><button type="submit" name="cancel" value="Cancel">Cancel</button></td>
-      </tr>
-    </table>
+    <div class="cds--structured-list">
+      <div class="cds--structured-list-tbody">
+        <div class="cds--structured-list-row">
+          <div class="cds--structured-list-td">Name</div>
+          <div class="cds--structured-list-td">{{ host.name }}</div>
+        </div>
+        <div class="cds--structured-list-row">
+          <div class="cds--structured-list-td">ID</div>
+          <div class="cds--structured-list-td">
+            {{ host.id }}
+            <input type="hidden" name="hostID" value="{{ host.id }}"/>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cds--form-item">
+      <label class="cds--label" for="arches">Arches</label>
+      <input type="text" id="arches" name="arches" class="cds--text-input" value="{{ host.arches }}"/>
+    </div>
+    <div class="cds--form-item">
+      <label class="cds--label" for="capacity">Capacity</label>
+      <input type="text" id="capacity" name="capacity" class="cds--text-input" value="{{ host.capacity }}"/>
+    </div>
+    <div class="cds--form-item">
+      <label class="cds--label" for="description">Description</label>
+      <textarea id="description" name="description" class="cds--text-area" rows="6" cols="50">{{ host.description }}</textarea>
+    </div>
+    <div class="cds--form-item">
+      <label class="cds--label" for="comment">Comment</label>
+      <textarea id="comment" name="comment" class="cds--text-area" rows="2" cols="50">{{ host.comment }}</textarea>
+    </div>
+    <div class="cds--form-item cds--checkbox-wrapper">
+      <input type="checkbox" id="enabled" name="enabled" value="yes" class="cds--checkbox" {{ 'checked="checked"' if host.enabled else '' }}/>
+      <label class="cds--checkbox-label" for="enabled">
+        <span class="cds--checkbox-label-text">Enabled?</span>
+      </label>
+    </div>
+    <div class="cds--form-item">
+      <label class="cds--label" for="channels">Channels</label>
+      <select id="channels" name="channels" class="cds--select-input koji-multiselect" multiple="multiple" size="6">
+        {% for channel in allChannels %}
+        <option value="{{ channel.name }}" {{ 'selected' if channel in hostChannels else '' }}>{{ channel.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="cds--btn-set">
+      <button type="submit" name="save" value="Save" class="cds--btn cds--btn--primary">Save</button>
+      <button type="submit" name="cancel" value="Cancel" class="cds--btn cds--btn--secondary">Cancel</button>
+    </div>
   </form>
 
 {% endblock %}

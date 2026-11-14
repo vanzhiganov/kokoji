@@ -208,8 +208,6 @@ def _genHTML(environ, fileName):
     # Cheetah templates had a .chtml extension; the Jinja2 templates use .html
     if fileName.endswith('.chtml'):
         fileName = fileName[:-len('.chtml')] + '.html'
-    # fresh per-render counter used by rowToggle()
-    values['_rowNum_holder'] = [0]
     env = _get_jinja_env()
     tmpl = env.get_template(fileName)
     return tmpl.render(**values)
@@ -728,19 +726,6 @@ def formatRPM(rpminfo, link=True):
         return label
 
 
-def rowToggle(template):
-    """If the value of template._rowNum is even, return 'row-even';
-    if it is odd, return 'row-odd'.  Increment the value before checking it.
-    If the template does not have that value, set it to 0."""
-    if not hasattr(template, '_rowNum'):
-        template._rowNum = 0
-    template._rowNum += 1
-    if template._rowNum % 2:
-        return 'row-odd'
-    else:
-        return 'row-even'
-
-
 def taskScratchClass(task_object):
     """ Return a css class indicating whether or not this task is a scratch
     build.
@@ -1227,20 +1212,6 @@ def _ctx_passthrough_except(context, *exclude, prefix='&'):
     return _passthrough_values(vars, context.get_all(), prefix)
 
 
-@jinja2.pass_context
-def _ctx_rowToggle(context):
-    """Jinja equivalent of rowToggle(template)."""
-    holder = _resolve_context_var(context, '_rowNum_holder')
-    if not holder:
-        holder = [0]
-        context.vars['_rowNum_holder'] = holder
-    holder[0] += 1
-    if holder[0] % 2:
-        return 'row-odd'
-    else:
-        return 'row-even'
-
-
 def _jinja_toggleSelected(var, option, checked=False):
     """Jinja equivalent of toggleSelected(template, var, option, checked)."""
     if var == option:
@@ -1356,7 +1327,6 @@ def setup_jinja_env(env):
     env.globals['sortImage'] = _ctx_sortImage
     env.globals['passthrough'] = _ctx_passthrough
     env.globals['passthrough_except'] = _ctx_passthrough_except
-    env.globals['rowToggle'] = _ctx_rowToggle
     env.globals['authToken'] = _ctx_authToken
     # Distinct callable name: "authToken" is shadowed by a string value in the
     # render context (the current token), so templates call this instead.

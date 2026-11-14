@@ -4,88 +4,106 @@
 
   <h4>Information for host <a href="hostinfo?hostID={{ host.id }}">{{ host.name }}</a></h4>
 
-  <table>
-    <tr>
-      <th>Name</th><td>{{ host.name }}</td>
-    </tr>
-    <tr>
-      <th>ID</th><td>{{ host.id }}</td>
-    </tr>
-    <tr>
-      <th>Arches</th><td>{{ host.arches }}</td>
-    </tr>
-    <tr>
-      <th>Capacity</th><td>{{ host.capacity }}</td>
-    </tr>
-    <tr>
-      <th>Task Load</th><td><a href="tasks?hostID={{ host.id }}">{{ '%.2f' % host.task_load }}</a></td>
-    </tr>
-    <tr>
-      <th>Description</th><td class="usertext">{{ host.description }}</td>
-    </tr>
-    <tr>
-      <th>Comment</th><td class="usertext">{{ host.comment }}</td>
-    </tr>
-    <tr>
+  <div class="cds--structured-list">
+    <div class="cds--structured-list-tbody">
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Name</div>
+        <div class="cds--structured-list-td">{{ host.name }}</div>
+      </div>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">ID</div>
+        <div class="cds--structured-list-td">{{ host.id }}</div>
+      </div>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Arches</div>
+        <div class="cds--structured-list-td">{{ host.arches }}</div>
+      </div>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Capacity</div>
+        <div class="cds--structured-list-td">{{ host.capacity }}</div>
+      </div>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Task Load</div>
+        <div class="cds--structured-list-td"><a href="tasks?hostID={{ host.id }}">{{ '%.2f' % host.task_load }}</a></div>
+      </div>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Description</div>
+        <div class="cds--structured-list-td usertext">{{ host.description }}</div>
+      </div>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Comment</div>
+        <div class="cds--structured-list-td usertext">{{ host.comment }}</div>
+      </div>
       {% set enabled = host.enabled and 'yes' or 'no' %}
-      <th>Enabled?</th>
-      <td class="{{ enabled }}">
-        {{ util.imageTag(enabled) }}
-        {% if 'admin' in perms %}
-        {% if host.enabled %}
-        <span class="adminLink">(<a href="disablehost?hostID={{ host.id }}{{ koji_authToken() }}">disable</a>)</span>
-        {% else %}
-        <span class="adminLink">(<a href="enablehost?hostID={{ host.id }}{{ koji_authToken() }}">enable</a>)</span>
-        {% endif %}
-        {% endif %}
-      </td>
-    </tr>
-    <tr>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Enabled?</div>
+        <div class="cds--structured-list-td {{ enabled }}">
+          {{ util.imageTag(enabled) }}
+          {% if 'admin' in perms %}
+          {% if host.enabled %}
+          <span class="adminLink">(<a href="disablehost?hostID={{ host.id }}{{ koji_authToken() }}">disable</a>)</span>
+          {% else %}
+          <span class="adminLink">(<a href="enablehost?hostID={{ host.id }}{{ koji_authToken() }}">enable</a>)</span>
+          {% endif %}
+          {% endif %}
+        </div>
+      </div>
       {% set ready = host.ready and 'yes' or 'no' %}
-      <th>Ready?</th><td class="{{ ready }}">{{ util.imageTag(ready) }}</td>
-    </tr>
-    <tr>
-      <th>Last Update</th><td>{{ util.formatTime(lastUpdate) }}</td>
-    </tr>
-    <tr>
-      <th>Channels</th>
-      <td>
-        {% for channel in channels %}
-        <a href="channelinfo?channelID={{ channel.id }}" class="{{ channel.enabled }}">{{ channel.name }}</a><br/>
-        {% endfor %}
-        {% if not channels %}
-        No channels
-        {% endif %}
-      </td>
-    </tr>
-    <tr>
-      <th>Active Buildroots</th>
-      {% if buildroots %}
-      <td class="container">
-        <table class="nested data-list">
-          <tr class="list-header">
-            <th>Buildroot</th><th>Created</th><th>State</th>
-          </tr>
-          {% for buildroot in buildroots %}
-          <tr class="{{ rowToggle() }}">
-            <td><a href="buildrootinfo?buildrootID={{ buildroot.id }}">{{ buildroot.tag_name }}-{{ buildroot.id }}-{{ buildroot.repo_id }}</a></td>
-            <td>{{ util.formatTime(buildroot.create_event_time) }}</td>
-            <td>{{ util.imageTag(util.brStateName(buildroot.state)) }}</td>
-          </tr>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Ready?</div>
+        <div class="cds--structured-list-td {{ ready }}">{{ util.imageTag(ready) }}</div>
+      </div>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Last Update</div>
+        <div class="cds--structured-list-td">{{ util.formatTime(lastUpdate) }}</div>
+      </div>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Channels</div>
+        <div class="cds--structured-list-td">
+          {% for channel in channels %}
+          <a href="channelinfo?channelID={{ channel.id }}" class="{{ channel.enabled }}">{{ channel.name }}</a><br/>
           {% endfor %}
-        </table>
-      </td>
-      {% else %}
-      <td>
-        No buildroots
-      </td>
-      {% endif %}
-    </tr>
-    {% if 'admin' in perms %}
-    <tr>
-      <td colspan="2"><a href="hostedit?hostID={{ host.id }}{{ koji_authToken() }}">Edit host</a></td>
-    </tr>
-    {% endif %}
-  </table>
+          {% if not channels %}
+          No channels
+          {% endif %}
+        </div>
+      </div>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Active Buildroots</div>
+        <div class="cds--structured-list-td">
+          {% if buildroots %}
+          <div class="cds--data-table-container">
+            <table class="cds--data-table cds--data-table--zebra">
+              <thead>
+                <tr>
+                  <th scope="col">Buildroot</th>
+                  <th scope="col">Created</th>
+                  <th scope="col">State</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for buildroot in buildroots %}
+                <tr>
+                  <td><a href="buildrootinfo?buildrootID={{ buildroot.id }}">{{ buildroot.tag_name }}-{{ buildroot.id }}-{{ buildroot.repo_id }}</a></td>
+                  <td>{{ util.formatTime(buildroot.create_event_time) }}</td>
+                  <td>{{ util.imageTag(util.brStateName(buildroot.state)) }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+          No buildroots
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% if 'admin' in perms %}
+  <div class="cds--btn-set">
+    <a class="cds--btn cds--btn--secondary cds--btn--sm" href="hostedit?hostID={{ host.id }}{{ koji_authToken() }}">Edit host</a>
+  </div>
+  {% endif %}
 
 {% endblock %}

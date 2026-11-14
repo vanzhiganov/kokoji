@@ -8,58 +8,59 @@
   <h4>Create tag</h4>
   {% endif %}
 
-  <form action="{{ 'tagedit' if tag else 'tagcreate' }}">
+  <form action="{{ 'tagedit' if tag else 'tagcreate' }}" class="koji-form">
     {{ koji_authToken(form=True) }}
-    <table>
-      <tr>
-        <th>Name</th>
-        <td>
-          <input type="text" name="name" value="{{ tag.name if tag else '' }}"/>
-          {% if tag %}
-          <input type="hidden" name="tagID" value="{{ tag.id }}"/>
-          {% endif %}
-        </td>
-      </tr>
-      <tr>
-        <th>Arches</th>
-        <td><input type="text" name="arches" value="{{ tag.arches if tag else '' }}"/></td>
-      </tr>
-      <tr>
-        <th>Locked</th>
-        <td><input type="checkbox" name="locked" value="yes" {{ 'checked="checked"' if tag and tag.locked else '' }}/></td>
-      </tr>
-      <tr>
-        <th>Permission</th>
-        <td>
-          <select name="permission">
-            <option value="none" {{ 'selected' if tag and not tag.perm_id else '' }}>none</option>
-            {% for permission in permissions %}
-            <option value="{{ permission.id }}" {{ 'selected' if tag and tag.perm_id == permission.id else '' }}>{{ permission.name }}</option>
-            {% endfor %}
-          </select>
-        </td>
-      </tr>
-      {% if mavenEnabled %}
-      <tr>
-        <th>Maven Support?</th>
-        <td><input type="checkbox" name="maven_support" value="yes" {{ 'checked="checked"' if tag and tag.maven_support else '' }}>
-      </tr>
-      <tr>
-        <th>Include All Maven Builds?</th>
-        <td><input type="checkbox" name="maven_include_all" value="yes" {{ 'checked="checked"' if tag and tag.maven_include_all else '' }}>
-      </tr>
+    <div class="cds--form-item">
+      <label class="cds--label" for="tagName">Name</label>
+      <input type="text" id="tagName" name="name" value="{{ tag.name if tag else '' }}" class="cds--text-input"/>
+      {% if tag %}
+      <input type="hidden" name="tagID" value="{{ tag.id }}"/>
       {% endif %}
-      <tr>
-        <td>
-          {% if tag %}
-          <button type="submit" name="save" value="Save">Save</button>
-          {% else %}
-          <button type="submit" name="add" value="Add">Add</button>
-          {% endif %}
-        </td>
-        <td><button type="submit" name="cancel" value="Cancel">Cancel</button></td>
-      </tr>
-    </table>
+    </div>
+    <div class="cds--form-item">
+      <label class="cds--label" for="tagArches">Arches</label>
+      <input type="text" id="tagArches" name="arches" value="{{ tag.arches if tag else '' }}" class="cds--text-input"/>
+    </div>
+    <div class="cds--form-item">
+      <div class="cds--checkbox-wrapper">
+        <input type="checkbox" id="tagLocked" name="locked" value="yes" class="cds--checkbox" {{ 'checked="checked"' if tag and tag.locked else '' }}/>
+        <label for="tagLocked" class="cds--checkbox-label"><span class="cds--checkbox-label-text">Locked</span></label>
+      </div>
+    </div>
+    <div class="cds--select">
+      <label class="cds--label" for="tagPermission">Permission</label>
+      <div class="cds--select-input__wrapper">
+        <select id="tagPermission" name="permission" class="cds--select-input">
+          <option value="none" {{ 'selected' if tag and not tag.perm_id else '' }}>none</option>
+          {% for permission in permissions %}
+          <option value="{{ permission.id }}" {{ 'selected' if tag and tag.perm_id == permission.id else '' }}>{{ permission.name }}</option>
+          {% endfor %}
+        </select>
+        <svg focusable="false" class="cds--select__arrow" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 22L6 12l1.4-1.4 8.6 8.6 8.6-8.6L26 12z"/></svg>
+      </div>
+    </div>
+    {% if mavenEnabled %}
+    <div class="cds--form-item">
+      <div class="cds--checkbox-wrapper">
+        <input type="checkbox" id="tagMavenSupport" name="maven_support" value="yes" class="cds--checkbox" {{ 'checked="checked"' if tag and tag.maven_support else '' }}/>
+        <label for="tagMavenSupport" class="cds--checkbox-label"><span class="cds--checkbox-label-text">Maven Support?</span></label>
+      </div>
+    </div>
+    <div class="cds--form-item">
+      <div class="cds--checkbox-wrapper">
+        <input type="checkbox" id="tagMavenIncludeAll" name="maven_include_all" value="yes" class="cds--checkbox" {{ 'checked="checked"' if tag and tag.maven_include_all else '' }}/>
+        <label for="tagMavenIncludeAll" class="cds--checkbox-label"><span class="cds--checkbox-label-text">Include All Maven Builds?</span></label>
+      </div>
+    </div>
+    {% endif %}
+    <div class="koji-filters">
+      {% if tag %}
+      <button type="submit" name="save" value="Save" class="cds--btn cds--btn--primary">Save</button>
+      {% else %}
+      <button type="submit" name="add" value="Add" class="cds--btn cds--btn--primary">Add</button>
+      {% endif %}
+      <button type="submit" name="cancel" value="Cancel" class="cds--btn cds--btn--secondary">Cancel</button>
+    </div>
   </form>
 
 {% endblock %}

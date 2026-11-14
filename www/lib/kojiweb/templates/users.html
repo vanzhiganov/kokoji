@@ -1,94 +1,87 @@
 {% extends "base.html" %}
 {% block content %}
 
-
-  <h4>Users{{ ' starting with "%s"' % prefix if prefix else '' }}</h4>
-  <table class="data-list">
-    <tr>
-      <td class="charlist" colspan="5">
-        {% for char in chars %}
-        {% if prefix == char %}
-        <strong>{{ char }}</strong>
-        {% else %}
-        <a href="users?prefix={{ char }}{{ passthrough('order') }}">{{ char }}</a>
-        {% endif %}
-        | 
-        {% endfor %}
-        {% if prefix %}
-        <a href="users?{{ passthrough('order', prefix='') }}">all</a>
-        {% else %}
-        <strong>all</strong>
-        {% endif %}
-      </td>
-    </tr>
-    <tr>
-      <td class="paginate" colspan="5">
-        {% if len(userPages) > 1 %}
-        <form class="pageJump" action="">
-          Page:
-          <select onchange="javascript: window.location = 'users?start=' + this.value * {{ userRange }} + '{{ passthrough('order', 'prefix') }}';">
+{% macro pagination() %}
+  <div class="cds--pagination">
+    <div class="cds--pagination__left">
+      {% if len(userPages) > 1 %}
+      <div class="cds--select cds--select--inline">
+        <label class="cds--label" for="userPage">Page</label>
+        <div class="cds--select-input__wrapper">
+          <select id="userPage" class="cds--select-input" onchange="javascript: window.location = 'users?start=' + this.value * {{ userRange }} + '{{ passthrough('order', 'prefix') }}';">
             {% for pageNum in userPages %}
             <option value="{{ pageNum }}"{{ ' selected' if pageNum == userCurrentPage else '' }}>{{ pageNum + 1 }}</option>
             {% endfor %}
           </select>
-        </form>
-        {% endif %}
-        {% if userStart > 0 %}
-        <a href="users?start={{ userStart - userRange }}{{ passthrough('order', 'prefix') }}">&lt;&lt;&lt;</a>
-        {% endif %}
-        {% if totalUsers != 0 %}
-        <strong>Users {{ userStart + 1 }} through {{ userStart + userCount }} of {{ totalUsers }}</strong>
-        {% endif %}
-        {% if userStart + userCount < totalUsers %}
-        <a href="users?start={{ userStart + userRange }}{{ passthrough('order', 'prefix') }}">&gt;&gt;&gt;</a>
-        {% endif %}
-      </td>
-    </tr>
-    <tr class="list-header">
-      <th><a href="users?order={{ toggleOrder('id') }}{{ passthrough('prefix') }}">ID</a> {{ sortImage('id') }}</th>
-      <th><a href="users?order={{ toggleOrder('name') }}{{ passthrough('prefix') }}">Name</a> {{ sortImage('name') }}</th>
-      <th>Packages</th>
-      <th>Builds</th>
-      <th>Tasks</th>
-    </tr>
-    {% if len(users) > 0 %}
-      {% for user in users %}
-        <tr class="{{ rowToggle() }}">
+          <svg focusable="false" class="cds--select__arrow" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 22L6 12l1.4-1.4 8.6 8.6 8.6-8.6L26 12z"/></svg>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+    <div class="cds--pagination__right">
+      {% if totalUsers != 0 %}
+      <span class="cds--pagination__items-count">Users {{ userStart + 1 }} through {{ userStart + userCount }} of {{ totalUsers }}</span>
+      {% endif %}
+      {% if userStart > 0 %}
+      <a class="cds--btn cds--btn--ghost cds--btn--sm" href="users?start={{ userStart - userRange }}{{ passthrough('order', 'prefix') }}">Previous</a>
+      {% endif %}
+      {% if userStart + userCount < totalUsers %}
+      <a class="cds--btn cds--btn--ghost cds--btn--sm" href="users?start={{ userStart + userRange }}{{ passthrough('order', 'prefix') }}">Next</a>
+      {% endif %}
+    </div>
+  </div>
+{% endmacro %}
+
+  <h4>Users{{ ' starting with "%s"' % prefix if prefix else '' }}</h4>
+
+  <nav class="koji-links" aria-label="Filter users by first character">
+    {% for char in chars %}
+    {% if prefix == char %}
+    <strong>{{ char }}</strong>
+    {% else %}
+    <a href="users?prefix={{ char }}{{ passthrough('order') }}">{{ char }}</a>
+    {% endif %}
+    {% endfor %}
+    {% if prefix %}
+    <a href="users?{{ passthrough('order', prefix='') }}">all</a>
+    {% else %}
+    <strong>all</strong>
+    {% endif %}
+  </nav>
+
+  {{ pagination()|safe }}
+
+  <div class="cds--data-table-container">
+    <table class="cds--data-table cds--data-table--zebra">
+      <thead>
+        <tr>
+          <th scope="col"><a href="users?order={{ toggleOrder('id') }}{{ passthrough('prefix') }}">ID</a> {{ sortImage('id') }}</th>
+          <th scope="col"><a href="users?order={{ toggleOrder('name') }}{{ passthrough('prefix') }}">Name</a> {{ sortImage('name') }}</th>
+          <th scope="col">Packages</th>
+          <th scope="col">Builds</th>
+          <th scope="col">Tasks</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if len(users) > 0 %}
+        {% for user in users %}
+        <tr>
           <td>{{ user.id }}</td>
           <td><a href="userinfo?userID={{ quote(user.name) }}">{{ user.name }}</a></td>
           <td><a href="packages?userID={{ quote(user.name) }}">view</a></td>
           <td><a href="builds?userID={{ quote(user.name) }}">view</a></td>
           <td><a href="tasks?owner={{ quote(user.name) }}">view</a></td>
         </tr>
-      {% endfor %}
-    {% else %}
-      <tr class="row-odd">
-        <td colspan="5">No users</td>
-      </tr>
-    {% endif %}
-    <tr>
-      <td class="paginate" colspan="5">
-        {% if len(userPages) > 1 %}
-        <form class="pageJump" action="">
-          Page:
-          <select onchange="javascript: window.location = 'users?start=' + this.value * {{ userRange }} + '{{ passthrough('order', 'prefix') }}';">
-            {% for pageNum in userPages %}
-            <option value="{{ pageNum }}"{{ ' selected' if pageNum == userCurrentPage else '' }}>{{ pageNum + 1 }}</option>
-            {% endfor %}
-          </select>
-        </form>
+        {% endfor %}
+        {% else %}
+        <tr>
+          <td colspan="5">No users</td>
+        </tr>
         {% endif %}
-        {% if userStart > 0 %}
-        <a href="users?start={{ userStart - userRange }}{{ passthrough('order', 'prefix') }}">&lt;&lt;&lt;</a>
-        {% endif %}
-        {% if totalUsers != 0 %}
-        <strong>Users {{ userStart + 1 }} through {{ userStart + userCount }} of {{ totalUsers }}</strong>
-        {% endif %}
-        {% if userStart + userCount < totalUsers %}
-        <a href="users?start={{ userStart + userRange }}{{ passthrough('order', 'prefix') }}">&gt;&gt;&gt;</a>
-        {% endif %}
-      </td>
-    </tr>
-  </table>
+      </tbody>
+    </table>
+  </div>
+
+  {{ pagination()|safe }}
 
 {% endblock %}

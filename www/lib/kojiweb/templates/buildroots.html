@@ -5,55 +5,69 @@
 
   <h4>Buildroots in repo <a href="repoinfo?repoID={{ repoID }}">{{ repoID }}</a></h4>
 
-  <table class="data-list">
-  <tr>
-      <td colspan="5">
-        <table class="nested">
-        <tr><td>
-        <strong>State</strong>:
-        </td><td>
-        <select name="state" class="filterlist" onchange="javascript: window.location = 'buildroots?state=' + this.value + '{{ passthrough_except('state') }}';">
+  <form action="buildroots" class="koji-filters">
+    <div class="cds--select cds--select--inline">
+      <label class="cds--label" for="filterState">State</label>
+      <div class="cds--select-input__wrapper">
+        <select id="filterState" name="state" class="cds--select-input" onchange="javascript: window.location = 'buildroots?state=' + this.value + '{{ passthrough_except('state') }}';">
           <option value="all">all</option>
           {% for stateOpt in ['INIT', 'WAITING', 'BUILDING', 'EXPIRED'] %}
           <option value="{{ koji.BR_STATES[stateOpt] }}" {{ 'selected' if state == koji.BR_STATES[stateOpt] else '' }}>{{ stateOpt.lower() }}</option>
           {% endfor %}
         </select>
-        </table>
-        </td>
-       </tr>
-      <tr>
-      <td class="paginate" colspan="5">
-        {% if len(buildrootPages) > 1 %}
-        <form class="pageJump" action="">
-          Page:
-          <select onchange="javascript: window.location = 'builds?start=' + this.value * {{ buildrootRange }} + '{{ passthrough_except() }}';">
+        <svg focusable="false" class="cds--select__arrow" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 22L6 12l1.4-1.4 8.6 8.6 8.6-8.6L26 12z"/></svg>
+      </div>
+    </div>
+  </form>
+
+  {% macro pagination() %}
+  <div class="cds--pagination">
+    <div class="cds--pagination__left">
+      {% if len(buildrootPages) > 1 %}
+      <div class="cds--select cds--select--inline">
+        <label class="cds--label" for="buildrootPage">Page</label>
+        <div class="cds--select-input__wrapper">
+          <select id="buildrootPage" class="cds--select-input" onchange="javascript: window.location = 'buildroots?start=' + this.value * {{ buildrootRange }} + '{{ passthrough_except() }}';">
             {% for pageNum in buildrootPages %}
             <option value="{{ pageNum }}"{{ ' selected' if pageNum == buildrootCurrentPage else '' }}>{{ pageNum + 1 }}</option>
             {% endfor %}
           </select>
-        </form>
-        {% endif %}
-        {% if buildrootStart > 0 %}
-        <a href="builds?start={{ buildrootStart - buildrootRange }}{{ passthrough_except() }}">&lt;&lt;&lt;</a>
-        {% endif %}
-        {% if totalBuildroots != 0 %}
-        <strong>Buildroots {{ buildrootStart + 1 }} through {{ buildrootStart + buildrootCount }} of {{ totalBuildroots }}</strong>
-        {% endif %}
-        {% if buildrootStart + buildrootCount < totalBuildroots %}
-        <a href="builds?start={{ buildrootStart + buildrootRange }}{{ passthrough_except() }}">&gt;&gt;&gt;</a>
-        {% endif %}
-      </td>
-    </tr>
-    <tr class="list-header">
-      <th><a href="buildroots?order={{ toggleOrder('id') }}{{ passthrough_except('order') }}">BuildrootID</a> {{ sortImage('id') }}</th>
-      <th><a href="buildroots?order={{ toggleOrder('repo_id') }}{{ passthrough_except('order') }}">Repo ID</a> {{ sortImage('repo_id') }}</th>
-      <th><a href="buildroots?order={{ toggleOrder('task_id') }}{{ passthrough_except('order') }}">Task ID</a> {{ sortImage('task_id') }}</th>
-      <th><a href="buildroots?order={{ toggleOrder('tag_name') }}{{ passthrough_except('order') }}">Tag name</a> {{ sortImage('tag_name') }}</th>
-      <th><a href="buildroots?order={{ toggleOrder('state') }}{{ passthrough_except('order') }}">State</a> {{ sortImage('state') }}</th>
-    </tr>
-    {% if len(buildroots) > 0 %}
-      {% for buildroot in buildroots %}
-        <tr class="{{ rowToggle() }}">
+          <svg focusable="false" class="cds--select__arrow" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 22L6 12l1.4-1.4 8.6 8.6 8.6-8.6L26 12z"/></svg>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+    <div class="cds--pagination__right">
+      {% if totalBuildroots != 0 %}
+      <span class="cds--pagination__items-count">{{ buildrootStart + 1 }}&ndash;{{ buildrootStart + buildrootCount }} of {{ totalBuildroots }}</span>
+      {% endif %}
+      {% if buildrootStart > 0 %}
+      <a class="cds--btn cds--btn--ghost cds--btn--sm" href="buildroots?start={{ buildrootStart - buildrootRange }}{{ passthrough_except() }}">Previous</a>
+      {% endif %}
+      {% if buildrootStart + buildrootCount < totalBuildroots %}
+      <a class="cds--btn cds--btn--ghost cds--btn--sm" href="buildroots?start={{ buildrootStart + buildrootRange }}{{ passthrough_except() }}">Next</a>
+      {% endif %}
+    </div>
+  </div>
+  {% endmacro %}
+
+  {{ pagination()|safe }}
+
+  <div class="cds--data-table-container">
+    <table class="cds--data-table cds--data-table--zebra">
+      <thead>
+        <tr>
+          <th scope="col"><a href="buildroots?order={{ toggleOrder('id') }}{{ passthrough_except('order') }}">BuildrootID</a> {{ sortImage('id') }}</th>
+          <th scope="col"><a href="buildroots?order={{ toggleOrder('repo_id') }}{{ passthrough_except('order') }}">Repo ID</a> {{ sortImage('repo_id') }}</th>
+          <th scope="col"><a href="buildroots?order={{ toggleOrder('task_id') }}{{ passthrough_except('order') }}">Task ID</a> {{ sortImage('task_id') }}</th>
+          <th scope="col"><a href="buildroots?order={{ toggleOrder('tag_name') }}{{ passthrough_except('order') }}">Tag name</a> {{ sortImage('tag_name') }}</th>
+          <th scope="col"><a href="buildroots?order={{ toggleOrder('state') }}{{ passthrough_except('order') }}">State</a> {{ sortImage('state') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if len(buildroots) > 0 %}
+        {% for buildroot in buildroots %}
+        <tr>
           <td><a href="buildrootinfo?buildrootID={{ buildroot.id }}">{{ buildroot.id }}</a></td>
           <td><a href="repoinfo?repoID={{ buildroot.repo_id }}">{{ buildroot.repo_id }}</a></td>
           <td><a href="taskinfo?taskID={{ buildroot.task_id }}">{{ buildroot.task_id }}</a></td>
@@ -61,35 +75,16 @@
           {% set stateName = util.brStateName(buildroot.state) %}
           <td class="{{ stateName }}">{{ util.brStateImage(buildroot.state) }}</td>
         </tr>
-      {% endfor %}
-    {% else %}
-      <tr class="row-odd">
-        <td colspan="5">No buildroots</td>
-      </tr>
-    {% endif %}
-    <tr>
-      <td class="paginate" colspan="5">
-        {% if len(buildrootPages) > 1 %}
-        <form class="pageJump" action="">
-          Page:
-          <select onchange="javascript: window.location = 'builds?start=' + this.value * {{ buildrootRange }} + '{{ passthrough_except() }}';">
-            {% for pageNum in buildrootPages %}
-            <option value="{{ pageNum }}"{{ ' selected' if pageNum == buildrootCurrentPage else '' }}>{{ pageNum + 1 }}</option>
-            {% endfor %}
-          </select>
-        </form>
+        {% endfor %}
+        {% else %}
+        <tr>
+          <td colspan="5">No buildroots</td>
+        </tr>
         {% endif %}
-        {% if buildrootStart > 0 %}
-        <a href="builds?start={{ buildrootStart - buildrootRange }}{{ passthrough_except() }}">&lt;&lt;&lt;</a>
-        {% endif %}
-        {% if totalBuildroots != 0 %}
-        <strong>Buildroots {{ buildrootStart + 1 }} through {{ buildrootStart + buildrootCount }} of {{ totalBuildroots }}</strong>
-        {% endif %}
-        {% if buildrootStart + buildrootCount < totalBuildroots %}
-        <a href="builds?start={{ buildrootStart + buildrootRange }}{{ passthrough_except() }}">&gt;&gt;&gt;</a>
-        {% endif %}
-      </td>
-    </tr>
-  </table>
+      </tbody>
+    </table>
+  </div>
+
+  {{ pagination()|safe }}
 
 {% endblock %}
