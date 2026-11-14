@@ -329,8 +329,7 @@ class TasksTestCase(unittest.TestCase):
         obj.session = MagicMock()
         obj.session.host.taskWait.return_value = [[], [99, 100, 101]]
         time.side_effect = list(range(0, 4000, 60))
-        if six.PY3:
-            sigtimedwait = patch('signal.sigtimedwait').start()
+        sigtimedwait = patch('signal.sigtimedwait').start()
 
         try:
             obj.wait([99, 100, 101], timeout=3600)
@@ -338,8 +337,7 @@ class TasksTestCase(unittest.TestCase):
         except koji.GenericError as e:
             self.assertEqual(e.args[0][:24], 'Subtasks timed out after')
 
-        if six.PY3:
-            sigtimedwait.stop()
+        sigtimedwait.stop()
 
         obj.session.host.taskSetWait.assert_called_once_with(95, [99, 100, 101])
         obj.session.cancelTaskChildren.assert_called_once_with(95)
@@ -365,13 +363,11 @@ class TasksTestCase(unittest.TestCase):
         taskWait_returns.append([[99, 100, 101], []])
         obj.session.host.taskWait.side_effect = taskWait_returns
 
-        if six.PY3:
-            sigtimedwait = patch('signal.sigtimedwait').start()
+        sigtimedwait = patch('signal.sigtimedwait').start()
 
         obj.wait([99, 100, 101], timeout=3600)
 
-        if six.PY3:
-            sigtimedwait.stop()
+        sigtimedwait.stop()
 
         obj.session.host.taskSetWait.assert_called_once_with(95, [99, 100, 101])
         obj.session.cancelTaskChildren.assert_not_called()

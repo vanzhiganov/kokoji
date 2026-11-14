@@ -1,4 +1,3 @@
-PYVER_MAJOR := $(shell $(PYTHON) -c 'import sys; print(".".join(sys.version.split(".")[:1]))')
 PACKAGE = kojihub
 PYFILES = $(wildcard *.py)
 PKGDIR = $(shell $(PYTHON) ../devtools/get_site_packages.py )/$(PACKAGE)

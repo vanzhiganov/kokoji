@@ -32,7 +32,7 @@ from six.moves import zip
 
 class BytesJSONEncoder(json.JSONEncoder):
     def default(self, o):
-        if six.PY3 and isinstance(o, bytes):
+        if isinstance(o, bytes):
             return o.decode('utf-8')
         return json.JSONEncoder.default(self, o)
 
@@ -268,6 +268,5 @@ class Rpmdiff:
         if not data:
             raise ValueError("rpm header data are empty")
         s = json.dumps(data, sort_keys=True, cls=BytesJSONEncoder)
-        if six.PY3:
-            s = s.encode('utf-8')
+        s = s.encode('utf-8')
         return hashlib.sha256(s).hexdigest()

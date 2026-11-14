@@ -40,6 +40,18 @@ You may browse code at https://pagure.io/koji
 
 Archived releases can be found at https://pagure.io/koji/releases
 
+Building from source
+--------------------
+
+Building the RPM packages from this checkout requires ``rpm-build``. Install
+it with dnf:
+
+    dnf install rpm-build
+
+Then run ``make srpm`` or ``make rpm`` from the repository root. The Makefile
+also uses ``rpm``/``rpmspec`` to read the version from the spec file, so this
+dependency is needed even for other make targets.
+
 Documentation
 -------------
 

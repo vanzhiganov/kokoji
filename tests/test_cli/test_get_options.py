@@ -27,7 +27,7 @@ class TestGetOptions(unittest.TestCase):
                             'timeout': 50000, 'auth_timeout': 60, 'use_fast_upload': True,
                             'upload_blocksize': 1048576, 'poll_interval': 6,
                             'cert': None, 'serverca': None, 'no_ssl_verify': False,
-                            'authtype': None, 'debug': False, 'debug_xmlrpc': False, 'pyver': None,
+                            'authtype': None, 'debug': False, 'debug_xmlrpc': False,
                             'plugin_paths': None, 'force_auth': False, 'config': 'path/to/config'}
         self.expanduser_values = ['path/topdir', 'cert.crt', 'serverca.crt']
         self.orig_basedir = koji.BASEDIR

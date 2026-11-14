@@ -1,76 +1,6 @@
-%bcond_without python3
-%bcond_without python2
 %global _python_bytecompile_extra 0
 
-# We can build varying amounts of Koji for python2 and python3 based on
-# the py[23]_support macro values. Valid values are:
-#   undefined or 0 -- do not build
-#   1 -- build just the cli and lib
-#   2 -- build everything we can
-# For executable scripts, py3 wins if we build it
-# The following rules tweak these settings based on options and environment
-
-# Default to building both fully
-%define py2_support 2
-%define py3_support 2
-%define wheel_support 1
-
-%if 0%{?rhel} >= 8
-# and no python2 on rhel8+
-%define py2_support 0
-%define wheel_support 1
-%else
-%if 0%{?rhel} >= 7
-# No python3 for older rhel
-%define py3_support 0
-%define wheel_support 0
-%else
-# don't build anything for rhel6
-%define py2_support 0
-%define py3_support 0
-%define wheel_support 0
-%endif
-%endif
-
-%if 0%{?fedora} >= 33
-# no py2 after F33
-%define py2_support 0
-%define py3_support 2
-%define wheel_support 1
-%else
-%if 0%{?fedora} >= 30
-%define py2_support 1
-%define py3_support 2
-%else
-%if 0%{?fedora}
-# match what the older Fedoras already have
-%define py2_support 2
-%define py3_support 1
-%endif
-%endif
-%endif
-
-# Lastly enforce the bcond parameters
-%if %{without python2}
-%define py2_support 0
-%endif
-%if %{without python3}
-%define py3_support 0
-%endif
-
-%if ! %{py2_support}
-# use python3
-%define __python %{__python3}
-%endif
-
-# Compatibility with RHEL. These macros have been added to EPEL but
-# not yet to RHEL proper.
-# https://bugzilla.redhat.com/show_bug.cgi?id=1307190
-%{!?__python2: %global __python2 /usr/bin/python2}
-%{!?python2_sitelib: %global python2_sitelib %(%{__python2} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
-%{!?python2_sitearch: %global python2_sitearch %(%{__python2} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib(1))")}
-%{!?py2_build: %global py2_build %{expand: CFLAGS="%{optflags}" %{__python2} setup.py %{?py_setup_args} build --executable="%{__python2} -s"}}
-%{!?py2_install: %global py2_install %{expand: CFLAGS="%{optflags}" %{__python2} setup.py %{?py_setup_args} install -O1 --skip-build --root %{buildroot}}}
+# Koji is built for Python 3 only. Python 2 support has been removed.
 
 # If the definition isn't available for python3_pkgversion, define it
 %{?!python3_pkgversion:%global python3_pkgversion 3}
@@ -86,7 +16,6 @@ Name: koji
 Version: 1.35.3
 Release: %{release}%{?dist}
 License: LGPL-2.1-only and GPL-2.0-or-later
-# the included arch lib from yum's rpmUtils is GPLv2+
 # rpmdiff lib (from rpmlint) is GPLv2+
 Summary: Build system tools
 Group: Applications/System
@@ -94,15 +23,8 @@ URL: https://pagure.io/koji
 Source: https://releases.pagure.org/koji/koji-%{version}.tar.bz2
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildArch: noarch
-%if 0%{py3_support}
 Requires: python%{python3_pkgversion}-%{name} = %{version}-%{release}
 Requires: python%{python3_pkgversion}-libcomps
-%else
-Requires: python2-%{name} = %{version}-%{release}
-%if 0%{?fedora} || 0%{?rhel} >= 7
-Requires: python-libcomps
-%endif
-%endif
 BuildRequires: systemd
 BuildRequires: pkgconfig
 BuildRequires: make
@@ -112,34 +34,6 @@ BuildRequires: sed
 Koji is a system for building and tracking RPMS.  The base package
 contains shared libraries and the command-line interface.
 
-%if 0%{py2_support}
-%package -n python2-%{name}
-Summary: Build system tools python library
-%{?python_provide:%python_provide python2-%{name}}
-%if 0%{?fedora} >= 30
-BuildRequires: python2-devel
-%else
-BuildRequires: python-devel
-%endif
-%if 0%{wheel_support}
-BuildRequires: python2-pip
-BuildRequires: python2-wheel
-%endif
-%if 0%{?fedora} || 0%{?rhel} >= 8
-Requires: python2-rpm
-%else
-Requires: rpm-python
-%endif
-Requires: python-requests
-Requires: python-dateutil
-Requires: python-six
-Requires: python-defusedxml
-
-%description -n python2-%{name}
-desc
-%endif
-
-%if 0%{py3_support}
 %package -n python%{python3_pkgversion}-%{name}
 Summary: Build system tools python library
 %{?python_provide:%python_provide python%{python3_pkgversion}-%{name}}
@@ -163,22 +57,7 @@ Provides: python%{python3_pkgversion}dist(%{name}) = %{version}
 
 %description -n python%{python3_pkgversion}-%{name}
 desc
-%endif
 
-%if 0%{py2_support}
-%package -n python2-%{name}-cli-plugins
-Summary: Koji client plugins
-Group: Applications/Internet
-License: LGPL-2.1-only
-Requires: python2-%{name} = %{version}-%{release}
-Obsoletes: python2-%{name}-sidetag-plugin-cli < %{version}-%{release}
-Provides: python2-%{name}-sidetag-plugin-cli = %{version}-%{release}
-
-%description -n python2-%{name}-cli-plugins
-Plugins to the koji command-line interface
-%endif
-
-%if 0%{py3_support}
 %package -n python%{python3_pkgversion}-%{name}-cli-plugins
 Summary: Koji client plugins
 Group: Applications/Internet
@@ -189,9 +68,7 @@ Provides: python%{python3_pkgversion}-%{name}-sidetag-plugin-cli = %{version}-%{
 
 %description -n python%{python3_pkgversion}-%{name}-cli-plugins
 Plugins to the koji command-line interface
-%endif
 
-%if 0%{py3_support} > 1
 %package hub
 Summary: Koji XMLRPC interface
 Group: Applications/Internet
@@ -214,7 +91,6 @@ Requires: httpd
 Requires: python%{python3_pkgversion}-mod_wsgi
 Requires: python%{python3_pkgversion}-psycopg2
 Requires: python%{python3_pkgversion}-%{name} = %{version}-%{release}
-# py2 xor py3
 Provides: %{name}-hub-code = %{version}-%{release}
 
 %description -n python%{python3_pkgversion}-%{name}-hub
@@ -245,7 +121,6 @@ Provides: python%{python3_pkgversion}-%{name}-sidetag-plugin-hub = %{version}-%{
 
 %description -n python%{python3_pkgversion}-%{name}-hub-plugins
 Plugins to the koji XMLRPC interface
-%endif
 
 %package builder-plugins
 Summary: Koji builder plugins
@@ -260,12 +135,7 @@ Plugins for the koji build daemon
 %package builder
 Summary: Koji RPM builder daemon
 Group: Applications/System
-%if 0%{py2_support}
-License: LGPL-2.1-only and GPL-2.0-or-later
-#mergerepos (from createrepo) is GPLv2+
-%else
 License: LGPL-2.1-only
-%endif
 Requires: mock >= 0.9.14
 Requires(pre): /usr/sbin/useradd
 Requires: squashfs-tools
@@ -276,16 +146,10 @@ Requires: /usr/bin/svn
 Requires: /usr/bin/git
 Requires: createrepo_c >= 0.11.0
 Requires: dnf
-%if 0%{py3_support} > 1
 Requires: python%{python3_pkgversion}-%{name} = %{version}-%{release}
 Requires: python%{python3_pkgversion}-librepo
 Requires: python%{python3_pkgversion}-multilib
 Requires: python%{python3_pkgversion}-cheetah
-%else
-Requires: python2-%{name} = %{version}-%{release}
-Requires: python2-multilib
-Requires: python-cheetah
-%endif
 
 %description builder
 koji-builder is the daemon that runs on build machines and executes
@@ -299,13 +163,8 @@ Requires: %{name} = %{version}-%{release}
 Requires(post): systemd
 Requires(preun): systemd
 Requires(postun): systemd
-%if 0%{py3_support} > 1
 Requires: python%{python3_pkgversion}-libvirt
 Requires: python%{python3_pkgversion}-libxml2
-%else
-Requires: libvirt-python
-Requires: libxml2-python
-%endif
 Requires: /usr/bin/virt-clone
 Requires: qemu-img
 
@@ -313,7 +172,6 @@ Requires: qemu-img
 koji-vm contains a supplemental build daemon that executes certain tasks in a
 virtual machine. This package is not required for most installations.
 
-%if 0%{py3_support} > 1
 %package utils
 Summary: Koji Utilities
 Group: Applications/Internet
@@ -356,7 +214,6 @@ Provides: %{name}-web-code = %{version}-%{release}
 
 %description -n python%{python3_pkgversion}-%{name}-web
 koji-web is a web UI to the Koji system.
-%endif
 
 %prep
 %autosetup -p1
@@ -365,76 +222,22 @@ koji-web is a web UI to the Koji system.
 sed -e '/util\/koji/g' -e '/koji_cli_plugins/g' -i setup.py
 
 %build
-%if 0%{wheel_support}
-%if 0%{py2_support}
-%py2_build_wheel
-%endif
-%if 0%{py3_support}
 %py3_build_wheel
-%endif
-%endif
 
 %install
 rm -rf $RPM_BUILD_ROOT
 %define make_with_dirs make DESTDIR=$RPM_BUILD_ROOT SBINDIR=%{_sbindir}
 
-%if 0%{py2_support} < 2  &&  0%{py3_support} < 2
-echo "At least one python must be built with full support"
-exit 1
-%endif
-
-# python2 build
-%if 0%{wheel_support}
-%if 0%{py2_support}
-%py2_install_wheel %{name}-%{version}-py2-none-any.whl
-mkdir -p %{buildroot}/etc/koji.conf.d
-cp cli/koji.conf %{buildroot}/etc/koji.conf
-%endif
-%if 0%{py2_support} == 1
-pushd plugins
-%{make_with_dirs} KOJI_MINIMAL=1 PYTHON=%{__python2} install
-popd
-%endif
-%if 0%{py2_support} > 1
-for D in builder plugins vm ; do
-    pushd $D
-    %{make_with_dirs} PYTHON=%{__python2} install
-    popd
-done
-%endif
-%else
-%if 0%{py2_support}
-%{make_with_dirs} PYTHON=%{__python2} install
-%endif
-%endif
-
-
 # python3 build
-%if 0%{py3_support}
 %py3_install_wheel %{name}-%{version}-py3-none-any.whl
 mkdir -p %{buildroot}/etc/koji.conf.d
 cp cli/koji.conf %{buildroot}/etc/koji.conf
-%endif
-%if 0%{py3_support} == 1
-pushd plugins
-%{make_with_dirs} KOJI_MINIMAL=1 PYTHON=%{__python3} install
-popd
-%endif
-%if 0%{py3_support} > 1
+
 for D in kojihub builder plugins util www vm schemas ; do
     pushd $D
     %{make_with_dirs} PYTHON=%{__python3} install
     popd
 done
-
-# alter python interpreter in koji CLI
-scripts='%{_bindir}/koji %{_sbindir}/kojid %{_sbindir}/kojira %{_sbindir}/koji-shadow
-         %{_sbindir}/koji-gc %{_sbindir}/kojivmd %{_sbindir}/koji-sweep-db
-         %{_sbindir}/koji-sidetag-cleanup'
-for fn in $scripts ; do
-    sed -i 's|#!/usr/bin/python2|#!/usr/bin/python3|' $RPM_BUILD_ROOT$fn
-done
-%endif
 
 %if 0%{?fedora}
 # handle extra byte compilation
@@ -444,45 +247,9 @@ extra_dirs='
     %{_datadir}/koji-hub
     %{_datadir}/koji-web/lib/kojiweb
     %{_datadir}/koji-web/scripts'
-%if 0%{py2_support} > 1
-for fn in $extra_dirs ; do
-    %py_byte_compile %{__python2} %{buildroot}$fn
-done
-%endif
-%if 0%{py3_support} > 1
 for fn in $extra_dirs ; do
     %py_byte_compile %{__python3} %{buildroot}$fn
 done
-%endif
-%endif
-
-# in case, we're building only py2, delete all py3 content
-%if 0%{py3_support} < 1 && 0%{py2_support} > 0
-   rm -rf %{buildroot}%{_datadir}/koji-web
-   rm -rf %{buildroot}%{_datadir}/koji-hub
-   rm -rf %{buildroot}%{_prefix}/lib/koji-hub-plugins
-   rm -f %{buildroot}/etc/httpd/conf.d/kojihub.conf
-   rm -f %{buildroot}/etc/httpd/conf.d/kojiweb.conf
-   rm -f %{buildroot}/etc/koji-hub/hub.conf
-   rm -f %{buildroot}/etc/koji-hub/plugins/protonmsg.conf
-   rm -f %{buildroot}/etc/koji-hub/plugins/rpm2maven.conf
-   rm -f %{buildroot}/etc/koji-hub/plugins/save_failed_tree.conf
-   rm -f %{buildroot}/etc/koji-hub/plugins/sidetag.conf
-   rm -f %{buildroot}/etc/kojiweb/web.conf
-   rm -f %{buildroot}%{_prefix}/lib/systemd/system/koji-sweep-db.service
-   rm -f %{buildroot}%{_prefix}/lib/systemd/system/koji-sweep-db.timer
-   rm -f %{buildroot}%{_prefix}/sbin/koji-sweep-db
-   rm -f %{buildroot}/etc/koji-gc/email.tpl
-   rm -f %{buildroot}/etc/koji-gc/koji-gc.conf
-   rm -f %{buildroot}/etc/koji-shadow/koji-shadow.conf
-   rm -f %{buildroot}/etc/kojira/kojira.conf
-   rm -f %{buildroot}%{_prefix}/lib/systemd/system/koji-gc.service
-   rm -f %{buildroot}%{_prefix}/lib/systemd/system/koji-gc.timer
-   rm -f %{buildroot}%{_prefix}/lib/systemd/system/kojira.service
-   rm -f %{buildroot}%{_prefix}/sbin/koji-gc
-   rm -f %{buildroot}%{_prefix}/sbin/koji-shadow
-   rm -f %{buildroot}%{_prefix}/sbin/koji-sidetag-cleanup
-   rm -f %{buildroot}%{_prefix}/sbin/kojira
 %endif
 
 %clean
@@ -493,42 +260,19 @@ rm -rf $RPM_BUILD_ROOT
 %dir /etc/koji.conf.d
 %doc docs Authors COPYING LGPL
 
-%if 0%{py2_support}
-%{_bindir}/*
-%files -n python2-%{name}
-%{python2_sitelib}/%{name}
-%if 0%{wheel_support}
-%{python2_sitelib}/%{name}-%{version}.*-info
-%endif
-%{python2_sitelib}/koji_cli
-%endif
-
-%if 0%{py3_support}
 %{_bindir}/*
 %files -n python%{python3_pkgversion}-koji
 %{python3_sitelib}/%{name}
 %{python3_sitelib}/%{name}-%{version}.*-info
 %{python3_sitelib}/koji_cli
 %{_datadir}/koji/*.sql
-%endif
 
-%if 0%{py2_support}
-%files -n python2-%{name}-cli-plugins
-%{python2_sitelib}/koji_cli_plugins
-# we don't have config files for default plugins yet
-#%%dir %%{_sysconfdir}/koji/plugins
-#%%config(noreplace) %%{_sysconfdir}/koji/plugins/*.conf
-%endif
-
-%if 0%{py3_support}
 %files -n python%{python3_pkgversion}-%{name}-cli-plugins
 %{python3_sitelib}/koji_cli_plugins
 # we don't have config files for default plugins yet
 #%%dir %%{_sysconfdir}/koji/plugins
 #%%config(noreplace) %%{_sysconfdir}/koji/plugins/*.conf
-%endif
 
-%if 0%{py3_support} > 1
 %files hub
 %config(noreplace) %attr(0640, root, apache) /etc/httpd/conf.d/kojihub.conf
 %dir /etc/koji-hub
@@ -550,18 +294,14 @@ rm -rf $RPM_BUILD_ROOT
 %files -n python%{python3_pkgversion}-%{name}-hub-plugins
 %{_prefix}/lib/koji-hub-plugins/*.py
 %{_prefix}/lib/koji-hub-plugins/__pycache__
-%endif
 
 %files builder-plugins
 %dir /etc/kojid/plugins
 %config(noreplace) /etc/kojid/plugins/*.conf
 %dir %{_prefix}/lib/koji-builder-plugins
 %{_prefix}/lib/koji-builder-plugins/*.py*
-%if 0%{py3_support} > 1
 %{_prefix}/lib/koji-builder-plugins/__pycache__
-%endif
 
-%if 0%{py3_support} > 1
 %files utils
 %{_sbindir}/kojira
 %{_unitdir}/koji-gc.service
@@ -577,9 +317,7 @@ rm -rf $RPM_BUILD_ROOT
 %dir /etc/koji-shadow
 %config(noreplace) /etc/koji-shadow/koji-shadow.conf
 %{_sbindir}/koji-sidetag-cleanup
-%endif
 
-%if 0%{py3_support} > 1
 %files web
 %dir /etc/kojiweb
 %config(noreplace) /etc/kojiweb/web.conf
@@ -588,14 +326,9 @@ rm -rf $RPM_BUILD_ROOT
 
 %files -n python%{python3_pkgversion}-%{name}-web
 %{_datadir}/koji-web
-%endif
 
 %files builder
 %{_sbindir}/kojid
-%if 0%{py2_support} > 1
-%dir %{_libexecdir}/kojid
-%{_libexecdir}/kojid/mergerepos
-%endif
 %{_unitdir}/kojid.service
 %dir /etc/kojid
 %config(noreplace) /etc/kojid/kojid.conf
@@ -630,7 +363,6 @@ rm -rf $RPM_BUILD_ROOT
 %postun vm
 %systemd_postun kojivmd.service
 
-%if 0%{py3_support} > 1
 %post utils
 %systemd_post kojira.service
 
@@ -639,7 +371,6 @@ rm -rf $RPM_BUILD_ROOT
 
 %postun utils
 %systemd_postun kojira.service
-%endif
 
 %changelog
 * Mon Oct  7 2024 Mike McLean <mikem at redhat.com> - 1.35.1-1

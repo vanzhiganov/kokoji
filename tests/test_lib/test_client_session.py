@@ -3,7 +3,6 @@ try:
     from unittest import mock
 except ImportError:
     import mock
-import six
 import weakref
 import requests
 import unittest
@@ -23,8 +22,6 @@ class TestClientSession(unittest.TestCase):
 
     @mock.patch('requests.Session')
     def test_new_session_close(self, rsession):
-        if six.PY3:
-            return
         ksession = koji.ClientSession('http://koji.example.com/kojihub')
         my_rsession = mock.MagicMock()
         ksession.rsession = my_rsession
@@ -74,10 +71,7 @@ class TestFastUpload(unittest.TestCase):
         self.ksession._callMethod = mock.MagicMock()
         self.ksession.retries = 1
         self.rsession = mock.patch('requests.Session').start()
-        if six.PY2:
-            self.file_mock = mock.patch('__builtin__.open').start()
-        else:
-            self.file_mock = mock.patch('builtins.open').start()
+        self.file_mock = mock.patch('builtins.open').start()
         self.getsize_mock = mock.patch('os.path.getsize').start()
 
     def tearDown(self):
@@ -237,10 +231,6 @@ class TestMultiCall(unittest.TestCase):
 
     def test_MultiCallHack_weakref_validation(self):
         expected_exc = 'The session parameter must be a weak reference'
-        if six.PY2:
-            with self.assertRaisesRegexp(TypeError, expected_exc):
-                koji.MultiCallHack(self.ksession)
-            return
         with self.assertRaisesRegex(TypeError, expected_exc):
             koji.MultiCallHack(self.ksession)
 

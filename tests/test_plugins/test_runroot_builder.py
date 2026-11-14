@@ -17,10 +17,7 @@ import koji
 import koji.util
 import runroot
 
-if six.PY2:
-    CONFIG_PARSER = 'six.moves.configparser.SafeConfigParser'
-else:
-    CONFIG_PARSER = 'six.moves.configparser.ConfigParser'
+CONFIG_PARSER = 'six.moves.configparser.ConfigParser'
 
 
 CONFIG1 = {

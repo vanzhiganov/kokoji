@@ -27,7 +27,6 @@ import socket
 import string
 import time
 
-import six
 from six.moves import range, urllib
 import koji
 from koji.context import context
@@ -641,7 +640,7 @@ class Session(object):
         :param str name: username or user_id
         :param str password: new password (plaintext)
         """
-        if isinstance(name, six.integer_types):
+        if isinstance(name, int):
             clauses = ['id = %(name)i']
         else:
             clauses = ['name = %(name)s']

@@ -8,7 +8,6 @@ import types
 
 import defusedxml.xmlrpc as defusedxmlrpc
 import re
-import six
 # importing here for references in koji by defused.xmlrpc.monkey_patch() below
 import six.moves.xmlrpc_client as xmlrpc_client
 import six.moves.xmlrpc_server as xmlrpc_server  # noqa: F401
@@ -45,8 +44,6 @@ class ExtendedMarshaller(xmlrpc_client.Marshaller):
     MINI8 = -2 ** 63
 
     def dump_int(self, value, write):
-        # python2's xmlrpclib doesn't support i8 extension for marshalling,
-        # but can unmarshall it correctly.
         if (value > self.MAXI8 or value < self.MINI8):
             raise OverflowError("long int exceeds XML-RPC limits")
         elif (value > xmlrpc_client.MAXINT or
@@ -65,10 +62,6 @@ class ExtendedMarshaller(xmlrpc_client.Marshaller):
         dispatch[re.Pattern] = dump_re
     except AttributeError:
         dispatch[re._pattern_type] = dump_re
-
-
-if six.PY2:
-    ExtendedMarshaller.dispatch[long] = ExtendedMarshaller.dump_int  # noqa: F821
 
 
 def dumps(params, methodname=None, methodresponse=None, encoding=None,
@@ -106,9 +99,6 @@ def dumps(params, methodname=None, methodresponse=None, encoding=None,
     # standard XML-RPC wrappings
     if methodname:
         # a method call
-        if six.PY2 and isinstance(methodname, six.text_type):
-            # Do we need this?
-            methodname = methodname.encode(encoding, 'xmlcharrefreplace')
         parts = (
             xmlheader,
             "<methodCall>\n"

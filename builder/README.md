@@ -19,7 +19,6 @@ reachable, plus a shared `topdir`.
 | `kojid.service` | 18 | systemd unit |
 | `kojid.init` | 99 | legacy SysV init script (reads `kojid.sysconfig`) |
 | `kojid.sysconfig` | 3 | variables consumed by `kojid.init` |
-| `mergerepos` | 370 | legacy repo-merge helper, **Python 2 only** (see below) |
 | `Makefile` | 38 | standalone install target, used by `koji.spec` |
 
 `kojid` is an extensionless executable script, not an importable module — it is
@@ -376,7 +375,7 @@ Python imports that are hard requirements: `librepo`, `multilib`, `Cheetah`,
 otherwise `ImageFactory`/oz fails later (BZ 1923971, Pagure 2964). Do not
 "tidy" the import order.
 
-Declared in `koji.spec:260-291` (`%package builder`): `mock >= 0.9.14`,
+Declared in `koji.spec` (`%package builder`): `mock >= 0.9.14`,
 `createrepo_c >= 0.11.0`, `squashfs-tools`, `git`, `svn`, plus a `useradd` at
 install time for `mockuser`.
 
@@ -386,13 +385,6 @@ install time for `mockuser`.
 `koji.spec` drives. It installs `kojid` to `$SBINDIR`, `kojid.conf` to
 `/etc/kojid`, `kojid.service` to the systemd unit dir, and creates
 `/etc/mock/koji`.
-
-`mergerepos` is installed to `%{_libexecdir}/kojid` **only under
-`py2_support > 1`** — the Makefile gates it on `PYVER_MAJOR < 3` and the spec's
-`%files` on `%if 0%{py2_support} > 1`. On a Python 3 build the file is neither
-installed nor packaged, and nothing in `kojid` calls it. The script itself is
-hard-bound to Python 2 (`#!/usr/bin/python2`, `rpmUtils.miscutils`, `yum`), so
-treat it as dead code kept for the legacy build.
 
 Enabling the daemon: `kojid.service` runs `kojid --fg --force-lock --verbose`.
 `--force-lock` matters — kojid takes an exclusive hub session

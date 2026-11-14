@@ -1,6 +1,9 @@
 from __future__ import absolute_import
+import importlib.machinery
+import importlib.util
 import os
 import sys
+
 
 def load_plugin(plugin_type, plugin_name):
     # We have to do this craziness because 'import koji' is ambiguous.  Is it the
@@ -15,15 +18,10 @@ def load_plugin(plugin_type, plugin_name):
     sys.path = [os.path.dirname(CLI_FILENAME),
                 os.path.join(os.path.dirname(__file__), "../..", plugin_type)] + \
                sys.path
-    if sys.version_info[0] >= 3:
-        import importlib.machinery
-        loader = importlib.machinery.SourceFileLoader(mod_name, CLI_FILENAME)
-        spec = importlib.util.spec_from_loader(loader.name, loader)
-        plugin = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(plugin)
-        loader.exec_module(plugin)
-        sys.modules[mod_name] = plugin
-    else:
-        import imp
-        plugin = imp.load_source(mod_name, CLI_FILENAME)
+    loader = importlib.machinery.SourceFileLoader(mod_name, CLI_FILENAME)
+    spec = importlib.util.spec_from_loader(loader.name, loader)
+    plugin = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(plugin)
+    loader.exec_module(plugin)
+    sys.modules[mod_name] = plugin
     return plugin

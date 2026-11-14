@@ -1,10 +1,8 @@
 -e .
 -r requirements.txt
-mock<=2.0.0;python_version < '3.3'
-requests-mock;python_version >= '3.0'
-requests-mock<1.11.0;python_version < '3.0'
+requests-mock
 coverage
 pytest
-pytest-cov;python_version >= '3.0'
-pytest-xdist;python_version >= '3.0'
-setuptools;python_version >= '3.0'
+pytest-cov
+pytest-xdist
+setuptools

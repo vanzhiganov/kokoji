@@ -47,13 +47,9 @@ import warnings
 import weakref
 import xml.sax
 import xml.sax.handler
-try:
-    import importlib
-    import importlib.machinery
-except ImportError:  # pragma: no cover
-    # importlib not available for PY2, so we fall back to using imp
-    import imp as imp
-    importlib = None
+import importlib
+import importlib.machinery
+import importlib.util
 from fnmatch import fnmatch
 
 import dateutil.parser
@@ -846,10 +842,7 @@ class RawHeader(object):
                 print("Offset: 0x%x" % self.datalen)
 
     def decode_bytes(self, value):
-        if six.PY2:
-            return value
-        else:
-            return value.decode(errors='surrogateescape')
+        return value.decode(errors='surrogateescape')
 
     def __getitem__(self, key):
         tag, dtype, offset, count = self.index[key]
@@ -955,17 +948,14 @@ def rip_rpm_hdr(src):
 def _ord(s):
     """Convert a string (single character) to an int (byte).
 
-    Use this method to get bytes from RPM headers in Python 2 and 3.
+    RPM headers are bytes (sequences of integers); single-character strings
+    are still handled for compatibility.
 
     :returns: int
     """
     if isinstance(s, int):
-        # In Python 3, RPM headers are bytes (sequences of integers), so we
-        # already have an int here:
         return s
     else:
-        # In Python 2, RPM headers are strings, so we have a one-character
-        # string here, which we must convert to an int:
         return ord(s)
 
 
@@ -1155,10 +1145,8 @@ def get_rpm_header(f, ts=None):
 
 
 def _decode_item(item):
-    """Decode rpm header byte strings to str in py3"""
-    if six.PY2:
-        return item
-    elif isinstance(item, bytes):
+    """Decode rpm header byte strings to str"""
+    if isinstance(item, bytes):
         try:
             return item.decode()
         except UnicodeDecodeError:
@@ -1457,11 +1445,8 @@ class POMHandler(xml.sax.handler.ContentHandler):
 
 # BEGIN kojikamid dup #
 def _open_text_file(path, mode='rt'):
-    # enforce utf-8 encoding for py3
-    if six.PY2:
-        return open(path, mode)
-    else:
-        return open(path, mode, encoding='utf-8')
+    # enforce utf-8 encoding
+    return open(path, mode, encoding='utf-8')
 # END kojikamid dup #
 
 
@@ -2231,38 +2216,26 @@ def get_profile_module(profile_name, config=None):
     # Prepare module name
     mod_name = "__%s__%s" % (__name__, profile_name)
 
-    if not importlib:
-        imp.acquire_lock()
+    # Check if profile module exists and if so return it
+    if mod_name in PROFILE_MODULES:
+        return PROFILE_MODULES[mod_name]
 
-    try:
-        # Check if profile module exists and if so return it
-        if mod_name in PROFILE_MODULES:
-            return PROFILE_MODULES[mod_name]
+    # Load current module under a new name
+    koji_spec = importlib.util.find_spec(__name__)
+    mod_spec = importlib.util.spec_from_file_location(mod_name, koji_spec.origin)
+    mod = importlib.util.module_from_spec(mod_spec)
+    sys.modules[mod_name] = mod
+    mod_spec.loader.exec_module(mod)
 
-        # Load current module under a new name
-        if importlib:
-            koji_spec = importlib.util.find_spec(__name__)
-            mod_spec = importlib.util.spec_from_file_location(mod_name, koji_spec.origin)
-            mod = importlib.util.module_from_spec(mod_spec)
-            sys.modules[mod_name] = mod
-            mod_spec.loader.exec_module(mod)
-        else:
-            koji_module_loc = imp.find_module(__name__)
-            mod = imp.load_module(mod_name, None, koji_module_loc[1], koji_module_loc[2])
+    # Tweak config of the new module
+    mod.config = config
+    mod.BASEDIR = config.topdir
+    mod.pathinfo.topdir = config.topdir
 
-        # Tweak config of the new module
-        mod.config = config
-        mod.BASEDIR = config.topdir
-        mod.pathinfo.topdir = config.topdir
+    # Be sure that get_profile_module is only called from main module
+    mod.get_profile_module = get_profile_module
 
-        # Be sure that get_profile_module is only called from main module
-        mod.get_profile_module = get_profile_module
-
-        PROFILE_MODULES[mod_name] = mod
-    finally:
-        if not importlib:
-            imp.release_lock()
-
+    PROFILE_MODULES[mod_name] = mod
     return mod
 
 
@@ -2306,11 +2279,7 @@ def read_config_files(config_files, raw=False):
 
     if raw:
         parser = six.moves.configparser.RawConfigParser
-    elif six.PY2:
-        parser = six.moves.configparser.SafeConfigParser
     else:
-        # In python3, ConfigParser is "safe", and SafeConfigParser is a
-        # deprecated alias
         parser = six.moves.configparser.ConfigParser
     config = parser()
     cfgs = []
@@ -2328,10 +2297,7 @@ def read_config_files(config_files, raw=False):
         elif strict:
             raise ConfigurationError("Config file %s can't be opened."
                                      % config_file)
-    if six.PY3:
-        config.read(cfgs, encoding="utf8")
-    else:
-        config.read(cfgs)
+    config.read(cfgs, encoding="utf8")
     return config
 
 
@@ -2869,11 +2835,9 @@ class ClientSession(object):
             handler = self.baseurl
 
         request = dumps(args, name, allow_none=1)
-        if six.PY3:
-            # For python2, dumps() without encoding specified means return a str
-            # encoded as UTF-8. For python3 it means "return a str with an appropriate
-            # xml declaration for encoding as UTF-8".
-            request = request.encode('utf-8')
+        # dumps() returns a str with an appropriate xml declaration for
+        # encoding as UTF-8; the connection needs bytes.
+        request = request.encode('utf-8')
         headers += [
             # connection class handles Host
             ('User-Agent', 'koji/1'),
@@ -2945,7 +2909,7 @@ class ClientSession(object):
             for _key in callopts:
                 _val = callopts[_key]
                 if _key == 'data':
-                    if six.PY3 and isinstance(_val, bytes):
+                    if isinstance(_val, bytes):
                         try:
                             _val = _val.decode()
                         except UnicodeDecodeError:
@@ -3249,10 +3213,9 @@ class ClientSession(object):
             ("Content-length", str(size)),
         ]
         request = chunk
-        if six.PY3 and isinstance(chunk, str):
+        if isinstance(chunk, str):
             request = chunk.encode('utf-8')
         else:
-            # py2 or bytes
             request = chunk
         return handler, headers, request
 
@@ -3694,30 +3657,21 @@ def _taskLabel(taskInfo):
 
 CONTROL_CHARS = [chr(i) for i in range(32)]
 NONPRINTABLE_CHARS = ''.join([c for c in CONTROL_CHARS if c not in '\r\n\t'])
-if six.PY3:
-    NONPRINTABLE_CHARS_TABLE = dict.fromkeys(map(ord, NONPRINTABLE_CHARS), None)
+NONPRINTABLE_CHARS_TABLE = dict.fromkeys(map(ord, NONPRINTABLE_CHARS), None)
 
 
 def removeNonprintable(value):
-    # TODO: it's no more used in PY2
-    # expects raw-encoded string, not unicode
-    if six.PY2:
-        return value.translate(None, NONPRINTABLE_CHARS)
-    else:
-        value = value.translate(NONPRINTABLE_CHARS_TABLE)
-        # remove broken unicode chars (some changelogs, etc.)
-        return value.encode('utf-8', errors='replace').decode()
+    value = value.translate(NONPRINTABLE_CHARS_TABLE)
+    # remove broken unicode chars (some changelogs, etc.)
+    return value.encode('utf-8', errors='replace').decode()
 
 
 def _fix_print(value):
     """Fix a string so it is suitable to print
 
-    In python2, this means we return a utf8 encoded str
     In python3, this means we return unicode
     """
-    if six.PY2 and isinstance(value, six.text_type):
-        return value.encode('utf8')
-    elif six.PY3 and isinstance(value, six.binary_type):
+    if isinstance(value, six.binary_type):
         return value.decode('utf8')
     else:
         return value
@@ -3739,35 +3693,16 @@ def fix_encoding(value, fallback='iso8859-15', remove_nonprintable=False):
     """
     Adjust string to work around encoding issues
 
-    In python2, unicode strings are encoded as utf8. For normal
-    strings, we attempt to fix encoding issues. The fallback option
-    is the encoding to use if the string is not valid utf8.
-
     If remove_nonprintable is True, then nonprintable characters are
     filtered out.
 
-    In python3 this is mostly a no-op, but remove_nonprintable is still honored
+    On python3 this is mostly a no-op, but remove_nonprintable is still honored.
     """
-
-    # play encoding tricks for py2 strings
-    if six.PY2:
-        if isinstance(value, unicode):  # noqa: F821
-            # just convert it to a utf8-encoded str
-            value = value.encode('utf8')
-        elif isinstance(value, str):
-            # value is a str, but may be encoded in utf8 or some
-            # other non-ascii charset.  Try to verify it's utf8, and if not,
-            # decode it using the fallback encoding.
-            try:
-                value = value.decode('utf8').encode('utf8')
-            except UnicodeDecodeError:
-                value = value.decode(fallback).encode('utf8')
 
     # remove nonprintable characters, if requested
     if remove_nonprintable and isinstance(value, str):
         # NOTE: we test for str instead of six.text_type deliberately
-        #  - on py3, we're leaving bytes alone
-        #  - on py2, we've just decoded any unicode
+        #  - we're leaving bytes alone
         value = removeNonprintable(value)
 
     return value

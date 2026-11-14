@@ -1,26 +1,29 @@
-/* 
-  Koji styling
-  Copyright (c) 2007-2014 Red Hat, Inc.
+/*
+  Koji styling - Carbon Design System theme
 
-  Authors:
-    Mike Bonnet <mikeb@redhat.com>
-    Mike McLean <mikem@redhat.com>
+  This stylesheet keeps the class names used by the kojiweb templates but
+  styles them using the Carbon Design System look and feel. It is intended
+  to be loaded after carbon.min.css.
 */
+
+/* ------------------------------------------------------------------ */
+/* Layout                                                             */
+/* ------------------------------------------------------------------ */
 
 html {
     min-width: 800px;
 }
 
 body {
-    margin: 0px;
-    padding: 0px;
-    font-size: small;
-    font-family: "Lucida Grande", "Luxi Sans", "Bitstream Vera Sans", helvetica, verdana, arial, sans-serif;
-    color: #333;
-    background: #fff url(images/bkgrnd_greydots.png) repeat;
+    margin: 0;
+    padding: 0;
+    font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif;
+    color: var(--cds-text-primary, #161616);
+    background: var(--cds-background, #ffffff);
 }
 
 a {
+    color: var(--cds-link-primary, #0f62fe);
     text-decoration: none;
 }
 
@@ -29,53 +32,34 @@ a:hover {
 }
 
 #wrap {
-    min-width: 750px;
-    margin: 0 25px 10px 25px;
+    margin: 0;
     padding: 0;
-    text-align: left;
-    background: #fff;
+    background: var(--cds-background, #ffffff);
 }
 
 #innerwrap {
-    margin: 0 15px;
-    padding: 8px 0;
+    margin: 0;
+    padding: 0;
 }
 
 #header {
-    width: 100%;
-    height: 40px;
-    clear: left;
+    display: none; /* replaced by the Carbon UI shell */
 }
 
-#headerSearch {
-    float: right;
-    margin-right: 10px;
-    margin-top: 15px;
-}
-
-#headerSearch input,
-#headerSearch select {
-    font-size: smaller;
-}
-
-#kojiLogo {
-    /* Used only for the koji logo icon */
-    float: left;
-    width: 49px;
-    height: 40px;
-}
-
-div#content {
-    margin: 0 20px;
+#content,
+.cds--content {
+    margin: 0;
+    padding: 2rem;
     clear: both;
 }
 
 p#footer {
-    padding-top: 40px;
-    margin-left: 15px;
+    padding: 2rem;
+    margin: 0;
     line-height: 1.5em;
-    color: #999;
-    font-size: xx-small;
+    color: var(--cds-text-secondary, #525252);
+    font-size: 0.75rem;
+    border-top: 1px solid var(--cds-border-subtle, #e0e0e0);
     clear: both;
 }
 
@@ -84,9 +68,8 @@ p#footer a {
 }
 
 #PoweredByKojiLogo {
-    /* Used only for the powered by koji icon */
     float: right;
-    border: 0px;
+    border: 0;
     height: 30px;
 }
 
@@ -94,115 +77,113 @@ p#footer a {
     display: none;
 }
 
+.hidden {
+    display: none;
+}
+
 .disabled {
-    color: #808080;
+    color: var(--cds-text-disabled, #c6c6c6);
 }
 
-#mainNav {
-    width: 100%;
-    background-color: #009;
-    font-weight: bold;
-    font-family: verdana, helvetica, arial, sans-serif;
-    height: 2.1em;
+.smaller {
+    font-size: 0.875rem;
 }
 
-#mainNav ul {
-    padding: 0px;
-    margin: 0px;
-    list-style-type: none;
+.error {
+    color: var(--cds-text-error, #da1e28);
 }
 
-#mainNav ul li {
-    background-color: #006;
-    color: #fff;
-    display: block;
-    float: left;
-    padding: 0px;
-    margin: 0px;
-    border-style: solid;
-    border-width: 2px;
-    border-color: #009;
+/* ------------------------------------------------------------------ */
+/* Search / header helpers                                            */
+/* ------------------------------------------------------------------ */
+
+#headerSearch {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
-#mainNav ul li a {
-    display: block;
-    color: #fff;
-    text-decoration: none;
-    padding: 0.4em 1.5em;
-    font-size: 0.77em;
-    height: 1.5em;
+#headerSearch input[type="text"] {
+    min-width: 14rem;
 }
 
-#mainNav ul li:hover {
-    border-color: #ddd;
+span#loginInfo {
+    color: var(--cds-text-secondary, #525252);
+    font-size: 0.875rem;
+    margin-left: auto;
+    padding-right: 1rem;
+    white-space: nowrap;
 }
 
-body#summary #mainNav li#summaryTab a,
-body#tasks #mainNav li#tasksTab a,
-body#tags #mainNav li#tagsTab a,
-body#builds #mainNav li#buildsTab a,
-body#packages #mainNav li#packagesTab a,
-body#users #mainNav li#usersTab a,
-body#hosts #mainNav li#hostsTab a,
-body#buildtargets #mainNav li#buildtargetsTab a,
-body#reports #mainNav li#reportsTab a,
-body#search #mainNav li#searchTab a,
-body#api #mainNav li#apiTab a {
-    background-color: #eee;
-    color: #000;
+/* ------------------------------------------------------------------ */
+/* Headings                                                           */
+/* ------------------------------------------------------------------ */
+
+h1, h2, h3, h4, h5 {
+    font-weight: 400;
+    color: var(--cds-text-primary, #161616);
 }
 
 h4 {
-    color: #fff;
-    background-color: #006;
-    padding: 0.3em;
-    margin: 0px;
+    padding: 0;
+    margin: 0 0 0.5rem 0;
+    background: none;
+    color: var(--cds-text-primary, #161616);
+    font-size: 1.25rem;
 }
 
 h4 a {
-    color: #fff;
+    color: var(--cds-link-primary, #0f62fe);
 }
 
+/* ------------------------------------------------------------------ */
+/* Tables                                                             */
+/* ------------------------------------------------------------------ */
+
 table {
-    border-spacing: 0px;
+    border-spacing: 0;
+    border-collapse: collapse;
 }
 
 th {
-    font-weight: bold;
+    font-weight: 600;
     vertical-align: text-top;
+    text-align: left;
 }
 
 th, td {
-    padding: 5px;
+    padding: 0.5rem 1rem 0.5rem 0;
 }
 
-td.building {
-    color: #cc0;
+table.data-list {
+    width: 100%;
+    border-top: 1px solid var(--cds-border-subtle, #e0e0e0);
 }
 
-td.complete {
-    color: #008000;
+table.data-list td {
+    vertical-align: text-top;
+    border-bottom: 1px solid var(--cds-border-subtle, #e0e0e0);
+    font-size: 0.875rem;
 }
 
-td.deleted,
-td.failed,
-td.canceled {
-    color: #ff0000;
+tr.list-header th {
+    background-color: var(--cds-layer-02, #e0e0e0);
+    color: var(--cds-text-primary, #161616);
+    font-size: 0.875rem;
+    padding: 0.75rem 1rem 0.75rem 0;
 }
 
-td.false {
-    color: #ff0000;
+tr.row-odd {
+    background-color: var(--cds-layer-01, #f4f4f4);
 }
 
-td.true {
-    color: #008000;
+tr.row-even {
+    background-color: var(--cds-background, #ffffff);
 }
 
-img.sort {
-    /* used for up/down sort arrows*/
-    vertical-align: baseline;
-    width: 10px;
-    height: 9px;
+tr.row-odd td,
+tr.row-even td {
+    border-bottom: 1px solid var(--cds-border-subtle, #e0e0e0);
 }
 
 td.paginate {
@@ -214,22 +195,20 @@ form.pageJump {
     margin-left: 20px;
 }
 
-form.pageJump select {
-    font-size: smaller;
-}
-
 div.dataHeader {
-    font-weight: bold;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
 }
 
 div.noPaginate {
-    margin-bottom: 10px;
+    margin-bottom: 1rem;
 }
 
 div.pageHeader {
-    margin-bottom: 10px;
-    font-weight: bold;
-    font-size: 1.5em;
+    margin-bottom: 1.5rem;
+    font-weight: 400;
+    font-size: 2rem;
+    line-height: 1.25;
 }
 
 table.nested {
@@ -237,7 +216,7 @@ table.nested {
 }
 
 td.container {
-    padding: 4px 0px;
+    padding: 4px 0;
     width: 100%;
 }
 
@@ -250,34 +229,37 @@ div.toggle {
     padding: 6px;
 }
 
+/* ------------------------------------------------------------------ */
+/* Trees (tag inheritance, task children)                             */
+/* ------------------------------------------------------------------ */
+
 td.tree {
-    background-color: #fff;
+    background-color: var(--cds-background, #ffffff);
 }
 
 .tree span.root {
-    font-weight: bold;
-    background-color: #fff;
+    font-weight: 600;
 }
 
 .tree ul {
     padding-left: 2em;
     list-style: none;
-    margin-top: 0em;
-    margin-bottom: 0em;
+    margin-top: 0;
+    margin-bottom: 0;
 }
 
 .tree span.treeBranch {
-    border-bottom: 1px solid #000;
-    border-left: 1px solid #000;
+    border-bottom: 1px solid var(--cds-border-strong, #8d8d8d);
+    border-left: 1px solid var(--cds-border-strong, #8d8d8d);
     font-size: 1.2em;
 }
 
 .tree li.sibling > span.treeBranch {
-    border-left-width: 0em;
+    border-left-width: 0;
 }
 
 .tree li.sibling {
-    border-left: 1px solid #000;
+    border-left: 1px solid var(--cds-border-strong, #8d8d8d);
 }
 
 .tree a {
@@ -289,7 +271,7 @@ td.tree {
     top: 0.6em;
     margin-left: 1.2em;
     padding-left: 0.2em;
-    background-color: #fff;
+    background-color: var(--cds-background, #ffffff);
     font-size: 0.83em;
 }
 
@@ -297,20 +279,20 @@ td.tree {
     padding-bottom: 0.6em;
 }
 
-.hidden {
-    display: none;
-}
-
 .tree span.treeToggle {
-    font-weight: bold;
+    font-weight: 600;
 }
 
 .tree span.treeLink {
     font-size: smaller;
 }
 
+/* ------------------------------------------------------------------ */
+/* States and misc                                                    */
+/* ------------------------------------------------------------------ */
+
 .adminLink {
-    color: #000;
+    color: var(--cds-link-primary, #0f62fe);
 }
 
 img.stateimg {
@@ -318,97 +300,65 @@ img.stateimg {
     margin-bottom: -6px;
 }
 
+img.sort {
+    vertical-align: baseline;
+    width: 10px;
+    height: 9px;
+}
+
 .charlist {
     text-align: center;
 }
 
 img.graphrow {
-    background-color: #00f;
+    background-color: var(--cds-link-primary, #0f62fe);
     vertical-align: bottom;
 }
 
-table.data-list {
-    width: 100%;
+td.building {
+    color: var(--cds-support-warning, #f1c21b);
 }
 
-table.data-list td {
-    vertical-align: text-top;
+td.complete {
+    color: var(--cds-support-success, #198038);
 }
 
-tr.list-header {
-    background-color: #fff;
+td.deleted,
+td.failed,
+td.canceled {
+    color: var(--cds-support-error, #da1e28);
 }
 
-tr.list-header th {
-    background-color: #ddd;
+td.false {
+    color: var(--cds-support-error, #da1e28);
 }
 
-tr.list-header th:first-child {
-    -moz-border-radius-topleft: 1em;
-    -webkit-border-top-left-radius: 1em;
-}
-
-tr.list-header th:last-child {
-    -moz-border-radius-topright: 1em;
-    -webkit-border-top-right-radius: 1em;
-}
-
-tr.row-odd {
-    background-color: #fff;
-}
-
-tr.row-odd td {
-    border-bottom: 1px solid #eee;
-}
-
-tr.row-even {
-    background-color: #eee;
-}
-
-tr.row-even td {
-    border-bottom: 1px solid #fff;
-}
-
-tr.row-odd td:first-child,
-tr.row-even td:first-child {
-    border-left: 1px solid #eee;
-}
-
-tr.row-odd td:last-child,
-tr.row-even td:last-child {
-    border-right: 1px solid #eee;
-}
-
-tr.row-even td.tree {
-    background-color: #eee;
-}
-
-tr.row-even td.tree span.treeLabel {
-    background-color: #eee;
+td.true {
+    color: var(--cds-support-success, #198038);
 }
 
 .taskfree, .repoinit {
-    color: #30c;
+    color: #6929c4;
 }
 
 .taskopen {
-    color: #ff8c00;
+    color: #a56eff;
 }
 
 .taskclosed, .repoready {
-    color: #008000;
+    color: var(--cds-support-success, #198038);
 }
 
 .taskcanceled, .repoexpired {
-    color: #c90;
+    color: #b28600;
 }
 
 .taskassigned {
-    color: #c0f;
+    color: #005d5d;
 }
 
 .taskfailed, .repodeleted, .repoproblem {
-    color: #ff0000;
+    color: var(--cds-support-error, #da1e28);
 }
 
 a.help {
@@ -420,30 +370,36 @@ abbr {
 }
 
 .changelog, .rpmheader, .usertext {
-    font-family: monospace;
-    font-size: medium;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.875rem;
     white-space: pre;
-}
-
-#headerHelp {
-    float: right;
-    margin: 15px 10px 0 0;
+    display: block;
+    background-color: var(--cds-layer-01, #f4f4f4);
+    padding: 1rem;
+    overflow-x: auto;
 }
 
 .filterlist {
     font-size: smaller;
 }
 
-span#loginInfo {
-    float: right;
-    font-weight: bold;
-    margin: 5px;
+/* ------------------------------------------------------------------ */
+/* Carbon tweaks                                                      */
+/* ------------------------------------------------------------------ */
+
+.cds--header__menu-item[aria-current="page"] {
+    border-bottom: 3px solid var(--cds-border-interactive, #0f62fe);
+    font-weight: 600;
 }
 
-.smaller {
-    font-size: smaller;
+.koji-header-content {
+    padding: 1rem 2rem 0 2rem;
 }
 
-.error {
-    color: red;
+.koji-login-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    color: var(--cds-text-secondary, #525252);
+    font-size: 0.875rem;
 }

@@ -1,9 +1,7 @@
-#!/usr/bin/python2
+#!/usr/bin/python3
 
 import subprocess
 import tempfile
-from multiprocessing import Pool
-
 
 def explode_ref(ref, dest):
     """Write contents from ref to dest dir"""
@@ -26,22 +24,14 @@ def checkout_run(cmd, ref='HEAD'):
     return output
 
 
-def run_test2():
-    return checkout_run(['make', 'test2'])
-
-
-def run_test3():
-    return checkout_run(['make', 'test3'])
+def run_test():
+    return checkout_run(['make', 'test'])
 
 
 def main():
-    """Run our test targets in parallel using fresh checkouts of HEAD"""
+    """Run the test target in a fresh checkout of HEAD"""
     print("Running tests...")
-    p = Pool(2)
-    results = [p.apply_async(f) for f in [run_test2, run_test3]]
-    for r in results:
-        print(r.get().decode('utf-8'))
-    p.close()
+    print(run_test().decode('utf-8'))
 
 
 if __name__ == '__main__':

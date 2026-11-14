@@ -13,10 +13,7 @@ from . import utils
 
 
 def md5_to_bytes(s):
-    if six.PY2:
-        return bytearray.fromhex(unicode(s))
-    else:
-        return bytearray.fromhex(s)
+    return bytearray.fromhex(s)
 
 
 class TestImport(utils.CliTestCase):

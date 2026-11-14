@@ -5,7 +5,6 @@ import shutil
 import tempfile
 import unittest
 
-import six
 
 import koji
 
@@ -33,7 +32,6 @@ class TestCheckSigMD5(unittest.TestCase):
         self.assertEqual(contents_signed, contents_spliced)
         self.assertNotEqual(contents_signed, contents_orig)
 
-    @unittest.skipIf(six.PY2, "Python 2 not supported")
     def test_splice_rpm_sighdr(self):
         contents_signed = open(self.signed, 'rb').read()
         sighdr = koji.rip_rpm_sighdr(self.signed)

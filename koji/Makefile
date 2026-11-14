@@ -1,15 +1,8 @@
-PYVER_MAJOR := $(shell $(PYTHON) -c 'import sys; print(".".join(sys.version.split(".")[:1]))')
 PACKAGE = $(shell basename `pwd`)
-PYFILES_ALL = $(wildcard *.py)
+PYFILES = $(wildcard *.py)
 PYSCRIPTS =
 SUBDIRS =
 PKGDIR = $(shell $(PYTHON) ../devtools/get_site_packages.py )/$(PACKAGE)
-
-ifeq ($(PYVER_MAJOR),2)
-	PYFILES=$(filter-out db.py,$(PYFILES_ALL))
-else
-	PYFILES=$(PYFILES_ALL)
-endif
 
 _default:
 	@echo "nothing to make.  try make install"

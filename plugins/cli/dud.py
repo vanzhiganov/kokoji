@@ -43,7 +43,7 @@ def handle_dud_build(goptions, session, args):
         assert False  # pragma: no cover
     pkg_list = []
 
-    # Can't use * operator with unpacking in Python 2.7, but this works for both Python 2 and 3
+    # split the fixed arguments from the package list
     target, dud_name, dud_version, pkg_list = args[0], args[1], args[2], args[3:]
 
     activate_session(session, goptions)

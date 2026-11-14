@@ -13,10 +13,7 @@ import koji
 from koji_cli.commands import handle_image_build_indirection, _build_image_indirection
 from . import utils
 
-if six.PY2:
-    ConfigParser = six.moves.configparser.SafeConfigParser
-else:
-    ConfigParser = six.moves.configparser.ConfigParser
+ConfigParser = six.moves.configparser.ConfigParser
 
 
 TASK_OPTIONS = {

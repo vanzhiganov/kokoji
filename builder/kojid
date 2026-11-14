@@ -797,8 +797,7 @@ class BuildRoot(object):
             # so there should be an origins file.
             origin_idx = {}
             with GzipFile(fileobj=fo, mode='r') as fo2:
-                if six.PY3:
-                    fo2 = io.TextIOWrapper(fo2, encoding='utf-8')
+                fo2 = io.TextIOWrapper(fo2, encoding='utf-8')
                 for line in fo2:
                     parts = line.split(None, 2)
                     if len(parts) < 2:
@@ -1216,7 +1215,7 @@ class BuildTask(BaseTaskHandler):
             policy_data['target'] = target_info['name']
         if not self.opts.get('skip_tag'):
             policy_data['tag'] = dest_tag  # id
-        # backward-compatible deprecated policies (TODO: remove if py2 is dropped - rhel6 builders)
+        # deprecated policies retained for compatibility with older builders
         if not SCM.is_scm_url(src) and not opts.get('scratch'):
             # let hub policy decide
             self.session.host.assertPolicy('build_from_srpm', policy_data)
@@ -5491,9 +5490,8 @@ Status: %(status)s\r
         message = self.message_templ % locals()
         # ensure message is in UTF-8
         message = koji.fixEncoding(message)
-        # binary for python3
-        if six.PY3:
-            message = message.encode('utf8')
+        # smtplib needs bytes
+        message = message.encode('utf8')
         server = smtplib.SMTP(self.options.smtphost)
         if self.options.smtp_user is not None and self.options.smtp_pass is not None:
             server.login(self.options.smtp_user, self.options.smtp_pass)
@@ -5717,9 +5715,8 @@ Build Info: %(weburl)s/buildinfo?buildID=%(build_id)i\r
         message = self.message_templ % locals()
         # ensure message is in UTF-8
         message = koji.fixEncoding(message)
-        # binary for python3
-        if six.PY3:
-            message = message.encode('utf8')
+        # smtplib needs bytes
+        message = message.encode('utf8')
         server = smtplib.SMTP(self.options.smtphost)
         if self.options.smtp_user is not None and self.options.smtp_pass is not None:
             server.login(self.options.smtp_user, self.options.smtp_pass)
@@ -6020,7 +6017,7 @@ class CreaterepoTask(BaseTaskHandler):
                 shutil.copytree(olddatadir, self.datadir)
                 oldorigins = os.path.join(self.datadir, 'pkgorigins.gz')
                 if os.path.isfile(oldorigins):
-                    # remove any previous origins file and rely on mergerepos
+                    # remove any previous origins file and rely on mergerepo_c
                     # to rewrite it (if we have external repos to merge)
                     os.unlink(oldorigins)
                 cmd.append('--update')
@@ -6092,31 +6089,22 @@ class CreaterepoTask(BaseTaskHandler):
             ext_url = ext_url.replace('$arch', arch)
             repos.append(ext_url)
 
-        mergerepo_c_version = None
-        if self.options.use_createrepo_c or six.PY3:
-            mergerepo_c_version = self._get_mergerepo_c_version()
+        mergerepo_c_version = self._get_mergerepo_c_version()
 
         # construct command
         if merge_mode == 'simple':
             if mergerepo_c_version and mergerepo_c_version >= (0, 13, 0):
                 cmd = ['/usr/bin/mergerepo_c', '--koji', '--simple']
-            elif six.PY3:
-                # koji's mergerepos script only works on python2
+            else:
                 raise koji.GenericError("mergerepo_c is not installed or has low version: "
                                         "%s (0.13.0 needed for --simple)" %
                                         ".".join([str(d) for d in mergerepo_c_version or [None]]))
-            else:
-                cmd = ['/usr/libexec/kojid/mergerepos',
-                       '--mode', 'simple',
-                       '--tempdir', self.workdir]
         elif merge_mode == 'bare':
             # "bare" merge mode for repos with modular metadata
             # forces use of mergerepo_c
             cmd = ['/usr/bin/mergerepo_c', '--pkgorigins', '--all']
-        elif self.options.use_createrepo_c or six.PY3:
-            cmd = ['/usr/bin/mergerepo_c', '--koji']
         else:
-            cmd = ['/usr/libexec/kojid/mergerepos', '--tempdir', self.workdir]
+            cmd = ['/usr/bin/mergerepo_c', '--koji']
 
         if merge_mode != 'bare':
             blocklist = self.repodir + '/blocklist'
@@ -6370,7 +6358,7 @@ class createDistRepoTask(BaseTaskHandler):
                 shutil.copytree(oldrepodata, datadir)
                 oldorigins = os.path.join(datadir, 'pkgorigins.gz')
                 if os.path.isfile(oldorigins):
-                    # remove any previous origins file and rely on mergerepos
+                    # remove any previous origins file and rely on mergerepo_c
                     # to rewrite it (if we have external repos to merge)
                     os.unlink(oldorigins)
                 cmd.append('--update')

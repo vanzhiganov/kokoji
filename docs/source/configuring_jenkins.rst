@@ -8,7 +8,7 @@ for automatically running unit tests for new commits in master branch.
 Pagure triggers tests for any new pull request. It can be also triggered
 manually by pressing "Rerun CI" button in PR.
 
-Currently we run tests on Fedora 33/34/rawhide and CentOS 7/8 platforms.
+Currently we run tests on Fedora 33/34/rawhide and CentOS 8 platforms.
 
 Usage
 -----
@@ -96,11 +96,6 @@ Configuration
         git checkout "origin/${BRANCH_TO:-master}"  
         git merge --no-ff "proposed/$BRANCH" -m "Merge PR"  
     fi  
-
-    # centos:7
-    rm -rf .tox
-    podman run --rm --pull=always -v $PWD:/koji --security-opt label=disable --name koji-centos-test-7 quay.io/tkopecek/koji-centos-test:7 bash -c "cd /koji && tox -e py2"
-    podman rmi quay.io/tkopecek/koji-centos-test:7
 
     # centos:8
     rm -rf .tox

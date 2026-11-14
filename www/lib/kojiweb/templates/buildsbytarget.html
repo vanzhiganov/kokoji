@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block content %}
+
+{% macro printOption(value, label=None) %}
+{% if not label %}
+{% set label = value %}
+{% endif %}
+<option value="{{ value }}"{{ ' selected' if value == days else '' }}>{{ label }}</option>
+{% endmacro %}
+
+
+  <h4>Builds by Target{{ ' in the last %i days' % days if days != -1 else '' }}</h4>
+  <table class="data-list">
+    <tr style="text-align: left">
+      <td colspan="3">
+        <form action="">
+          Show last
+          <select onchange="javascript: window.location = 'buildsbytarget?days=' + this.value + '{{ passthrough('order') }}';">
+            {{ printOption(1)|safe }}
+            {{ printOption(3)|safe }}
+            {{ printOption(5)|safe }}
+            {{ printOption(7)|safe }}
+            {{ printOption(14)|safe }}
+            {{ printOption(30)|safe }}
+            {{ printOption(60)|safe }}
+            {{ printOption(90)|safe }}
+            {{ printOption(120)|safe }}
+            {{ printOption(-1, 'all')|safe }}
+          </select> days
+        </form>
+      </td>
+    </tr>
+    <tr>
+      <td class="paginate" colspan="3">
+        {% if len(targetPages) > 1 %}
+        <form class="pageJump" action="">
+          Page:
+          <select onchange="javascript: window.location = 'buildsbytarget?start=' + this.value * {{ targetRange }} + '{{ passthrough('days', 'order') }}';">
+            {% for pageNum in targetPages %}
+            <option value="{{ pageNum }}"{{ ' selected' if pageNum == targetCurrentPage else '' }}>{{ pageNum + 1 }}</option>
+            {% endfor %}
+          </select>
+        </form>
+        {% endif %}
+        {% if targetStart > 0 %}
+        <a href="buildsbytarget?start={{ targetStart - targetRange }}{{ passthrough('days', 'order') }}">&lt;&lt;&lt;</a>
+        {% endif %}
+        {% if totalTargets != 0 %}
+        <strong>Build Targets {{ targetStart + 1 }} through {{ targetStart + targetCount }} of {{ totalTargets }}</strong>
+        {% endif %}
+        {% if targetStart + targetCount < totalTargets %}
+        <a href="buildsbytarget?start={{ targetStart + targetRange }}{{ passthrough('days', 'order') }}">&gt;&gt;&gt;</a>
+        {% endif %}
+      </td>
+    </tr>
+    <tr class="list-header">
+      <th><a href="buildsbytarget?order={{ toggleOrder('name') }}{{ passthrough('days') }}">Name</a> {{ sortImage('name') }}</th>
+      <th><a href="buildsbytarget?order={{ toggleOrder('builds') }}{{ passthrough('days') }}">Builds</a> {{ sortImage('builds') }}</th>
+      <th>&nbsp;</th>
+    </tr>
+    {% if len(targets) > 0 %}
+    {% for target in targets %}
+    <tr class="{{ rowToggle() }}">
+      <td><a href="buildtargetinfo?name={{ quote(target.name) }}">{{ target.name }}</a></td>
+      <td width="{{ graphWidth + 5 }}"><img src={{ util.themePath('images/1px.gif') }} width="{{ increment * target.builds }}" height="15" class="graphrow" alt="graph row"/></td>
+      <td>{{ target.builds }}</td>
+    </tr>
+    {% endfor %}
+    {% else %}
+    <tr class="row-odd">
+      <td colspan="3">No builds</td>
+    </tr>
+    {% endif %}
+    <tr>
+      <td class="paginate" colspan="3">
+        {% if len(targetPages) > 1 %}
+        <form class="pageJump" action="">
+          Page:
+          <select onchange="javascript: window.location = 'buildsbytarget?start=' + this.value * {{ targetRange }} + '{{ passthrough('days', 'order') }}';">
+            {% for pageNum in targetPages %}
+            <option value="{{ pageNum }}"{{ ' selected' if pageNum == targetCurrentPage else '' }}>{{ pageNum + 1 }}</option>
+            {% endfor %}
+          </select>
+        </form>
+        {% endif %}
+        {% if targetStart > 0 %}
+        <a href="buildsbytarget?start={{ targetStart - targetRange }}{{ passthrough('days', 'order') }}">&lt;&lt;&lt;</a>
+        {% endif %}
+        {% if totalTargets != 0 %}
+        <strong>Build Targets {{ targetStart + 1 }} through {{ targetStart + targetCount }} of {{ totalTargets }}</strong>
+        {% endif %}
+        {% if targetStart + targetCount < totalTargets %}
+        <a href="buildsbytarget?start={{ targetStart + targetRange }}{{ passthrough('days', 'order') }}">&gt;&gt;&gt;</a>
+        {% endif %}
+      </td>
+    </tr>
+  </table>
+
+{% endblock %}
