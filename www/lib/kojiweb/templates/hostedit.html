@@ -1,8 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-
-
-  <h4>Edit host {{ host.name }}</h4>
+  <h2 class="pageHeader">Edit host {{ host.name }}</h2>
 
   <form action="hostedit" class="cds--form">
     {{ koji_authToken(form=True) }}

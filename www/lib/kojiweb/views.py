@@ -288,9 +288,13 @@ def _getServer(environ):
     session = _makeClientSession(options)
 
     environ['koji.currentLogin'] = _getUserCookie(environ)
+    if environ['koji.currentLogin'] and options['WebAuthType'] == koji.AUTHTYPES['NORMAL']:
+        _restoreHubSession(environ, session)
+        if not session.logged_in:
+            # a user cookie without a hub session (e.g. set before hub sessions were
+            # kept): the hub would treat the request as anonymous, so ask to log in again
+            environ['koji.currentLogin'] = None
     if environ['koji.currentLogin']:
-        if options['WebAuthType'] == koji.AUTHTYPES['NORMAL']:
-            _restoreHubSession(environ, session)
         environ['koji.currentUser'] = session.getUser(environ['koji.currentLogin'])
         if not environ['koji.currentUser']:
             raise koji.AuthError(

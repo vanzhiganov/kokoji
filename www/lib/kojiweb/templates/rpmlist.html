@@ -52,11 +52,11 @@ colspan="2"
 {% endmacro %}
 
   {% if type == 'component' %}
-  <h4>Component RPMs of buildroot <a href="buildrootinfo?buildrootID={{ buildroot.id }}">{{ util.brLabel(buildroot) }}</a></h4>
+  <h2 class="pageHeader">Component RPMs of buildroot <a href="buildrootinfo?buildrootID={{ buildroot.id }}">{{ util.brLabel(buildroot) }}</a></h2>
   {% elif type == 'image' %}
-  <h4>RPMs installed in <a href="archiveinfo?archiveID={{ image.id }}">{{ image.filename }}</a></h4>
+  <h2 class="pageHeader">RPMs installed in <a href="archiveinfo?archiveID={{ image.id }}">{{ image.filename }}</a></h2>
   {% else %}
-  <h4>RPMs built in buildroot <a href="buildrootinfo?buildrootID={{ buildroot.id }}">{{ util.brLabel(buildroot) }}</a></h4>
+  <h2 class="pageHeader">RPMs built in buildroot <a href="buildrootinfo?buildrootID={{ buildroot.id }}">{{ util.brLabel(buildroot) }}</a></h2>
   {% endif %}
 
   {% if totalRpms %}

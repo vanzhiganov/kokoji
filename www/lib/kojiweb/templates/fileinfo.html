@@ -2,9 +2,9 @@
 {% block content %}
 
   {% if rpm %}
-  <h4>Information for file <a href="fileinfo?rpmID={{ rpm.id }}&amp;filename={{ quote(file.name) }}">{{ file.name }}</a></h4>
+  <h2 class="pageHeader">Information for file <a href="fileinfo?rpmID={{ rpm.id }}&amp;filename={{ quote(file.name) }}">{{ file.name }}</a></h2>
   {% elif archive %}
-  <h4>Information for file <a href="fileinfo?archiveID={{ archive.id }}&amp;filename={{ quote(file.name) }}">{{ file.name }}</a></h4>
+  <h2 class="pageHeader">Information for file <a href="fileinfo?archiveID={{ archive.id }}&amp;filename={{ quote(file.name) }}">{{ file.name }}</a></h2>
   {% endif %}
 
   <div class="cds--structured-list">

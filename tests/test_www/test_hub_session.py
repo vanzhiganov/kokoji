@@ -95,6 +95,7 @@ class TestHubSession(unittest.TestCase):
             'LibPath': '/nonexistent',
             'PythonDebug': True,
         }
+        self.options = options
         self.app = kojiweb.create_app(options=options)
         self.app.config['TESTING'] = True
         self.sessions = []
@@ -165,6 +166,27 @@ class TestHubSession(unittest.TestCase):
                                        environ_overrides=env)
             self.assertEqual(len(self.sessions), 1)
             self.assertIsNone(self.sessions[0].seen_sinfo)
+
+
+    def test_user_cookie_without_hub_session_must_log_in_again(self):
+        env = {'REQUEST_SCHEME': 'http'}
+        with mock.patch.object(webidx, '_makeClientSession', side_effect=self._make_session):
+            client = self.app.test_client()
+            resp = client.post('/login', data={'username': 'alice', 'password': 'pw',
+                                               'page': ''}, environ_overrides=env)
+            full_cookie = self._cookie_header(resp)
+            # the token the app issues to this user
+            token = kojiweb.util._genToken(
+                {'koji.currentLogin': 'alice', 'koji.options': self.options})
+            # keep only the user cookie, as sessions set before hub sessions were stored
+            user_only = '; '.join(
+                c for c in full_cookie.split('; ') if c.startswith('user='))
+            client = self.app.test_client()
+            client.set_cookie('user', user_only.split('=', 1)[1])
+            resp = client.get('/buildtargetcreate?add=Add&a=%s&name=x&buildTag=1&destTag=1'
+                              % token, environ_overrides=env)
+            self.assertEqual(resp.status_code, 302)
+            self.assertIn('login', resp.headers['Location'])
 
 
 if __name__ == '__main__':

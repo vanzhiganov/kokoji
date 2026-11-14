@@ -3,9 +3,9 @@
 
 
   {% if notif %}
-  <h4>Edit notification</h4>
+  <h2 class="pageHeader">Edit notification</h2>
   {% else %}
-  <h4>Create notification</h4>
+  <h2 class="pageHeader">Create notification</h2>
   {% endif %}
 
   <form action="{{ 'notificationedit' if notif else 'notificationcreate' }}" class="cds--form">
@@ -53,5 +53,4 @@
       <button type="submit" name="cancel" value="Cancel" class="cds--btn cds--btn--secondary">Cancel</button>
     </div>
   </form>
-
 {% endblock %}

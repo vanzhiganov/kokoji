@@ -3,9 +3,9 @@
 
 
   {% if target %}
-  <h4>Edit target {{ target.name }}</h4>
+  <h2 class="pageHeader">Edit target {{ target.name }}</h2>
   {% else %}
-  <h4>Create build target</h4>
+  <h2 class="pageHeader">Create build target</h2>
   {% endif %}
 
   <form action="{{ 'buildtargetedit' if target else 'buildtargetcreate' }}">

@@ -1,8 +1,7 @@
 {% extends "base.html" %}
 {% set _PASSTHROUGH = ['userID'] %}
 {% block content %}
-
-<h4>Active sessions for {{ loggedInUser.name }} user</h4>
+  <h2 class="pageHeader">Active sessions for {{ loggedInUser.name }} user</h2>
 
 <div class="cds--data-table-container">
   <table class="cds--data-table cds--data-table--zebra">

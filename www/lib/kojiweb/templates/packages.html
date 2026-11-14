@@ -47,7 +47,7 @@ owned by <a href="userinfo?userID={{ user.id }}">{{ user.name }}</a>
   </div>
 {% endmacro %}
 
-  <h4>{{ getDescription()|safe }}</h4>
+  <h2 class="pageHeader">{{ getDescription()|safe }}</h2>
 
   {% if tag %}
   <form action="packages" class="koji-filters">
@@ -74,21 +74,20 @@ owned by <a href="userinfo?userID={{ user.id }}">{{ user.name }}</a>
   </form>
   {% endif %}
 
-  <div class="koji-charlist">
+  <nav class="koji-charlist" aria-label="Filter packages by first character">
     {% for char in chars %}
-    {% if prefix == char %}
-    <strong>{{ char }}</strong>
-    {% else %}
-    <a href="packages?prefix={{ char }}{{ passthrough('userID', 'tagID', 'order', 'inherited', 'blocked') }}">{{ char }}</a>
-    {% endif %}
-    |
+      {% if prefix == char %}
+        <strong>{{ char }}</strong>
+      {% else %}
+        <a href="packages?prefix={{ char }}{{ passthrough('userID', 'tagID', 'order', 'inherited', 'blocked') }}">{{ char }}</a>
+      {% endif %}
     {% endfor %}
     {% if prefix %}
-    <a href="packages?{{ passthrough('userID', 'tagID', 'order', 'inherited', 'blocked', prefix='') }}">all</a>
+      <a href="packages?{{ passthrough('userID', 'tagID', 'order', 'inherited', 'blocked', prefix='') }}">all</a>
     {% else %}
-    <strong>all</strong>
+      <strong>all</strong>
     {% endif %}
-  </div>
+  </nav>
 
   {% if totalPackages %}
   {{ pagination()|safe }}

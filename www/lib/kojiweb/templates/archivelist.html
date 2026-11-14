@@ -42,11 +42,11 @@ buildrootID={{ buildroot.id }}
 {% endmacro %}
 
   {% if type == 'component' %}
-  <h4>Component Archives of buildroot <a href="buildrootinfo?buildrootID={{ buildroot.id }}">{{ util.brLabel(buildroot) }}</a></h4>
+  <h2 class="pageHeader">Component Archives of buildroot <a href="buildrootinfo?buildrootID={{ buildroot.id }}">{{ util.brLabel(buildroot) }}</a></h2>
   {% elif type == 'image' %}
-  <h4>Archives installed in <a href="archiveinfo?archiveID={{ image.id }}">{{ image.filename }}</a></h4>
+  <h2 class="pageHeader">Archives installed in <a href="archiveinfo?archiveID={{ image.id }}">{{ image.filename }}</a></h2>
   {% else %}
-  <h4>Archives built in buildroot <a href="buildrootinfo?buildrootID={{ buildroot.id }}">{{ util.brLabel(buildroot) }}</a></h4>
+  <h2 class="pageHeader">Archives built in buildroot <a href="buildrootinfo?buildrootID={{ buildroot.id }}">{{ util.brLabel(buildroot) }}</a></h2>
   {% endif %}
 
   {{ pagination()|safe }}

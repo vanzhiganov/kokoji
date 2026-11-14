@@ -32,7 +32,7 @@
   </div>
 {% endmacro %}
 
-  <h4>{{ rpmArch + ' ' if rpmArch else '' }}RPMs by Host{{ ' (%s)' % hostArch if hostArch else '' }}</h4>
+  <h2 class="pageHeader">{{ rpmArch + ' ' if rpmArch else '' }}RPMs by Host{{ ' (%s)' % hostArch if hostArch else '' }}</h2>
 
   <p>
     <strong>Host arch:</strong> {% for arch in hostArchList %}

@@ -58,7 +58,7 @@ in tag <a href="taginfo?tagID={{ tag.id }}">{{ tag.name }}</a>
   </div>
 {% endmacro %}
 
-  <h4>{{ getDescription()|safe }}</h4>
+  <h2 class="pageHeader">{{ getDescription()|safe }}</h2>
 
   <form action="builds" class="koji-filters">
     {% if tag %}
@@ -134,7 +134,6 @@ in tag <a href="taginfo?tagID={{ tag.id }}">{{ tag.name }}</a>
     {% else %}
     <a href="builds?prefix={{ char }}{{ passthrough_except('prefix') }}">{{ char }}</a>
     {% endif %}
-    |
     {% endfor %}
     {% if prefix %}
     <a href="builds?{{ passthrough_except('prefix', prefix='') }}">all</a>

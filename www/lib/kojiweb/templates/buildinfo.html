@@ -3,7 +3,7 @@
 
 {% set nvrpath = pathinfo.build(build) %}
 
-  <h4>Information for build <a href="buildinfo?buildID={{ build.id }}">{{ koji.buildLabel(build) }}</a></h4>
+  <h2 class="pageHeader">Information for build <a href="buildinfo?buildID={{ build.id }}">{{ koji.buildLabel(build) }}</a></h2>
 
   <div class="cds--structured-list">
     <div class="cds--structured-list-tbody">

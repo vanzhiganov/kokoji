@@ -11,7 +11,7 @@
 {% set numTotal = numSucceeded + numFailed + numCanceled %}
 
 
-  <h4>Succeeded/Failed/Canceled Builds{{ ' in the last %i days' % days if days != -1 else '' }}</h4>
+  <h2 class="pageHeader">Succeeded/Failed/Canceled Builds{{ ' in the last %i days' % days if days != -1 else '' }}</h2>
 
   <form action="" class="koji-filters">
     <div class="cds--select cds--select--inline">

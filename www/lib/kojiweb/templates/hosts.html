@@ -67,7 +67,7 @@ in {{ channel }} channel
   </div>
 {% endmacro %}
 
-  <h4>{{ headerState(state)|safe }} {{ headerReady(ready)|safe }} {{ headerArch(arch)|safe }} {{ headerChannel(channel)|safe }}</h4>
+  <h2 class="pageHeader">{{ headerState(state)|safe }} {{ headerReady(ready)|safe }} {{ headerArch(arch)|safe }} {{ headerChannel(channel)|safe }}</h2>
 
   <form action="hosts" class="koji-filters">
     <div class="cds--select cds--select--inline">

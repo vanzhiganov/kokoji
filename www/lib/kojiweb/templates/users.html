@@ -32,9 +32,9 @@
   </div>
 {% endmacro %}
 
-  <h4>Users{{ ' starting with "%s"' % prefix if prefix else '' }}</h4>
+  <h2 class="pageHeader">Users{{ ' starting with "%s"' % prefix if prefix else '' }}</h2>
 
-  <nav class="koji-links" aria-label="Filter users by first character">
+  <nav class="koji-charlist" aria-label="Filter users by first character">
     {% for char in chars %}
     {% if prefix == char %}
     <strong>{{ char }}</strong>
