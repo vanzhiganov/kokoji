@@ -31,22 +31,6 @@ a:hover {
     text-decoration: underline;
 }
 
-#wrap {
-    margin: 0;
-    padding: 0;
-    background: var(--cds-background, #ffffff);
-}
-
-#innerwrap {
-    margin: 0;
-    padding: 0;
-}
-
-#header {
-    display: none; /* replaced by the Carbon UI shell */
-}
-
-#content,
 .cds--content {
     margin: 0;
     padding: 2rem;
@@ -73,16 +57,8 @@ p#footer a {
     height: 30px;
 }
 
-.hide {
-    display: none;
-}
-
 .hidden {
     display: none;
-}
-
-.disabled {
-    color: var(--cds-text-disabled, #c6c6c6);
 }
 
 .smaller {
@@ -100,9 +76,14 @@ p#footer a {
 #headerSearch {
     display: flex;
     flex-wrap: wrap;
-    align-items: flex-end;
+    align-items: center;
     gap: 1rem;
     margin-bottom: 1rem;
+}
+
+/* the select is full width by default; size it to its options in the bar */
+#headerSearch .cds--select {
+    inline-size: auto;
 }
 
 #headerSearch .cds--search {
@@ -119,15 +100,11 @@ p#footer a {
 /* Headings                                                           */
 /* ------------------------------------------------------------------ */
 
-h1, h2, h3, h4, h5 {
-    font-weight: 400;
-    color: var(--cds-text-primary, #161616);
-}
-
 h4 {
     padding: 0;
     margin: 0 0 0.5rem 0;
     background: none;
+    font-weight: 400;
     color: var(--cds-text-primary, #161616);
     font-size: 1.25rem;
 }
@@ -223,10 +200,6 @@ td.container {
 table.nested th,
 table.nested td {
     padding: 2px 4px;
-}
-
-div.toggle {
-    padding: 6px;
 }
 
 /* ------------------------------------------------------------------ */
@@ -359,10 +332,6 @@ td.true {
 
 .taskfailed, .repodeleted, .repoproblem {
     color: var(--cds-support-error, #da1e28);
-}
-
-a.help {
-    text-decoration: underline;
 }
 
 abbr {

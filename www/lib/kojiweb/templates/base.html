@@ -67,7 +67,7 @@
 
     <!-- MAIN CONTENT -->
     <main class="cds--content" id="main-content">
-      <form action="search" id="headerSearch" role="search">
+      <form action="search" id="headerSearch" role="search" class="cds--layout--size-md">
         <input type="hidden" name="match" value="glob"/>
         <div class="cds--select cds--select--inline">
           <label class="cds--label" for="searchType">Search type</label>
@@ -92,13 +92,13 @@
             </svg>
           </div>
         </div>
-        <div class="cds--search" role="search">
+        <div class="cds--search">
           <svg focusable="false" class="cds--search-magnifier" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
             <path d="M15 14.3L10.7 10c1.9-2.3 1.6-5.8-.7-7.7S4.2.7 2.3 3 .7 8.8 3 10.7c2 1.7 5 1.7 7 0l4.3 4.3zM2 6.5C2 4 4 2 6.5 2S11 4 11 6.5 9 11 6.5 11 2 9 2 6.5z"/>
           </svg>
           <label class="cds--label cds--visually-hidden" for="searchTerms">Search terms</label>
           <input type="text" id="searchTerms" name="terms" class="cds--search-input"
-                 title="You can use glob expressions here (e.g. 'bash-*')"
+                 placeholder="Search terms, glob patterns allowed (e.g. bash-*)"
                  value="{{ terms|default('', true) }}"/>
         </div>
         <button type="submit" class="cds--btn cds--btn--primary">Search</button>
