@@ -60,7 +60,7 @@ endif
 
 .DEFAULT_GOAL := help
 
-.PHONY: help _default clean git-clean test test3 test-tarball tarball sources srpm rpm test-rpm pypi pypi-upload flake8 bandit tag force-tag install
+.PHONY: help _default clean git-clean test test3 test-tarball tarball sources srpm rpm test-rpm pypi pypi-upload flake8 bandit containers containers-base containers-cli containers-up containers-down tag force-tag install
 
 _default: help
 
@@ -74,6 +74,7 @@ help: ## Show this help
 	@echo "  PYTHON                   python interpreter (default: python3)"
 	@echo "  VERSION, RELEASE, DIST   override values read from the spec file"
 	@echo "  DESTDIR                  install root (default: /), with TYPE=systemd|sysv"
+	@echo "  CONTAINER_ENGINE, COMPOSE, COMPOSE_FILE  container tooling (default: docker compose)"
 	@echo ""
 	@echo "See docs/source/writing_koji_code.rst for more details."
 
@@ -140,6 +141,34 @@ flake8: ## Run flake8 linting via tox
 
 bandit: ## Run bandit security checks via tox
 	tox -e bandit
+
+# Containers -----------------------------------------------------------------
+# Every component image extends koji-base, so the base image has to exist
+# locally before the others can build. compose tags it koji-base:latest, but
+# the component Dockerfiles use FROM git.org.ru/platformos/koji-base:latest,
+# so containers-base also tags it under that name to avoid a registry pull.
+CONTAINER_ENGINE ?= docker
+COMPOSE ?= $(CONTAINER_ENGINE) compose
+COMPOSE_FILE ?= containers/compose.yml
+BASE_IMAGE ?= git.org.ru/platformos/koji-base:latest
+CLI_IMAGE ?= git.org.ru/platformos/koji-cli:latest
+
+containers-base: ## Build the shared koji-base image (must come first)
+	$(COMPOSE) -f $(COMPOSE_FILE) build base
+	$(CONTAINER_ENGINE) tag koji-base:latest $(BASE_IMAGE)
+
+containers-cli: containers-base ## Build the koji CLI image (not in compose.yml)
+	$(CONTAINER_ENGINE) build -f containers/cli/Dockerfile -t $(CLI_IMAGE) .
+
+containers: containers-base containers-cli ## Build all container images
+	$(COMPOSE) -f $(COMPOSE_FILE) build
+
+containers-up: ## Start the container stack in the background
+	$(COMPOSE) -f $(COMPOSE_FILE) up -d
+
+containers-down: ## Stop and remove the container stack
+	$(COMPOSE) -f $(COMPOSE_FILE) down
+# ----------------------------------------------------------------------------
 
 tag:: ## Create the annotated git tag
 	git tag -a $(TAG)
