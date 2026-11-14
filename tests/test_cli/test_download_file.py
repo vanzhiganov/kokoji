@@ -17,10 +17,7 @@ from koji_cli.lib import download_file, _download_progress
 
 def mock_open():
     """Return the right patch decorator for open"""
-    if six.PY2:
-        return mock.patch('__builtin__.open')
-    else:
-        return mock.patch('builtins.open')
+    return mock.patch('builtins.open')
 
 
 class TestDownloadFile(unittest.TestCase):

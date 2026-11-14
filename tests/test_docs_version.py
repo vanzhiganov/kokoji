@@ -1,27 +1,19 @@
 from __future__ import absolute_import
 import os
-import six
 import subprocess
 import unittest
 import sys
 
-try:
-    import importlib.util
-except ImportError:  # pragma: no cover
-    import imp as imp
-    importlib = None
+import importlib.util
 
 # docs version lives in docs/source/conf.py
 TOPDIR = os.path.dirname(__file__) + '/..'
 SPHINX_CONF = TOPDIR + '/docs/source/conf.py'
 
-if importlib:
-    spec = importlib.util.spec_from_file_location("sphinx_conf", SPHINX_CONF)
-    sphinx_conf = importlib.util.module_from_spec(spec)
-    sys.modules["sphinx_conf"] = sphinx_conf
-    spec.loader.exec_module(sphinx_conf)
-else:
-    sphinx_conf = imp.load_source('sphinx_conf', SPHINX_CONF)
+spec = importlib.util.spec_from_file_location("sphinx_conf", SPHINX_CONF)
+sphinx_conf = importlib.util.module_from_spec(spec)
+sys.modules["sphinx_conf"] = sphinx_conf
+spec.loader.exec_module(sphinx_conf)
 
 
 class TestDocsVersion(unittest.TestCase):
@@ -36,8 +28,7 @@ class TestDocsVersion(unittest.TestCase):
         output = popen.stdout.read()
         # rpm outputs a line for each subpackage
         version = output.splitlines()[0]
-        if six.PY3:
-            version = version.decode()
+        version = version.decode()
         return version
 
     def test_docs_version(self):

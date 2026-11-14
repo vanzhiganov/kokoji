@@ -2,7 +2,6 @@ from __future__ import absolute_import
 
 import fnmatch
 import os
-import sys
 import tarfile
 
 import koji
@@ -67,10 +66,7 @@ class SaveFailedTreeTask(tasks.BaseTaskHandler):
         tar_path = os.path.join(self.workdir, 'broot-%s.tar.gz' % buildrootID)
         self.logger.debug("Creating buildroot archive %s", tar_path)
         f = tarfile.open(tar_path, "w:gz")
-        if sys.version_info[0] < 3:
-            f.add(path, exclude=omit_paths2)
-        else:
-            f.add(path, filter=omit_paths3)
+        f.add(path, filter=omit_paths3)
         f.close()
 
         self.logger.debug("Uploading %s to hub", tar_path)

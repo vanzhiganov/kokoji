@@ -1,12 +1,11 @@
-PYVER_MAJOR := $(shell $(PYTHON) -c 'import sys; print(".".join(sys.version.split(".")[:1]))')
 PKGDIR = $(shell $(PYTHON) ../devtools/get_site_packages.py )/$(PACKAGE)
 
 CLIPLUGINDIR = $(PKGDIR)/koji_cli_plugins
 HUBPLUGINDIR = /usr/lib/koji-hub-plugins
 BUILDERPLUGINDIR = /usr/lib/koji-builder-plugins
-CLIFILES_ALL = $(wildcard cli/*.py)
-HUBFILES_ALL = $(wildcard hub/*.py)
-BUILDERFILES_ALL = $(wildcard builder/*.py)
+CLIFILES = $(wildcard cli/*.py)
+HUBFILES = $(wildcard hub/*.py)
+BUILDERFILES = $(wildcard builder/*.py)
 CLICONFDIR = /etc/koji/plugins
 HUBCONFDIR = /etc/koji-hub/plugins
 BUILDERCONFDIR = /etc/kojid/plugins
@@ -14,15 +13,6 @@ CLICONFFILES = $(wildcard cli/*.conf)
 HUBCONFFILES = $(wildcard hub/*.conf)
 BUILDERCONFFILES = $(wildcard builder/*.conf)
 
-ifeq ($(PYVER_MAJOR),2)
-	HUBFILES=$(filter-out hub/kiwi.py,$(HUBFILES_ALL))
-	BUILDERFILES=$(filter-out builder/kiwi.py,$(BUILDERFILES_ALL))
-	CLIFILES=$(filter-out cli/kiwi.py,$(CLIFILES_ALL))
-else
-	HUBFILES=$(HUBFILES_ALL)
-	BUILDERFILES=$(BUILDERFILES_ALL)
-	CLIFILES=$(CLIFILES_ALL)
-endif
 	
 _default:
 	@echo "nothing to make.  try make install"
@@ -40,12 +30,10 @@ install:
 
         ifndef KOJI_MINIMAL
 		mkdir -p $(DESTDIR)/$(HUBPLUGINDIR);
-		@if [ "$(PYVER_MAJOR)" == "3" ] ; then \
-			install -p -m 644 $(HUBFILES) $(DESTDIR)/$(HUBPLUGINDIR); \
-			$(PYTHON) -c "import compileall; compileall.compile_dir('$(DESTDIR)/$(HUBPLUGINDIR)', 1, '$(HUBPLUGINDIR)', 1)"; \
-			mkdir -p $(DESTDIR)/$(HUBCONFDIR); \
-			install -p -m 644 $(HUBCONFFILES) $(DESTDIR)/$(HUBCONFDIR); \
-		fi
+		install -p -m 644 $(HUBFILES) $(DESTDIR)/$(HUBPLUGINDIR); \
+		$(PYTHON) -c "import compileall; compileall.compile_dir('$(DESTDIR)/$(HUBPLUGINDIR)', 1, '$(HUBPLUGINDIR)', 1)"; \
+		mkdir -p $(DESTDIR)/$(HUBCONFDIR); \
+		install -p -m 644 $(HUBCONFFILES) $(DESTDIR)/$(HUBCONFDIR);
 		mkdir -p $(DESTDIR)/$(BUILDERPLUGINDIR);
 		install -p -m 644 $(BUILDERFILES) $(DESTDIR)/$(BUILDERPLUGINDIR);
 		$(PYTHON) -c "import compileall; compileall.compile_dir('$(DESTDIR)/$(BUILDERPLUGINDIR)', 1, '$(BUILDERPLUGINDIR)', 1)";

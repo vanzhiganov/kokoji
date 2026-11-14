@@ -1,18 +1,18 @@
 [run]
-data_file = .coverage2
+data_file = .coverage
 
 omit =
     setup.py
     /usr/*
-    kojihub/*
-    plugins/hub/*
+    /tmp/*
     tests/*
+    devtools/*
     .tox/*
 
 [report]
 exclude_lines =
     pragma: no cover
-    no cover: 2.x
+    no cover 3.x
 
 [html]
-directory = htmlcov/py2
+directory = htmlcov

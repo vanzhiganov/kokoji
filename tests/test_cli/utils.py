@@ -216,7 +216,4 @@ class CliTestCase(unittest.TestCase):
 
 
 def get_builtin_open():
-    if six.PY2:
-        return '__builtin__.open'
-    else:
-        return 'builtins.open'
+    return 'builtins.open'

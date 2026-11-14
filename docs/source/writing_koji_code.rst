@@ -687,8 +687,8 @@ Here are some guidelines on producing preferable pull requests.
    While much of the older code in Koji does not, we try to stick to it
    with new code
 -  Code which is imported into CLI or needed for stand-alone API calls must
-   run in both 2.6+ and 3.x python versions. We use the python-six library
-   for compatibility. The affected files are:
+   run on Python 3.6+. The python-six library is still used for a handful of
+   compatibility helpers. The affected files are:
 
      - ``cli/*``
      - ``koji/__init__.py``
@@ -698,8 +698,7 @@ Here are some guidelines on producing preferable pull requests.
      - ``tests/test_cli/*``
 
 - Check, that unit tests are not broken. Simply run ``make test`` in main
-  directory of your branch to check both python2/3 compatible-code. Or you can
-  also use ``make test2`` or ``make test3`` target for each of them.
+  directory of your branch to run the Python 3 test suite (``tox -e py3``).
 
 Note that the core development team for Koji is small, so it may take a few
 days for someone to reply to your request.
@@ -725,7 +724,6 @@ changes to the code. To do so, just run ``make test`` in your terminal.
 
 You can run the tests from your local and you will need to install the following packages to actually run the tests.
 
-For py3 instances:
  * ``gcc``
  * ``glibc-langpack-en``
  * ``python3-devel``
@@ -734,26 +732,9 @@ For py3 instances:
  * ``rpm-build``
  * ``Other packages are installed by test-requirements.txt.``
 
-For py2 instances:
- * ``dnf``
- * ``dnf-plugins-core``
- * ``gcc``
- * ``libffi-devel``
- * ``python-devel``
- * ``python-librepo``
- * ``python-requests``
- * ``rpm-build``
- * ``epel-release``
- * ``python-pip``
- * ``python-psycopg2``
- * ``tox``
- * ``pip==9.0.1``
- * ``Other packages are installed by test-requirements.txt.``
-
 You can use containers for the tests. Dockerfiles are placed in `devtools/containers` directory.
 Supported Dockerfiles:
 
- * ``Dockerfile.centos7``
  * ``Dockerfile.centos8``
  * ``Dockerfile.centos9``
  * ``Dockerfile.f34``

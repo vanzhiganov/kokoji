@@ -60,10 +60,7 @@ class EnumTestCase(unittest.TestCase):
 
 def mock_open():
     """Return the right patch decorator for open"""
-    if six.PY2:
-        return mock.patch('__builtin__.open')
-    else:
-        return mock.patch('builtins.open')
+    return mock.patch('builtins.open')
 
 
 class MiscFunctionTestCase(unittest.TestCase):
@@ -244,24 +241,16 @@ class ConfigFileTestCase(unittest.TestCase):
         self.manager.isdir = mock.patch("os.path.isdir").start()
         self.manager.isfile = mock.patch("os.path.isfile").start()
         self.manager.access = mock.patch("os.access", return_value=True).start()
-        if six.PY2:
-            self.manager.scp_clz = mock.patch("ConfigParser.SafeConfigParser",
-                                              spec=True).start()
-        else:
-            self.manager.cp_clz = mock.patch("configparser.ConfigParser",
-                                             spec=True).start()
+        self.manager.cp_clz = mock.patch("configparser.ConfigParser",
+                                         spec=True).start()
         self.manager.rcp_clz = mock.patch("six.moves.configparser.RawConfigParser",
                                           spec=True).start()
-        if six.PY2:
-            self.real_parser_clz = self.manager.scp_clz
-        else:
-            self.real_parser_clz = self.manager.cp_clz
+        self.real_parser_clz = self.manager.cp_clz
         self.mocks = [self.manager.isdir,
                       self.manager.isfile,
                       self.manager.access,
                       self.manager.open,
                       self.manager.cp_clz,
-                      self.manager.scp_clz,
                       self.manager.rcp_clz]
 
     def reset_mock(self):
@@ -290,17 +279,10 @@ class ConfigFileTestCase(unittest.TestCase):
         self.manager.isdir.return_value = False
         conf = koji.read_config_files(files)
         self.manager.isdir.assert_called_once_with(files)
-        if six.PY2:
-            self.assertTrue(isinstance(conf,
-                                       six.moves.configparser.SafeConfigParser.__class__))
-        else:
-            self.assertTrue(isinstance(conf,
-                                       six.moves.configparser.ConfigParser.__class__))
+        self.assertTrue(isinstance(conf,
+                                   six.moves.configparser.ConfigParser.__class__))
         self.real_parser_clz.assert_called_once()
-        if six.PY2:
-            self.real_parser_clz.return_value.read.assert_called_once_with([files])
-        else:
-            self.real_parser_clz.return_value.read.assert_called_once_with([files], encoding='utf8')
+        self.real_parser_clz.return_value.read.assert_called_once_with([files], encoding='utf8')
 
         # list as config_files
         self.reset_mock()
@@ -308,10 +290,7 @@ class ConfigFileTestCase(unittest.TestCase):
         koji.read_config_files(files)
 
         self.real_parser_clz.assert_called_once()
-        if six.PY2:
-            self.real_parser_clz.return_value.read.assert_called_once()
-        else:
-            self.real_parser_clz.return_value.read.assert_called_once()
+        self.real_parser_clz.return_value.read.assert_called_once()
 
         # tuple as config_files
         self.reset_mock()
@@ -372,11 +351,8 @@ class ConfigFileTestCase(unittest.TestCase):
         self.real_parser_clz.assert_called_once()
         expected_files = ['test1.conf', 'gooddir/test1-1.conf', 'gooddir/test1-2.conf',
                           'test2.conf']
-        if six.PY2:
-            self.real_parser_clz.return_value.read.assert_called_once_with(expected_files)
-        else:
-            self.real_parser_clz.return_value.read.assert_called_once_with(expected_files,
-                                                                           encoding='utf8')
+        self.real_parser_clz.return_value.read.assert_called_once_with(expected_files,
+                                                                       encoding='utf8')
         self.assertEqual(self.manager.isdir.call_count, 5)
         self.assertEqual(self.manager.isfile.call_count, 6)
         self.assertEqual(self.manager.access.call_count, 4)
@@ -766,12 +742,8 @@ class MavenUtilTestCase(unittest.TestCase):
     def _read_conf(self, cfile):
         path = os.path.dirname(__file__)
         with open(path + cfile, 'rt') as conf_file:
-            if six.PY2:
-                config = six.moves.configparser.SafeConfigParser()
-                config.readfp(conf_file)
-            else:
-                config = six.moves.configparser.ConfigParser()
-                config.read_file(conf_file)
+            config = six.moves.configparser.ConfigParser()
+            config.read_file(conf_file)
         return config
 
     @mylocale(('en_US', 'UTF-8'))

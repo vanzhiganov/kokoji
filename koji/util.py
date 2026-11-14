@@ -401,9 +401,6 @@ def base64encode(s, as_bytes=False):
 
     This function returns a string unless as_bytes is True
     """
-    if six.PY2:
-        return base64.b64encode(s)
-
     if isinstance(s, str):
         s = s.encode('utf8')
     data = base64.b64encode(s)
@@ -813,7 +810,6 @@ def _rmtree_nofork(path, logger=None):
     try:
         st = os.lstat(path)
     except OSError as e:
-        # FileNotFoundError is N/A in py2
         if e.errno == errno.ENOENT:
             logger.warning("No such file/dir %s for removal" % path)
             return
@@ -1144,14 +1140,14 @@ class adler32_constructor(object):
 
     # mimicing the hashlib constructors
     def __init__(self, arg=''):
-        if six.PY3 and isinstance(arg, str):
+        if isinstance(arg, str):
             arg = bytes(arg, 'utf-8')
         self._value = adler32(arg) & 0xffffffff
         # the bitwise and works around a bug in some versions of python
         # see: https://bugs.python.org/issue1202
 
     def update(self, arg):
-        if six.PY3 and isinstance(arg, str):
+        if isinstance(arg, str):
             arg = bytes(arg, 'utf-8')
         self._value = adler32(arg, self._value) & 0xffffffff
 
@@ -1341,8 +1337,7 @@ def parse_maven_chain(confs, scratch=False):
 
 def to_list(lst):
     """
-    Helper function for py2/py3 compatibility used e.g. in
-    list(dict.keys())
+    Normalize an iterable to a list (e.g. dict.keys() views).
 
     Don't use it for structures like list(zip(x, y)), where six.moves.zip is
     used, so it is always an iterator.

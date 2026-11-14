@@ -65,10 +65,7 @@ except ImportError:  # pragma: no cover
 
 
 def _printable_unicode(s):
-    if six.PY2:
-        return s.encode('utf-8')
-    else:  # no cover: 2.x
-        return s
+    return s
 
 
 def handle_add_group(goptions, session, args):
@@ -667,7 +664,7 @@ def handle_build(options, session, args):
     if build_opts.custom_user_metadata:
         try:
             custom_user_metadata = json.loads(build_opts.custom_user_metadata)
-        # Use ValueError instead of json.JSONDecodeError for Python 2 and 3 compatibility
+        # invalid JSON raises ValueError
         except ValueError:
             parser.error("--custom-user-metadata is not valid JSON")
 
@@ -1637,9 +1634,6 @@ def _import_comps(session, filename, tag, options):
                        }
             if pkg.type == libcomps.PACKAGE_TYPE_CONDITIONAL:
                 pkgopts['requires'] = pkg.requires
-            for k in pkgopts.keys():
-                if six.PY2 and isinstance(pkgopts[k], unicode):  # noqa: F821
-                    pkgopts[k] = str(pkgopts[k])
             s_opts = ', '.join(["'%s': %r" % (k, pkgopts[k]) for k in sorted(pkgopts.keys())])
             print("  Package: %s: {%s}" % (pkg.name, s_opts))
             session.groupPackageListAdd(tag, group.id, pkg.name, force=force, **pkgopts)
@@ -1670,9 +1664,6 @@ def _import_comps_alt(session, filename, tag, options):  # no cover 3.x
                 pkgopts = {'type': ptype}
                 if ptype == 'conditional':
                     pkgopts['requires'] = pdata[pkg]
-                for k in pkgopts.keys():
-                    if six.PY2 and isinstance(pkgopts[k], unicode):  # noqa: F821
-                        pkgopts[k] = str(pkgopts[k])
                 s_opts = ', '.join(["'%s': %r" % (k, pkgopts[k]) for k in sorted(pkgopts.keys())])
                 print("  Package: %s: {%s}" % (pkg, s_opts))
                 session.groupPackageListAdd(tag, group.groupid, pkg, force=force, **pkgopts)

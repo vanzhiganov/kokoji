@@ -17,28 +17,19 @@ sidetag = load_plugin.load_plugin('cli', 'sidetag_cli')
 
 def mock_stdout():
     def get_mock():
-        if six.PY2:
-            return six.StringIO()
-        else:
-            return io.TextIOWrapper(six.BytesIO())
+        return io.TextIOWrapper(six.BytesIO())
     return mock.patch('sys.stdout', new_callable=get_mock)
 
 
 def mock_stderr():
     def get_mock():
-        if six.PY2:
-            return six.StringIO()
-        else:
-            return io.TextIOWrapper(six.BytesIO())
+        return io.TextIOWrapper(six.BytesIO())
     return mock.patch('sys.stderr', new_callable=get_mock)
 
 
 def get_stdout_value(stdout):
-    if six.PY2:
-        return stdout.getvalue()
-    else:
-        # we have to force the TextIOWrapper to stop buffering
-        return stdout.detach().getvalue()
+    # we have to force the TextIOWrapper to stop buffering
+    return stdout.detach().getvalue()
 
 
 class TestSideTagCLI(unittest.TestCase):

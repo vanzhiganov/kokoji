@@ -13,10 +13,7 @@ except ImportError:
     import mock
     from mock import patch, MagicMock
 import six
-if six.PY2:
-    from ConfigParser import SafeConfigParser as ConfigParser
-else:
-    from configparser import ConfigParser
+from configparser import ConfigParser
 
 
 from koji.context import context
@@ -335,10 +332,7 @@ connect_timeout = 10
 send_timeout = 60
 """)
         conf = ConfigParser()
-        if six.PY2:
-            conf.readfp(confdata)
-        else:
-            conf.read_file(confdata)
+        conf.read_file(confdata)
         self.handler = protonmsg.TimeoutHandler('amqps://broker1.example.com:5671', [], conf)
 
     @patch('protonmsg.SSLDomain')
@@ -359,10 +353,7 @@ connect_timeout = 10
 send_timeout = 60
 """)
         conf = ConfigParser()
-        if six.PY2:
-            conf.readfp(confdata)
-        else:
-            conf.read_file(confdata)
+        conf.read_file(confdata)
         handler = protonmsg.TimeoutHandler('amqp://broker1.example.com:5672', [], conf)
         event = MagicMock()
         handler.on_start(event)

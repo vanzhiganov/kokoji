@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/python3
 # coding=utf-8
 
 """Test the __init__.py module"""
@@ -9,7 +9,6 @@ try:
     from unittest import mock
 except ImportError:
     import mock
-import six
 import unittest
 
 
@@ -43,16 +42,9 @@ class FixEncodingTestCase(unittest.TestCase):
         """Test the fixEncoding function"""
         for a, b in self.simple_values:
             self.assertEqual(koji.fixEncoding(b), b)
-            if six.PY2:
-                self.assertEqual(koji.fixEncoding(a), b)
-                c = a.encode('utf16')
-                self.assertEqual(koji.fixEncoding(c, fallback='utf16'), b)
-                d = a[:-3] + u'\x00\x01' + a[-3:]
-                self.assertEqual(koji.fixEncoding(d, remove_nonprintable=True), b)
-            else:
-                self.assertEqual(koji.fixEncoding(a), a)
-                d = a[:-3] + u'\x00\x01' + a[-3:]
-                self.assertEqual(koji.fixEncoding(d, remove_nonprintable=True), a)
+            self.assertEqual(koji.fixEncoding(a), a)
+            d = a[:-3] + u'\x00\x01' + a[-3:]
+            self.assertEqual(koji.fixEncoding(d, remove_nonprintable=True), a)
 
     def test_fix_print(self):
         """Test the _fix_print function"""
@@ -64,18 +56,6 @@ class FixEncodingTestCase(unittest.TestCase):
         actual = '\n'.join(actual)
         self.assertEqual(actual, expected)
 
-    complex_values = [
-        # [ value, fixed ]
-        [{}, {}],
-        [(), ()],
-        [None, None],
-        [[], []],
-        [{u'a': 'a' , 'b' : {'c': u'c\x00'}},
-         {'a': 'a' , 'b' : {'c':  'c\x00'}}],
-        # iso8859-15 fallback
-        ['g\xf3\xf0an daginn', 'g\xc3\xb3\xc3\xb0an daginn'],
-    ]
-
     nonprint = [
         ['hello\0world\0', 'helloworld'],
         [u'hello\0world\0', 'helloworld'],
@@ -86,13 +66,6 @@ class FixEncodingTestCase(unittest.TestCase):
 
     def test_fixEncodingRecurse(self):
         """Test the fixEncodingRecurse function"""
-        if six.PY3:
-            # don't test for py3
-            return
-        for a, b in self.simple_values:
-            self.assertEqual(koji.fixEncoding(a), b)
-        for a, b in self.complex_values:
-            self.assertEqual(koji.fixEncodingRecurse(a), b)
         for a, b in self.nonprint:
             self.assertEqual(koji.fixEncodingRecurse(a, remove_nonprintable=True), b)
 

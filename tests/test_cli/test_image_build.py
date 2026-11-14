@@ -12,10 +12,7 @@ import koji
 from koji_cli.commands import handle_image_build, _build_image_oz
 from . import utils
 
-if six.PY2:
-    ConfigParser = six.moves.configparser.SafeConfigParser
-else:
-    ConfigParser = six.moves.configparser.ConfigParser
+ConfigParser = six.moves.configparser.ConfigParser
 
 TASK_OPTIONS = {
     "background": None,
@@ -64,10 +61,7 @@ TASK_OPTIONS = {
 
 def mock_open():
     """Return the right patch decorator for open"""
-    if six.PY2:
-        return mock.patch('__builtin__.open')
-    else:
-        return mock.patch('builtins.open')
+    return mock.patch('builtins.open')
 
 
 class Options(object):

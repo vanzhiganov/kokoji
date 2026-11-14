@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 from __future__ import absolute_import
 
 import os.path
@@ -53,7 +53,6 @@ setup(
         "Intended Audience :: Developers",
         "License :: OSI Approved :: GNU Lesser General Public License v2 or later (LGPLv2+)",
         "Natural Language :: English",
-        "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3",
         "Operating System :: POSIX :: Linux",
         "Topic :: Utilities"
@@ -82,6 +81,6 @@ setup(
         'util/koji-sweep-db',
         'util/kojira',
     ],
-    python_requires='>=2.7',
+    python_requires='>=3.6',
     install_requires=get_install_requires(),
 )

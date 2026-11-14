@@ -43,11 +43,8 @@ Note this command only downloads task logs, not build logs.
         self.task_id = 123456
 
         self.builtin_open = None
-        if six.PY2:
-            self.builtin_open = __builtins__['open']
-        else:
-            import builtins
-            self.builtin_open = builtins.open
+        import builtins
+        self.builtin_open = builtins.open
         self.custom_open = {}
 
     def tearDown(self):
@@ -147,10 +144,7 @@ Note this command only downloads task logs, not build logs.
         out_file = six.StringIO()
         self.custom_open['kojilogs/x86_64-123456/volume1/file1.log'] = out_file
 
-        if six.PY2:
-            target = '__builtin__.open'
-        else:
-            target = 'builtins.open'
+        target = 'builtins.open'
         with mock.patch(target, new=self.mock_builtin_open):
             anon_handle_download_logs(self.options, self.session, [str(self.task_id)])
 

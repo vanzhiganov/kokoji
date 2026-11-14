@@ -384,11 +384,8 @@ def watch_tasks(session, tasklist, quiet=False, poll_interval=60, ki_handler=Non
 
 def bytes_to_stdout(contents):
     """Helper function for writing bytes to stdout"""
-    if six.PY2:
-        sys.stdout.write(contents)
-    else:
-        sys.stdout.buffer.write(contents)
-        sys.stdout.buffer.flush()
+    sys.stdout.buffer.write(contents)
+    sys.stdout.buffer.flush()
 
 
 def watch_logs(session, tasklist, opts, poll_interval):

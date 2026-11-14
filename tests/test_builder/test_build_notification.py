@@ -10,7 +10,6 @@ try:
 except ImportError:
     import mock
 import shutil
-import six
 
 import koji
 import koji.util
@@ -106,7 +105,5 @@ class TestBuildNotification(unittest.TestCase):
         fn = os.path.join(os.path.dirname(__file__), 'data/calls', 'build_notif_1', 'message.txt')
         with open(fn, 'rb') as fp:
             msg_expect = fp.read()
-        if six.PY2:
-            msg_expect = msg_expect.decode()
         self.assertMultiLineEqual(message.decode(), msg_expect.decode())
         locale.setlocale(locale.LC_ALL, "")

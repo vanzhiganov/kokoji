@@ -2,15 +2,10 @@ NAME=koji
 SPECFILE = $(firstword $(wildcard *.spec))
 
 ifndef PYTHON
-export PYTHON=python2
+export PYTHON=python3
 endif
 
-PYVER_MAJOR := $(shell $(PYTHON) -c 'import sys; print(".".join(sys.version.split(".")[:1]))')
-ifeq ($(PYVER_MAJOR),2)
-	SUBDIRS = builder koji cli plugins vm
-else
-	SUBDIRS = kojihub builder koji cli util www plugins vm schemas
-endif
+SUBDIRS = kojihub builder koji cli util www plugins vm schemas
 
 
 ifdef DIST
@@ -63,10 +58,26 @@ ifndef TAG
 TAG=$(NAME)-$(VERSION)-$(RELEASE)
 endif
 
-_default:
-	@echo "read the makefile"
+.DEFAULT_GOAL := help
 
-clean:
+.PHONY: help _default clean git-clean test test3 test-tarball tarball sources srpm rpm test-rpm pypi pypi-upload flake8 bandit tag force-tag install
+
+_default: help
+
+help: ## Show this help
+	@echo "Koji development makefile - usage: make <target> [VARIABLE=value]"
+	@echo ""
+	@echo "Targets:"
+	@grep -hE '^[a-zA-Z0-9_.-]+:.*## ' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
+	@echo ""
+	@echo "Common variables:"
+	@echo "  PYTHON                   python interpreter (default: python3)"
+	@echo "  VERSION, RELEASE, DIST   override values read from the spec file"
+	@echo "  DESTDIR                  install root (default: /), with TYPE=systemd|sysv"
+	@echo ""
+	@echo "See docs/source/writing_koji_code.rst for more details."
+
+clean: ## Remove generated files and build artifacts
 	rm -f *.o *.so *.pyc *~ koji*.bz2 koji*.src.rpm
 	rm -rf __pycache__
 	rm -rf devtools/fakehubc devtools/fakewebc devtools/__pycache__
@@ -78,25 +89,19 @@ clean:
 	find ./tests -name "__pycache__" -exec rm -rf {} \; ||:
 	find ./tests -name "*.pyc" -exec rm -f {} \;
 	rm -rf docs/source/__pycache__ docs/source/*.pyc
-	coverage2 erase ||:
-	coverage3 erase --rcfile .coveragerc3 ||:
+	$(PYTHON) -m coverage erase ||:
 	rm -rf htmlcov
 
-git-clean:
+git-clean: ## Remove all untracked and ignored files (git clean -dx)
 	@git clean -d -q -x
 
-test: test2 test3
-	@echo "All tests are finished for python 2&3"
-
-test2:
-	tox -e py2
-	@echo Full coverage report at file://${CURDIR}/htmlcov/py2/index.html
-
-test3:
+test: ## Run the full test suite (tox -e py3)
 	tox -e py3
-	@echo Full coverage report at file://${CURDIR}/htmlcov/py3/index.html
+	@echo Full coverage report at file://${CURDIR}/htmlcov/index.html
 
-test-tarball:
+test3: test ## Alias for test (kept for compatibility)
+
+test-tarball: ## Build a test tarball from the working tree
 	@rm -rf .koji-$(VERSION)
 	@mkdir .koji-$(VERSION)
 	@cp -al [A-Za-z]* .koji-$(VERSION)
@@ -105,49 +110,43 @@ test-tarball:
 	    -cpf koji-$(VERSION).tar.bz2 koji-$(VERSION)
 	@rm -rf koji-$(VERSION)
 
-tarball: clean
+tarball: clean ## Create the release tarball from HEAD via git archive
 	@git archive --format=tar --prefix=$(NAME)-$(VERSION)/ HEAD |bzip2 > $(NAME)-$(VERSION).tar.bz2
 
-sources: tarball
+sources: tarball ## Alias for tarball (used by rpm/koji builds)
 
-srpm: tarball
+srpm: tarball ## Build the source RPM
 	$(RPM_WITH_DIRS) $(DIST_DEFINES) -bs $(SPECFILE)
 
-rpm: tarball
+rpm: tarball ## Build the binary RPM
 	$(RPM_WITH_DIRS) $(DIST_DEFINES) -bb $(SPECFILE)
 
-test-rpm: tarball
+test-rpm: tarball ## Build the binary RPM with testbuild enabled
 	$(RPM_WITH_DIRS) $(DIST_DEFINES) --define "testbuild 1" -bb $(SPECFILE)
 
-pypi:
+pypi: ## Build sdist and python 3 wheel in dist/
 	rm -rf dist
-	python setup.py sdist
-	# py2
-	virtualenv -p /usr/bin/python2 build_py2
-	build_py2/bin/pip install --upgrade pip setuptools wheel virtualenv
-	build_py2/bin/python setup.py bdist_wheel
-	rm -rf build_py2
-	# py3
-	python3 -m venv build_py3
-	build_py3/bin/pip install --upgrade pip setuptools wheel virtualenv
+	$(PYTHON) setup.py sdist
+	$(PYTHON) -m venv build_py3
+	build_py3/bin/pip install --upgrade pip setuptools wheel
 	build_py3/bin/python setup.py bdist_wheel
 	rm -rf build_py3
 
-pypi-upload:
+pypi-upload: ## Upload dist/ artifacts to PyPI via twine
 	twine upload dist/*
 
-flake8:
+flake8: ## Run flake8 linting via tox
 	tox -e flake8
 
-bandit:
+bandit: ## Run bandit security checks via tox
 	tox -e bandit
 
-tag::
+tag:: ## Create the annotated git tag
 	git tag -a $(TAG)
 	@echo "Tagged with: $(TAG)"
 	@echo
 
-force-tag::
+force-tag:: ## Force-create/replace the annotated git tag
 	git tag -f -a $(TAG)
 	@echo "Tagged with: $(TAG)"
 	@echo
@@ -159,7 +158,7 @@ force-tag::
 
 DESTDIR ?= /
 TYPE = systemd
-install:
+install: ## Install all subdirectories under DESTDIR
 	@if [ "$(DESTDIR)" = "" ]; then \
 		echo " "; \
 		echo "ERROR: A destdir is required"; \
