@@ -36,7 +36,8 @@ RUN python3 -m pip install --no-cache-dir . \
     && python3 -m pip install --no-cache-dir \
         psycopg2-binary \
         Cheetah3 \
-        python-dateutil
+        python-dateutil \
+        flask
 
 WORKDIR /
 

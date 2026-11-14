@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% set _PASSTHROUGH = ['owner', 'state', 'view', 'method', 'hostID', 'channelID', 'order'] %}
 {% block content %}
 
 {% macro printChildren(taskID, childMap) %}
@@ -34,9 +35,6 @@ All
   {% endif %}
 {% endmacro %}
 
-#attr _PASSTHROUGH = ['owner', 'state', 'view', 'method', 'hostID', 'channelID', 'order']
-
-
 {% macro getDescription() %}
 {{ headerPrefix(state)|safe }}
 {% if view == 'toplevel' %}
@@ -56,17 +54,63 @@ in channel <a href="channelinfo?channelID={{ channel.id }}">{{ channel.name }}</
 {% endif %}
 {% endmacro %}
 
-  <h4>{{ getDescription()|safe }}</h4>
+{% macro pagination() %}
+  {% if taskPages is not none %}
+  <div class="cds--pagination">
+    <div class="cds--pagination__left">
+      {% if len(taskPages) > 1 %}
+      <div class="cds--select cds--select--inline">
+        <label class="cds--label" for="taskPage">Page</label>
+        <div class="cds--select-input__wrapper">
+          <select id="taskPage" class="cds--select-input" onchange="javascript: window.location = 'tasks?start=' + this.value * {{ taskRange }} + '{{ passthrough_except() }}';">
+            {% for pageNum in taskPages %}
+            <option value="{{ pageNum }}"{{ ' selected' if pageNum == taskCurrentPage else '' }}>{{ pageNum + 1 }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+    <div class="cds--pagination__right">
+      {% if totalTasks != 0 %}
+      <span class="cds--pagination__items-count">{{ taskStart + 1 }}&ndash;{{ taskStart + taskCount }} of {{ totalTasks }}</span>
+      {% endif %}
+      {% if taskStart > 0 %}
+      <a class="cds--btn cds--btn--ghost cds--btn--sm" href="tasks?start={{ taskStart - taskRange }}{{ passthrough_except() }}">Previous</a>
+      {% endif %}
+      {% if taskStart + taskCount < totalTasks %}
+      <a class="cds--btn cds--btn--ghost cds--btn--sm" href="tasks?start={{ taskStart + taskRange }}{{ passthrough_except() }}">Next</a>
+      {% endif %}
+    </div>
+  </div>
+  {% else %}
+  <div class="cds--pagination">
+    <div class="cds--pagination__left">
+      <div class="cds--select cds--select--inline">
+        <label class="cds--label" for="taskPage">Page</label>
+        <div class="cds--select-input__wrapper">
+          <select id="taskPage" class="cds--select-input" onchange="javascript: window.location = 'tasks?start=' + this.value * {{ taskRange }} + '{{ passthrough_except() }}';">
+            <option value="0"{{ ' selected' if 0 == taskCurrentPage else '' }}>1</option>
+            <option value="1"{{ ' selected' if 1 == taskCurrentPage else '' }}>load more</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="cds--pagination__right">
+      <span class="cds--pagination__items-count">{{ taskStart + 1 }}&ndash;{{ taskStart + taskCount }} of ???</span>
+      <a class="cds--btn cds--btn--ghost cds--btn--sm" href="tasks?start={{ taskRange }}{{ passthrough_except() }}">Next</a>
+    </div>
+  </div>
+  {% endif %}
+{% endmacro %}
 
-  <table class="data-list">
-    <tr>
-      <td colspan="6">
-        <form action="tasks">
-        <table class="nested">
-        <tr><td>
-        <strong>State</strong>:
-        </td><td>
-        <select name="state" class="filterlist" onchange="javascript: window.location = 'tasks?state=' + this.value + '{{ passthrough_except('state') }}';">
+  <div class="pageHeader">{{ getDescription()|safe }}</div>
+
+  <form action="tasks" class="koji-filters">
+    <div class="cds--select cds--select--inline">
+      <label class="cds--label" for="filterState">State</label>
+      <div class="cds--select-input__wrapper">
+        <select id="filterState" name="state" class="cds--select-input" onchange="javascript: window.location = 'tasks?state=' + this.value + '{{ passthrough_except('state') }}';">
           <option value="active" {{ toggleSelected(state, 'active') }}>active</option>
           <option value="all" {{ toggleSelected(state, 'all') }}>all</option>
           <option value="free" {{ 'selected' if state == 'free' else '' }}>free</option>
@@ -74,12 +118,14 @@ in channel <a href="channelinfo?channelID={{ channel.id }}">{{ channel.name }}</
           <option value="closed" {{ 'selected' if state == 'closed' else '' }}>closed</option>
           <option value="failed" {{ 'selected' if state == 'failed' else '' }}>failed</option>
           <option value="canceled" {{ 'selected' if state == 'canceled' else '' }}>canceled</option>
-          <option value="assigned" {{ 'selected' if state == 'assigned' else '' }}>assigned</option> 
+          <option value="assigned" {{ 'selected' if state == 'assigned' else '' }}>assigned</option>
         </select>
-        </td><td>
-        <strong>Owner</strong>:
-        </td><td>
-        <select name="owner" class="filterlist" onchange="javascript: window.location = 'tasks?owner=' + this.value + '{{ passthrough_except('owner') }}';">
+      </div>
+    </div>
+    <div class="cds--select cds--select--inline">
+      <label class="cds--label" for="filterOwner">Owner</label>
+      <div class="cds--select-input__wrapper">
+        <select id="filterOwner" name="owner" class="cds--select-input" onchange="javascript: window.location = 'tasks?owner=' + this.value + '{{ passthrough_except('owner') }}';">
           <option value="" {{ 'selected' if not owner else '' }}>everyone</option>
           {% if loggedInUser %}
           <option value="{{ loggedInUser.name }}">me</option>
@@ -88,11 +134,12 @@ in channel <a href="channelinfo?channelID={{ channel.id }}">{{ channel.name }}</
           <option value="{{ user.name }}" {{ 'selected' if user.name == owner else '' }}>{{ user.name }}</option>
           {% endfor %}
         </select>
-        </td></tr>
-        <tr><td>
-        <strong>Method</strong>:
-        </td><td>
-        <select name="method" class="filterlist" onchange="javascript: window.location = 'tasks?method=' + this.value + '{{ passthrough_except('method') }}';">
+      </div>
+    </div>
+    <div class="cds--select cds--select--inline">
+      <label class="cds--label" for="filterMethod">Method</label>
+      <div class="cds--select-input__wrapper">
+        <select id="filterMethod" name="method" class="cds--select-input" onchange="javascript: window.location = 'tasks?method=' + this.value + '{{ passthrough_except('method') }}';">
           <option value="all" {{ toggleSelected(method, 'all') }}>all</option>
           {% for task_type in alltasks %}
           {% if task_type in ('maven', 'buildMaven') and not mavenEnabled %}
@@ -106,66 +153,39 @@ in channel <a href="channelinfo?channelID={{ channel.id }}">{{ channel.name }}</
           {% endif %}
           {% endfor %}
         </select>
-        </td><td>
-        <strong>View</strong>:
-        </td><td>
-        <select name="view" class="filterlist" onchange="javascript: window.location = 'tasks?view=' + this.value + '{{ passthrough_except('view') }}';">
+      </div>
+    </div>
+    <div class="cds--select cds--select--inline">
+      <label class="cds--label" for="filterView">View</label>
+      <div class="cds--select-input__wrapper">
+        <select id="filterView" name="view" class="cds--select-input" onchange="javascript: window.location = 'tasks?view=' + this.value + '{{ passthrough_except('view') }}';">
           <option value="tree" {{ toggleSelected(view, 'tree') }} {{ 'disabled="disabled"' if not treeEnabled else '' }}>tree</option>
           <option value="toplevel" {{ toggleSelected(view, 'toplevel') }} {{ 'disabled="disabled"' if not toplevelEnabled else '' }}>toplevel</option>
           <option value="flat" {{ toggleSelected(view, 'flat') }}>flat</option>
         </select>
-        </td></tr>
-        </table>
-        </form>
-      </td>
-    </tr>
-    <tr>
-      <td class="paginate" colspan="6">
-        {% if taskPages is not none %}
-        {% if len(taskPages) > 1 %}
-        <form class="pageJump" action="">
-          Page:
-          <select onchange="javascript: window.location = 'tasks?start=' + this.value * {{ taskRange }} + '{{ passthrough_except() }}';">
-            {% for pageNum in taskPages %}
-            <option value="{{ pageNum }}"{{ ' selected' if pageNum == taskCurrentPage else '' }}>{{ pageNum + 1 }}</option>
-            {% endfor %}
-          </select>
-        </form>
-        {% endif %}
-        {% if taskStart > 0 %}
-        <a href="tasks?start={{ taskStart - taskRange }}{{ passthrough_except() }}">&lt;&lt;&lt;</a>
-        {% endif %}
-        {% if totalTasks != 0 %}
-        <strong>Tasks {{ taskStart + 1 }} through {{ taskStart + taskCount }} of {{ totalTasks }}</strong>
-        {% endif %}
-        {% if taskStart + taskCount < totalTasks %}
-        <a href="tasks?start={{ taskStart + taskRange }}{{ passthrough_except() }}">&gt;&gt;&gt;</a>
-        {% endif %}
-        {% else %}
-        <form class="pageJump" action="">
-          Page:
-          <select onchange="javascript: window.location = 'tasks?start=' + this.value * {{ taskRange }} + '{{ passthrough_except() }}';">
-            <option value="0"{{ ' selected' if 0 == taskCurrentPage else '' }}>{{ 1 }}</option>
-            <option value="1"{{ ' selected' if 1 == taskCurrentPage else '' }}>{{ "load more" }}</option>
-          </select>
-        </form>
-        <strong>Tasks {{ taskStart + 1 }} through {{ taskStart + taskCount }} of ???</strong>
-        <a href="tasks?start={{ taskRange }}{{ passthrough_except() }}">&gt;&gt;&gt;</a>
-        {% endif %}
-      </td>
-    </tr>
-    <tr class="list-header">
-      <th><a href="tasks?order={{ toggleOrder('id') }}{{ passthrough_except('order') }}">ID</a> {{ sortImage('id') }}</th>
-      <th><a href="tasks?order={{ toggleOrder('method') }}{{ passthrough_except('order') }}">Type</a> {{ sortImage('method') }}</th>
-      <th><a href="tasks?order={{ toggleOrder('owner') }}{{ passthrough_except('order') }}">Owner</a> {{ sortImage('owner') }}</th>
-      <th><a href="tasks?order={{ toggleOrder('arch') }}{{ passthrough_except('order') }}">Arch</a> {{ sortImage('arch') }}</th>
-      <th><a href="tasks?order={{ toggleOrder('completion_time') }}{{ passthrough_except('order') }}">Finished</a> {{ sortImage('completion_time') }}</th>
-      <th><a href="tasks?order={{ toggleOrder('state') }}{{ passthrough_except('order') }}">State</a> {{ sortImage('state') }}</th>
-    </tr>
-    {% if len(tasks) > 0 %}
-      {% for task in tasks %}
-        <tr class="{{ rowToggle() }}">
-          {% set taskState = util.taskState(task.state) %}
+      </div>
+    </div>
+  </form>
+
+  {{ pagination()|safe }}
+
+  <div class="cds--data-table-container">
+    <table class="cds--data-table cds--data-table--zebra">
+      <thead>
+        <tr>
+          <th scope="col"><a href="tasks?order={{ toggleOrder('id') }}{{ passthrough_except('order') }}">ID</a> {{ sortImage('id') }}</th>
+          <th scope="col"><a href="tasks?order={{ toggleOrder('method') }}{{ passthrough_except('order') }}">Type</a> {{ sortImage('method') }}</th>
+          <th scope="col"><a href="tasks?order={{ toggleOrder('owner') }}{{ passthrough_except('order') }}">Owner</a> {{ sortImage('owner') }}</th>
+          <th scope="col"><a href="tasks?order={{ toggleOrder('arch') }}{{ passthrough_except('order') }}">Arch</a> {{ sortImage('arch') }}</th>
+          <th scope="col"><a href="tasks?order={{ toggleOrder('completion_time') }}{{ passthrough_except('order') }}">Finished</a> {{ sortImage('completion_time') }}</th>
+          <th scope="col"><a href="tasks?order={{ toggleOrder('state') }}{{ passthrough_except('order') }}">State</a> {{ sortImage('state') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if len(tasks) > 0 %}
+        {% for task in tasks %}
+        {% set taskState = util.taskState(task.state) %}
+        <tr>
           <td>{{ task.id }}</td>
           <td{{ S(' class="tree"') if treeDisplay else '' }}>
             {{ '&nbsp;' if treeDisplay else '' }}<a href="taskinfo?taskID={{ task.id }}" class="task{{ taskState }}" title="{{ taskState }}">{{ koji.taskLabel(task) }}</a>
@@ -182,49 +202,18 @@ in channel <a href="channelinfo?channelID={{ channel.id }}">{{ channel.name }}</
           </td>
           <td>{{ task.arch }}</td>
           <td>{{ util.formatTime(task.completion_ts) }}</td>
-          <td class="task{{ state }}">{{ util.imageTag(taskState) }}</td>
+          <td class="task{{ taskState }}">{{ util.imageTag(taskState) }}</td>
         </tr>
-      {% endfor %}
-    {% else %}
-      <tr class="row-odd">
-        <td colspan="6">No tasks</td>
-      </tr>
-    {% endif %}
-    <tr>
-      <td class="paginate" colspan="6">
-        {% if taskPages is not none %}
-        {% if len(taskPages) > 1 %}
-        <form class="pageJump" action="">
-          Page:
-          <select onchange="javascript: window.location = 'tasks?start=' + this.value * {{ taskRange }} + '{{ passthrough_except() }}';">
-            {% for pageNum in taskPages %}
-            <option value="{{ pageNum }}"{{ ' selected' if pageNum == taskCurrentPage else '' }}>{{ pageNum + 1 }}</option>
-            {% endfor %}
-          </select>
-        </form>
-        {% endif %}
-        {% if taskStart > 0 %}
-        <a href="tasks?start={{ taskStart - taskRange }}{{ passthrough_except() }}">&lt;&lt;&lt;</a>
-        {% endif %}
-        {% if totalTasks != 0 %}
-        <strong>Tasks {{ taskStart + 1 }} through {{ taskStart + taskCount }} of {{ totalTasks }}</strong>
-        {% endif %}
-        {% if taskStart + taskCount < totalTasks %}
-        <a href="tasks?start={{ taskStart + taskRange }}{{ passthrough_except() }}">&gt;&gt;&gt;</a>
-        {% endif %}
+        {% endfor %}
         {% else %}
-        <form class="pageJump" action="">
-          Page:
-          <select onchange="javascript: window.location = 'tasks?start=' + this.value * {{ taskRange }} + '{{ passthrough_except() }}';">
-            <option value="0"{{ ' selected' if 0 == taskCurrentPage else '' }}>{{ 1 }}</option>
-            <option value="1"{{ ' selected' if 1 == taskCurrentPage else '' }}>{{ "load more" }}</option>
-          </select>
-        </form>
-        <strong>Tasks {{ taskStart + 1 }} through {{ taskStart + taskCount }} of ???</strong>
-        <a href="tasks?start={{ taskRange }}{{ passthrough_except() }}">&gt;&gt;&gt;</a>
+        <tr>
+          <td colspan="6">No tasks</td>
+        </tr>
         {% endif %}
-      </td>
-    </tr>
-  </table>
+      </tbody>
+    </table>
+  </div>
+
+  {{ pagination()|safe }}
 
 {% endblock %}

@@ -1,7 +1,6 @@
 {% extends "base.html" %}
+{% set _PASSTHROUGH = ['archiveID', 'fileOrder', 'fileStart', 'buildrootOrder', 'buildrootStart'] %}
 {% block content %}
-
-#attr _PASSTHROUGH = ['archiveID', 'fileOrder', 'fileStart', 'buildrootOrder', 'buildrootStart']
 
   <h4>Information for archive <a href="archiveinfo?archiveID={{ archive.id }}">{{ archive.filename }}</a></h4>
 

@@ -35,16 +35,16 @@
     <a class="cds--skip-to-content" href="#main-content">Skip to main content</a>
 
     <!-- Carbon UI shell header -->
-    <header class="cds--header" role="banner">
+    <header class="cds--header" aria-label="{{ siteName }}">
       <a class="cds--header__name" href="index" title="Koji">
-        <img src="{{ util.themePath('images/koji.png') }}" alt="Koji Logo" class="cds--header__logo" style="height: 1.25rem; margin-right: 0.5rem;"/>
+        <img src="{{ util.themePath('images/koji.png') }}" alt="" class="cds--header__name-logo"/>
         <span class="cds--header__name--prefix">{{ siteName }}</span>
       </a>
       <nav class="cds--header__nav" aria-label="Main navigation">
-        <ul class="cds--header__menu-bar" role="menubar">
+        <ul class="cds--header__menu-bar">
           {% for href, pid, label in koji_nav %}
-          <li role="none">
-            <a class="cds--header__menu-item" role="menuitem" href="{{ href }}"
+          <li>
+            <a class="cds--header__menu-item" href="{{ href }}"
                {% if pageID == pid %}aria-current="page"{% endif %}>{{ label }}</a>
           </li>
           {% endfor %}
@@ -73,28 +73,34 @@
         {% endif %}
       </div>
 
-      <form action="search" id="headerSearch" role="search" style="margin-top: 1rem;">
+      <form action="search" id="headerSearch" role="search">
         <input type="hidden" name="match" value="glob"/>
         <div class="cds--select cds--select--inline">
           <label class="cds--label cds--visually-hidden" for="searchType">Search type</label>
-          <select id="searchType" name="type" class="cds--select-input">
-            <option value="package" {{ toggleSelected(type, "package") }}>Packages</option>
-            <option value="build" {{ toggleSelected(type, "build") }}>Builds</option>
-            <option value="tag" {{ toggleSelected(type, "tag") }}>Tags</option>
-            <option value="target" {{ toggleSelected(type, "target") }}>Build Targets</option>
-            <option value="user" {{ toggleSelected(type, "user") }}>Users</option>
-            <option value="host" {{ toggleSelected(type, "host") }}>Hosts</option>
-            <option value="rpm" {{ toggleSelected(type, "rpm") }}>RPMs</option>
-            {% if mavenEnabled %}
-            <option value="maven" {{ toggleSelected(type, "maven") }}>Maven Artifacts</option>
-            {% endif %}
-            {% if winEnabled %}
-            <option value="win" {{ toggleSelected(type, "win") }}>Windows Artifacts</option>
-            {% endif %}
-          </select>
+          <div class="cds--select-input__wrapper">
+            <select id="searchType" name="type" class="cds--select-input">
+              <option value="package" {{ toggleSelected(type, "package") }}>Packages</option>
+              <option value="build" {{ toggleSelected(type, "build") }}>Builds</option>
+              <option value="tag" {{ toggleSelected(type, "tag") }}>Tags</option>
+              <option value="target" {{ toggleSelected(type, "target") }}>Build Targets</option>
+              <option value="user" {{ toggleSelected(type, "user") }}>Users</option>
+              <option value="host" {{ toggleSelected(type, "host") }}>Hosts</option>
+              <option value="rpm" {{ toggleSelected(type, "rpm") }}>RPMs</option>
+              {% if mavenEnabled %}
+              <option value="maven" {{ toggleSelected(type, "maven") }}>Maven Artifacts</option>
+              {% endif %}
+              {% if winEnabled %}
+              <option value="win" {{ toggleSelected(type, "win") }}>Windows Artifacts</option>
+              {% endif %}
+            </select>
+            <svg focusable="false" class="cds--select__arrow" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+              <path d="M16 22L6 12l1.4-1.4 8.6 8.6 8.6-8.6L26 12z"/>
+            </svg>
+          </div>
         </div>
-        <div class="cds--text-input-wrapper" style="display: inline-block;">
-          <input type="text" name="terms" class="cds--text-input"
+        <div class="cds--text-input-wrapper">
+          <label class="cds--label cds--visually-hidden" for="searchTerms">Search terms</label>
+          <input type="text" id="searchTerms" name="terms" class="cds--text-input"
                  title="You can use glob expressions here (e.g. 'bash-*')"
                  value="{{ terms|default('', true) }}"/>
         </div>

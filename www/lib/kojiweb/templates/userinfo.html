@@ -2,107 +2,132 @@
 {% block content %}
 
 
-  <h4>Information for user <a href="userinfo?userID={{ user.id }}">{{ user.name }}</a></h4>
+  <div class="pageHeader">
+    Information for user <a href="userinfo?userID={{ user.id }}">{{ user.name }}</a>
+  </div>
 
-  <table>
-    <tr>
-      <th>Name</th><td>{{ user.name }}</td>
-    </tr>
-    <tr>
-      <th>ID</th><td>{{ user.id }}</td>
-    </tr>
-    <tr>
-      <th>Tasks</th><td><a href="tasks?state=all{{ passthrough('owner') }}">{{ taskCount }}</a></td>
-    </tr>
-    <tr>
-      <th id="packagelist">Packages</th>
-      <td class="container">
-        {% if len(packages) > 0 %}
-        <table class="nested data-list">
-          <tr>
-            <td class="paginate" colspan="3">
-              {% if len(packagePages) > 1 %}
-              <form class="pageJump" action="">
-                Page:
-                <select onchange="javascript: window.location = 'userinfo?packageStart=' + this.value * {{ packageRange }} + '{{ passthrough('userID', 'packageOrder', 'buildOrder', 'buildStart') }}#packagelist';">
-                  {% for pageNum in packagePages %}
-                  <option value="{{ pageNum }}"{{ ' selected' if pageNum == packageCurrentPage else '' }}>{{ pageNum + 1 }}</option>
-                  {% endfor %}
-                </select>
-              </form>
-              {% endif %}
-              {% if packageStart > 0 %}
-              <a href="userinfo?packageStart={{ packageStart - packageRange }}{{ passthrough('userID', 'packageOrder', 'buildOrder', 'buildStart') }}#packagelist">&lt;&lt;&lt;</a>
-              {% endif %}
-              <strong>{{ packageStart + 1 }} through {{ packageStart + packageCount }} of {{ totalPackages }}</strong>
-              {% if packageStart + packageCount < totalPackages %}
-              <a href="userinfo?packageStart={{ packageStart + packageRange }}{{ passthrough('userID', 'packageOrder', 'buildOrder', 'buildStart') }}#packagelist">&gt;&gt;&gt;</a>
-              {% endif %}
-            </td>
-          </tr>
-          <tr class="list-header">
-            <th><a href="userinfo?packageOrder={{ toggleOrder('package_name', 'packageOrder') }}{{ passthrough('userID', 'buildOrder', 'buildStart') }}#packagelist">Name</a> {{ sortImage('package_name', 'packageOrder') }}</th>
-            <th><a href="userinfo?packageOrder={{ toggleOrder('tag_name', 'packageOrder') }}{{ passthrough('userID', 'buildOrder', 'buildStart') }}#packagelist">Tag</a> {{ sortImage('tag_name', 'packageOrder') }}</th>
-            <th><a href="userinfo?packageOrder={{ toggleOrder('blocked', 'packageOrder') }}{{ passthrough('userID', 'buildOrder', 'buildStart') }}#packagelist">Included?</a> {{ sortImage('blocked', 'packageOrder') }}</th>
-          </tr>
-          {% for package in packages %}
-          <tr class="{{ rowToggle() }}">
-            <td><a href="packageinfo?packageID={{ package.package_id }}">{{ package.package_name }}</a></td>
-            <td><a href="taginfo?tagID={{ package.tag_id }}">{{ package.tag_name }}</a></td>
-            <td class="{{ str(not package.blocked).lower() }}">{{ util.imageTag('no') if package.blocked else util.imageTag('yes') }}</td>
-          </tr>
-          {% endfor %}
-        </table>
-        {% else %}
-        No packages
+  <div class="cds--structured-list">
+    <div class="cds--structured-list-tbody">
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Name</div>
+        <div class="cds--structured-list-td">{{ user.name }}</div>
+      </div>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">ID</div>
+        <div class="cds--structured-list-td">{{ user.id }}</div>
+      </div>
+      <div class="cds--structured-list-row">
+        <div class="cds--structured-list-td">Tasks</div>
+        <div class="cds--structured-list-td"><a href="tasks?state=all{{ passthrough('owner') }}">{{ taskCount }}</a></div>
+      </div>
+    </div>
+  </div>
+
+  <section id="packagelist" class="cds--data-table-container">
+    <div class="cds--data-table-header">
+      <h4 class="cds--data-table-header__title">Packages</h4>
+    </div>
+    {% if len(packages) > 0 %}
+    <table class="cds--data-table cds--data-table--zebra">
+      <thead>
+        <tr>
+          <th scope="col"><a href="userinfo?packageOrder={{ toggleOrder('package_name', 'packageOrder') }}{{ passthrough('userID', 'buildOrder', 'buildStart') }}#packagelist">Name</a> {{ sortImage('package_name', 'packageOrder') }}</th>
+          <th scope="col"><a href="userinfo?packageOrder={{ toggleOrder('tag_name', 'packageOrder') }}{{ passthrough('userID', 'buildOrder', 'buildStart') }}#packagelist">Tag</a> {{ sortImage('tag_name', 'packageOrder') }}</th>
+          <th scope="col"><a href="userinfo?packageOrder={{ toggleOrder('blocked', 'packageOrder') }}{{ passthrough('userID', 'buildOrder', 'buildStart') }}#packagelist">Included?</a> {{ sortImage('blocked', 'packageOrder') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for package in packages %}
+        <tr>
+          <td><a href="packageinfo?packageID={{ package.package_id }}">{{ package.package_name }}</a></td>
+          <td><a href="taginfo?tagID={{ package.tag_id }}">{{ package.tag_name }}</a></td>
+          <td class="{{ str(not package.blocked).lower() }}">{{ util.imageTag('no') if package.blocked else util.imageTag('yes') }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <div class="cds--pagination">
+      <div class="cds--pagination__left">
+        {% if len(packagePages) > 1 %}
+        <div class="cds--select cds--select--inline">
+          <label class="cds--label" for="packagePage">Page</label>
+          <div class="cds--select-input__wrapper">
+            <select id="packagePage" class="cds--select-input" onchange="javascript: window.location = 'userinfo?packageStart=' + this.value * {{ packageRange }} + '{{ passthrough('userID', 'packageOrder', 'buildOrder', 'buildStart') }}#packagelist';">
+              {% for pageNum in packagePages %}
+              <option value="{{ pageNum }}"{{ ' selected' if pageNum == packageCurrentPage else '' }}>{{ pageNum + 1 }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
         {% endif %}
-      </td>
-    </tr>
-    <tr>
-      <th id="buildlist">Builds</th>
-      <td class="container">
-        {% if len(builds) > 0 %}
-        <table class="nested data-list">
-          <tr>
-            <td class="paginate" colspan="3">
-              {% if len(buildPages) > 1 %}
-              <form class="pageJump" action="">
-                Page:
-                <select onchange="javascript: window.location = 'userinfo?buildStart=' + this.value * {{ buildRange }} + '{{ passthrough('userID', 'buildOrder', 'packageOrder', 'packageStart') }}#buildlist';">
-                  {% for pageNum in buildPages %}
-                  <option value="{{ pageNum }}"{{ ' selected' if pageNum == buildCurrentPage else '' }}>{{ pageNum + 1 }}</option>
-                  {% endfor %}
-                </select>
-              </form>
-              {% endif %}
-              {% if buildStart > 0 %}
-              <a href="userinfo?buildStart={{ buildStart - buildRange }}{{ passthrough('userID', 'buildOrder', 'packageOrder', 'packageStart') }}#buildlist">&lt;&lt;&lt;</a>
-              {% endif %}
-              <strong>{{ buildStart + 1 }} through {{ buildStart + buildCount }} of {{ totalBuilds }}</strong>
-              {% if buildStart + buildCount < totalBuilds %}
-              <a href="userinfo?buildStart={{ buildStart + buildRange }}{{ passthrough('userID', 'buildOrder', 'packageOrder', 'packageStart') }}#buildlist">&gt;&gt;&gt;</a>
-              {% endif %}
-            </td>
-          </tr>
-          <tr class="list-header">
-            <th><a href="userinfo?buildOrder={{ toggleOrder('nvr', 'buildOrder') }}{{ passthrough('userID', 'packageOrder', 'packageStart') }}#buildlist">NVR</a> {{ sortImage('nvr', 'buildOrder') }}</th>
-            <th><a href="userinfo?buildOrder={{ toggleOrder('completion_time', 'buildOrder') }}{{ passthrough('userID', 'packageOrder', 'packageStart') }}#buildlist">Finished</a> {{ sortImage('completion_time', 'buildOrder') }}</th>
-            <th><a href="userinfo?buildOrder={{ toggleOrder('state', 'buildOrder') }}{{ passthrough('userID', 'packageOrder', 'packageStart') }}#buildlist">State</a> {{ sortImage('state', 'buildOrder') }}</th>
-          </tr>
-          {% for build in builds %}
-          <tr class="{{ rowToggle() }}">
-            {% set stateName = util.stateName(build.state) %}
-            <td><a href="buildinfo?buildID={{ build.build_id }}">{{ build.nvr }}</a></td>
-            <td>{{ util.formatTime(build.completion_ts) }}</td>
-            <td class="{{ stateName }}">{{ util.stateImage(build.state) }}</td>
-          </tr>
-          {% endfor %}
-        </table>
-        {% else %}
-        No builds
+      </div>
+      <div class="cds--pagination__right">
+        <span class="cds--pagination__items-count">{{ packageStart + 1 }}&ndash;{{ packageStart + packageCount }} of {{ totalPackages }}</span>
+        {% if packageStart > 0 %}
+        <a class="cds--btn cds--btn--ghost cds--btn--sm" href="userinfo?packageStart={{ packageStart - packageRange }}{{ passthrough('userID', 'packageOrder', 'buildOrder', 'buildStart') }}#packagelist">Previous</a>
         {% endif %}
-      </td>
-    </tr>
-  </table>
+        {% if packageStart + packageCount < totalPackages %}
+        <a class="cds--btn cds--btn--ghost cds--btn--sm" href="userinfo?packageStart={{ packageStart + packageRange }}{{ passthrough('userID', 'packageOrder', 'buildOrder', 'buildStart') }}#packagelist">Next</a>
+        {% endif %}
+      </div>
+    </div>
+    {% else %}
+    <p>No packages</p>
+    {% endif %}
+  </section>
+
+  <section id="buildlist" class="cds--data-table-container">
+    <div class="cds--data-table-header">
+      <h4 class="cds--data-table-header__title">Builds</h4>
+    </div>
+    {% if len(builds) > 0 %}
+    <table class="cds--data-table cds--data-table--zebra">
+      <thead>
+        <tr>
+          <th scope="col"><a href="userinfo?buildOrder={{ toggleOrder('nvr', 'buildOrder') }}{{ passthrough('userID', 'packageOrder', 'packageStart') }}#buildlist">NVR</a> {{ sortImage('nvr', 'buildOrder') }}</th>
+          <th scope="col"><a href="userinfo?buildOrder={{ toggleOrder('completion_time', 'buildOrder') }}{{ passthrough('userID', 'packageOrder', 'packageStart') }}#buildlist">Finished</a> {{ sortImage('completion_time', 'buildOrder') }}</th>
+          <th scope="col"><a href="userinfo?buildOrder={{ toggleOrder('state', 'buildOrder') }}{{ passthrough('userID', 'packageOrder', 'packageStart') }}#buildlist">State</a> {{ sortImage('state', 'buildOrder') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for build in builds %}
+        {% set stateName = util.stateName(build.state) %}
+        <tr>
+          <td><a href="buildinfo?buildID={{ build.build_id }}">{{ build.nvr }}</a></td>
+          <td>{{ util.formatTime(build.completion_ts) }}</td>
+          <td class="{{ stateName }}">{{ util.stateImage(build.state) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <div class="cds--pagination">
+      <div class="cds--pagination__left">
+        {% if len(buildPages) > 1 %}
+        <div class="cds--select cds--select--inline">
+          <label class="cds--label" for="buildPage">Page</label>
+          <div class="cds--select-input__wrapper">
+            <select id="buildPage" class="cds--select-input" onchange="javascript: window.location = 'userinfo?buildStart=' + this.value * {{ buildRange }} + '{{ passthrough('userID', 'buildOrder', 'packageOrder', 'packageStart') }}#buildlist';">
+              {% for pageNum in buildPages %}
+              <option value="{{ pageNum }}"{{ ' selected' if pageNum == buildCurrentPage else '' }}>{{ pageNum + 1 }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+      <div class="cds--pagination__right">
+        <span class="cds--pagination__items-count">{{ buildStart + 1 }}&ndash;{{ buildStart + buildCount }} of {{ totalBuilds }}</span>
+        {% if buildStart > 0 %}
+        <a class="cds--btn cds--btn--ghost cds--btn--sm" href="userinfo?buildStart={{ buildStart - buildRange }}{{ passthrough('userID', 'buildOrder', 'packageOrder', 'packageStart') }}#buildlist">Previous</a>
+        {% endif %}
+        {% if buildStart + buildCount < totalBuilds %}
+        <a class="cds--btn cds--btn--ghost cds--btn--sm" href="userinfo?buildStart={{ buildStart + buildRange }}{{ passthrough('userID', 'buildOrder', 'packageOrder', 'packageStart') }}#buildlist">Next</a>
+        {% endif %}
+      </div>
+    </div>
+    {% else %}
+    <p>No builds</p>
+    {% endif %}
+  </section>
 
 {% endblock %}

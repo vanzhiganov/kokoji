@@ -1,7 +1,6 @@
 {% extends "base.html" %}
+{% set _PASSTHROUGH = ['repoID', 'order', 'state'] %}
 {% block content %}
-
-#attr _PASSTHROUGH = ['repoID', 'order', 'state']
 
 
   <h4>Buildroots in repo <a href="repoinfo?repoID={{ repoID }}">{{ repoID }}</a></h4>

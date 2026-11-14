@@ -1,7 +1,6 @@
 {% extends "base.html" %}
+{% set _PASSTHROUGH = ['userID'] %}
 {% block content %}
-
-#attr _PASSTHROUGH = ['userID']
 
 <h4>Active sessions for {{ loggedInUser.name }} user</h4>
 <br>

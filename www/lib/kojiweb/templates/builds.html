@@ -1,7 +1,6 @@
 {% extends "base.html" %}
+{% set _PASSTHROUGH = ['userID', 'tagID', 'packageID', 'order', 'prefix', 'state', 'inherited', 'latest', 'type'] %}
 {% block content %}
-
-#attr _PASSTHROUGH = ['userID', 'tagID', 'packageID', 'order', 'prefix', 'state', 'inherited', 'latest', 'type']
 
 
 {% macro getDescription() %}

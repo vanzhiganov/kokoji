@@ -127,7 +127,10 @@ def _dispatch(name):
         status = 200
     except ServerRedirect:
         location = environ.get('koji.redirect', '/')
-        return redirect(location, code=302)
+        resp = redirect(location, code=302)
+        # keep the Set-Cookie headers (e.g. the user cookie set on login)
+        _apply_headers(resp, environ.get('koji.headers', []))
+        return resp
     except Exception:
         tb_str = ''.join(traceback.format_exception(*sys.exc_info()))
         logging.getLogger("koji.web").error(tb_str)

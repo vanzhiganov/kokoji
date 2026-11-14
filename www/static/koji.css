@@ -16,7 +16,7 @@ html {
 
 body {
     margin: 0;
-    padding: 0;
+    padding: 3rem 0 0; /* offset for the fixed Carbon UI shell header */
     font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif;
     color: var(--cds-text-primary, #161616);
     background: var(--cds-background, #ffffff);
@@ -101,6 +101,16 @@ p#footer a {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+#headerSearch .cds--text-input-wrapper {
+    display: inline-block;
+}
+
+.cds--header__name-logo {
+    height: 1.25rem;
+    margin-right: 0.5rem;
 }
 
 #headerSearch input[type="text"] {
@@ -394,6 +404,14 @@ abbr {
 
 .koji-header-content {
     padding: 1rem 2rem 0 2rem;
+}
+
+.koji-filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 1rem;
+    margin-bottom: 1rem;
 }
 
 .koji-login-info {
