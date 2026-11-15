@@ -109,6 +109,16 @@ Configuration is read from environment variables (see `containers/compose.yml`):
 * Relevant options in `web.conf`: `WebAuthType` (`password` or `ssl`),
   `ForceSSL`, `Secret`, `LoginTimeout` (hours), `AllowRegistration`.
 
+#### Screenshots
+
+Login page:
+
+![Login page](extra/screenshot_login.png)
+
+Build targets:
+
+![Build targets](extra/screenshot_targets.png)
+
 ### Permissions
 
 * Managing tags (create, edit, parents, external repositories) requires the
