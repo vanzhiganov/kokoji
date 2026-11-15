@@ -43,7 +43,7 @@
     <header class="cds--header" aria-label="{{ siteName }}">
       <a class="cds--header__name" href="index" title="Koji">
         <img src="{{ util.themePath('images/koji.png') }}" alt="" class="cds--header__name-logo"/>
-        <span class="cds--header__name--prefix">{{ siteName }}</span>
+        <!-- <span class="cds--header__name--prefix">{{ siteName }}</span> -->
       </a>
       <nav class="cds--header__nav" aria-label="Main navigation">
         <ul class="cds--header__menu-bar">
@@ -118,6 +118,14 @@
       {% if extra_nav %}
       <div>{{ extra_nav }}</div>
       {% endif %}
+
+      {% for category, message in flashedMessages|default([]) %}
+      <div class="cds--inline-notification cds--inline-notification--{{ category }}" role="status">
+        <div class="cds--inline-notification__details">
+          <p class="cds--inline-notification__subtitle">{{ message }}</p>
+        </div>
+      </div>
+      {% endfor %}
 
       {% block content %}{% endblock %}
     </main>

@@ -2117,6 +2117,8 @@ def read_config(profile_name, user_config=None):
         'serverca': None,
         'no_ssl_verify': False,
         'authtype': None,
+        'user': None,
+        'password': None,
         'debug': False,
         'debug_xmlrpc': False,
         'pyver': None,

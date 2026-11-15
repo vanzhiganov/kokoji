@@ -367,7 +367,10 @@ kojid is a Python driver; the real work is done by subprocesses:
 | `/usr/bin/livecd-creator`, `/usr/bin/appliance-creator` | legacy image paths |
 
 Python imports that are hard requirements: `librepo`, `multilib`, `Cheetah`,
-`rpm`, `dnf`, `six`, `requests`.
+`rpm`, `dnf`, `six`, `requests`. On Fedora, `Cheetah` is provided by
+`python3-cheetah` and `multilib` by `python3-multilib`; without them `kojid`
+exits at startup with `ModuleNotFoundError` (`kojid:63` for Cheetah,
+`kojid:69` for multilib).
 
 `guestfs` is imported **before** `dnf` at `kojid:53-60`, guarded by
 `try/except ImportError`. This is deliberate and load-bearing: importing
@@ -393,4 +396,20 @@ reboot will block startup until it expires, with no self-healing.
 
 ## Install
 
-dnf install python3-librepo
+dnf install python3-librepo python3-cheetah python3-multilib
+
+## Adding a host
+
+Adding a host is a CLI operation; the web UI cannot create one. The web UI can
+then be used to configure it (arches, capacity, description, channels) and to
+enable or disable it via the host's **Edit host** page.
+
+```bash
+koji add-host builder1.example.com x86_64          # hostname must match kojid's login name
+koji set-host-password builder1.example.com        # prompts for the password
+koji add-host-to-channel builder1.example.com default
+koji enable-host builder1.example.com              # or enable it later in the web UI
+```
+
+Then configure `kojid.conf` on the builder with the same username and password
+(see Authentication above).

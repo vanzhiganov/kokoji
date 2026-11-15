@@ -59,11 +59,14 @@ class FakeHubSession(object):
     def listUsers(self, **kwargs):
         return []
 
+    def countAndFilterResults(self, *args, **kwargs):
+        return 0, []
+
     def listTasks(self, **kwargs):
         # record what the hub call saw, then advance the callnum like a real call
         self.seen_sinfo = dict(self.sinfo) if self.sinfo else None
         self.seen_callnum = self.callnum
-        self.callnum += 3
+        self.callnum = (self.callnum or 0) + 3
         return []
 
     def __getattr__(self, name):
@@ -152,6 +155,23 @@ class TestHubSession(unittest.TestCase):
             gc.collect()
             self.assertEqual(FakeHubSession.hub_logouts, [])
 
+    def test_password_login_redirects_to_index_with_success_message(self):
+        env = {'REQUEST_SCHEME': 'http'}
+        with mock.patch.object(webidx, '_makeClientSession', side_effect=self._make_session):
+            client = self.app.test_client()
+            resp = client.post('/login', data={'username': 'alice', 'password': 'pw',
+                                               'page': 'buildinfo'}, environ_overrides=env)
+            self.assertEqual(resp.status_code, 302)
+            self.assertTrue(resp.headers['Location'].endswith('/index'), resp.headers)
+            cookie = self._cookie_header(resp)
+            resp = client.get('/tasks', headers={'Cookie': cookie}, environ_overrides=env)
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn(b'Successfully logged in as alice.', resp.data)
+            # the message is shown once
+            resp = client.get('/tasks', headers={'Cookie': self._cookie_header(resp)},
+                              environ_overrides=env)
+            self.assertNotIn(b'Successfully logged in as alice.', resp.data)
+
     def test_tampered_hub_session_cookie_is_ignored(self):
         env = {'REQUEST_SCHEME': 'http'}
         with mock.patch.object(webidx, '_makeClientSession', side_effect=self._make_session):
@@ -167,6 +187,29 @@ class TestHubSession(unittest.TestCase):
             self.assertEqual(len(self.sessions), 1)
             self.assertIsNone(self.sessions[0].seen_sinfo)
 
+
+    def test_rejected_hub_session_is_dropped_instead_of_failing(self):
+        env = {'REQUEST_SCHEME': 'http'}
+        with mock.patch.object(webidx, '_makeClientSession', side_effect=self._make_session):
+            client = self.app.test_client()
+            resp = client.post('/login', data={'username': 'alice', 'password': 'pw',
+                                               'page': ''}, environ_overrides=env)
+            cookie = self._cookie_header(resp)
+            # the hub rejects the stored session, e.g. it was created from another address
+            rejected = koji.AuthError('Invalid session or bad credentials')
+            with mock.patch.object(FakeHubSession, 'getUser', side_effect=rejected):
+                self.sessions.clear()
+                resp = client.get('/tasks', headers={'Cookie': cookie}, environ_overrides=env)
+            self.assertEqual(resp.status_code, 200)
+            self.assertNotIn(b'Invalid session or bad credentials', resp.data)
+            cleared = resp.headers.getlist('Set-Cookie')
+            self.assertTrue(any(h.startswith('hubsession=""') for h in cleared), cleared)
+            self.assertTrue(any(h.startswith('user=""') for h in cleared), cleared)
+            # the rejected session is not logged out again when the request objects go away
+            self.assertFalse(self.sessions[0].logged_in)
+            self.sessions.clear()
+            gc.collect()
+            self.assertEqual(FakeHubSession.hub_logouts, [])
 
     def test_user_cookie_without_hub_session_must_log_in_again(self):
         env = {'REQUEST_SCHEME': 'http'}

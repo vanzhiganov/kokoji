@@ -16,6 +16,7 @@ class TestActivateSession(unittest.TestCase):
         self.tempdir = tempfile.mkdtemp()
         self.warn = mock.patch('koji_cli.lib.warn').start()
         self.error = mock.patch('koji_cli.lib.error').start()
+        self.getpass = mock.patch('koji_cli.lib.getpass.getpass', return_value='PW').start()
         self.session = mock.MagicMock()
 
     def tearDown(self):
@@ -72,9 +73,20 @@ class TestActivateSession(unittest.TestCase):
         self.session.login.assert_not_called()
         self.session.ssl_login.assert_not_called()
 
+    def test_activate_session_pw_no_user(self):
+        self.session.logged_in = False
+        self.error.side_effect = SystemExit(1)
+        options = {'authtype': 'password', 'debug': False, 'cert': ''}
+        self.assertRaises(SystemExit, activate_session, self.session, options)
+        self.session.login.assert_not_called()
+        self.session.ssl_login.assert_not_called()
+        self.assertIn('needs a username', self.error.call_args[0][0])
+
     def test_activate_session_pw(self):
         self.session.logged_in = False
-        options = {'authtype': 'password', 'debug': False, 'cert': ''}
+        self.session.opts = {'user': 'USER', 'password': 'PW'}
+        options = {'authtype': 'password', 'debug': False, 'cert': '', 'user': 'USER',
+                   'password': 'PW'}
         activate_session(self.session, options)
         self.session.login.assert_called_once_with()
         self.session.ssl_login.assert_not_called()
@@ -92,6 +104,39 @@ class TestActivateSession(unittest.TestCase):
         activate_session(self.session, options)
         self.session.login.assert_called_once_with()
         self.session.ssl_login.assert_not_called()
+
+    def test_activate_session_pw_prompts_for_password(self):
+        self.session.logged_in = False
+        self.session.opts = {'user': 'USER'}
+        self.session.login.side_effect = lambda: setattr(self.session, 'logged_in', True)
+        options = {'authtype': 'password', 'debug': False, 'cert': '', 'user': 'USER'}
+        with mock.patch('koji_cli.lib.sys.stdin') as stdin:
+            stdin.isatty.return_value = True
+            activate_session(self.session, options)
+        self.getpass.assert_called_once_with('Password for USER: ')
+        self.assertEqual(self.session.opts['password'], 'PW')
+        self.session.login.assert_called_once_with()
+        self.error.assert_not_called()
+
+    def test_activate_session_pw_no_password_noninteractive(self):
+        self.session.logged_in = False
+        self.error.side_effect = SystemExit(1)
+        options = {'authtype': 'password', 'debug': False, 'cert': '', 'user': 'USER'}
+        with mock.patch('koji_cli.lib.sys.stdin') as stdin:
+            stdin.isatty.return_value = False
+            self.assertRaises(SystemExit, activate_session, self.session, options)
+        self.getpass.assert_not_called()
+        self.session.login.assert_not_called()
+        self.assertIn('No password for user USER', self.error.call_args[0][0])
+
+    def test_activate_session_pw_given_no_prompt(self):
+        self.session.logged_in = False
+        options = {'authtype': 'password', 'debug': False, 'cert': '', 'user': 'USER',
+                   'password': 'PW'}
+        with mock.patch('koji_cli.lib.getpass.getpass') as getpass:
+            activate_session(self.session, options)
+        getpass.assert_not_called()
+        self.session.login.assert_called_once_with()
 
     def test_activate_session_krb_logged(self):
         self.session.logged_in = True

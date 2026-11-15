@@ -32,6 +32,8 @@ import sys
 import time
 import itertools
 
+from flask import flash
+
 import koji
 from koji.tasks import parse_task_params
 import kojiweb.util
@@ -295,11 +297,26 @@ def _getServer(environ):
             # kept): the hub would treat the request as anonymous, so ask to log in again
             environ['koji.currentLogin'] = None
     if environ['koji.currentLogin']:
-        environ['koji.currentUser'] = session.getUser(environ['koji.currentLogin'])
-        if not environ['koji.currentUser']:
-            raise koji.AuthError(
-                'could not get user for principal: %s' % environ['koji.currentLogin'])
-        _setUserCookie(environ, environ['koji.currentLogin'])
+        try:
+            environ['koji.currentUser'] = session.getUser(environ['koji.currentLogin'])
+        except koji.AuthError as e:
+            if options['WebAuthType'] != koji.AUTHTYPES['NORMAL']:
+                raise
+            # the hub no longer accepts the stored session (closed, expired, or created
+            # from another address, e.g. after the web container was recreated):
+            # drop the login instead of failing every page, so the user can log in again
+            authlogger.warning('Stored hub session for %s was rejected: %s',
+                               environ['koji.currentLogin'], e)
+            session.setSession(None)
+            environ['koji.currentLogin'] = None
+            environ['koji.currentUser'] = None
+            _clearUserCookie(environ)
+            _clearHubSessionCookie(environ)
+        else:
+            if not environ['koji.currentUser']:
+                raise koji.AuthError(
+                    'could not get user for principal: %s' % environ['koji.currentLogin'])
+            _setUserCookie(environ, environ['koji.currentLogin'])
     else:
         environ['koji.currentUser'] = None
 
@@ -414,7 +431,6 @@ def _password_login(environ, page=None):
     form = environ['koji.form']
     username = form.getfirst('username', '')
     password = form.getfirst('password', '')
-    page = form.getfirst('page', page)
 
     if not username and not password:
         # GET request - just show the form
@@ -435,7 +451,8 @@ def _password_login(environ, page=None):
 
     _setUserCookie(environ, username)
     authlogger.info('Successful password authentication by %s', username)
-    _redirectBack(environ, page, forceSSL=options.get('ForceSSL', True))
+    flash('Successfully logged in as %s.' % username, 'success')
+    _redirectBack(environ, 'index', forceSSL=options.get('ForceSSL', True))
 
 
 def register(environ, page=None):

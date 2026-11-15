@@ -175,6 +175,15 @@ def _get_jinja_env():
     return _jinja_env
 
 
+def _getFlashedMessages():
+    """Return (category, message) pairs flashed earlier, outside of Flask as an empty list"""
+    try:
+        from flask import get_flashed_messages
+        return get_flashed_messages(with_categories=True)
+    except (ImportError, RuntimeError):
+        return []
+
+
 def _genHTML(environ, fileName):
     values = environ['koji.values']
 
@@ -183,6 +192,7 @@ def _genHTML(environ, fileName):
     else:
         values['currentUser'] = None
     values['authToken'] = _genToken(environ)
+    values['flashedMessages'] = _getFlashedMessages()
     if 'mavenEnabled' not in values:
         if 'koji.session' in environ:
             values['mavenEnabled'] = environ['koji.session'].mavenEnabled()

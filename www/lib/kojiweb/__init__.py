@@ -20,6 +20,7 @@
 #       Mike Bonnet <mikeb@redhat.com>
 #       Mike McLean <mikem@redhat.com>
 
+import hashlib
 import inspect
 import logging
 import os
@@ -27,6 +28,7 @@ import sys
 import traceback
 
 from flask import Flask, Response, make_response, redirect, request
+from flask.sessions import SecureCookieSessionInterface
 
 import koji
 import koji.util
@@ -193,6 +195,40 @@ def _apply_headers(response, headers):
         response.headers.add(name, value)
 
 
+def _load_options(app, environ):
+    """Load the web options on first use and set the flask secret key from them"""
+    state = app.extensions['kojiweb']
+    if state.get('options') is None and not state.get('startup_error'):
+        try:
+            state['options'] = load_config(environ)
+            state['formatter'] = setup_logging(state['options'], environ)
+            koji.util.setup_rlimits(state['options'])
+        except Exception:
+            etype, e = sys.exc_info()[:2]
+            tb_short = ''.join(traceback.format_exception_only(etype, e))
+            tb_str = ''.join(traceback.format_exception(*sys.exc_info()))
+            logging.getLogger("koji.web").error(
+                "Startup failed: %s\n%s", tb_short, tb_str)
+            state['startup_error'] = ("The web interface failed to start up. "
+                                      "Please check the server log for details.")
+    secret = getattr(state['options'] and state['options'].get('Secret'), 'value', None)
+    if secret and not app.secret_key:
+        # flask flash() keeps its messages in the flask session, which needs a key
+        app.secret_key = hashlib.sha256(('flask-session:' + secret).encode('utf-8')).hexdigest()
+
+
+class _SessionInterface(SecureCookieSessionInterface):
+    """Flask session handling that loads the options first.
+
+    Flask opens the session before before_request runs, and the secret key
+    comes from the options, which are only loaded on the first request.
+    """
+
+    def open_session(self, app, request):
+        _load_options(app, request.environ)
+        return super(_SessionInterface, self).open_session(app, request)
+
+
 def create_app(config=None, options=None):
     """Create and configure the kojiweb Flask application.
 
@@ -231,21 +267,10 @@ def create_app(config=None, options=None):
         if not request.environ.get('PATH_INFO'):
             target = request.environ.get('REQUEST_URI') or (request.script_root + '/')
             return redirect(target + '/', code=302)
-        state = app.extensions['kojiweb']
-        if state.get('options') is None and not state.get('startup_error'):
-            try:
-                state['options'] = load_config(request.environ)
-                state['formatter'] = setup_logging(state['options'], request.environ)
-                koji.util.setup_rlimits(state['options'])
-            except Exception:
-                etype, e = sys.exc_info()[:2]
-                tb_short = ''.join(traceback.format_exception_only(etype, e))
-                tb_str = ''.join(traceback.format_exception(*sys.exc_info()))
-                logging.getLogger("koji.web").error(
-                    "Startup failed: %s\n%s", tb_short, tb_str)
-                state['startup_error'] = ("The web interface failed to start up. "
-                                          "Please check the server log for details.")
+        _load_options(app, request.environ)
         return None
+
+    app.session_interface = _SessionInterface()
 
     @app.route('/', methods=['GET', 'POST', 'HEAD'], endpoint='index')
     @app.route('/<name>', methods=['GET', 'POST', 'HEAD'], endpoint='handler',

@@ -1,6 +1,7 @@
 # coding=utf-8
 from __future__ import absolute_import, division
 
+import getpass
 import hashlib
 import json
 import optparse
@@ -744,6 +745,17 @@ def warn(msg):
     sys.stderr.flush()
 
 
+def _prompt_login_password(user):
+    """Ask for the password of user when it was not given in the options or profile"""
+    if not sys.stdin.isatty():
+        error("No password for user %s: set 'password' in the profile, pass --password "
+              "or run the command interactively" % user)
+    password = getpass.getpass("Password for %s: " % user)
+    if not password:
+        error("Empty password is not allowed")
+    return password
+
+
 def activate_session(session, options):
     """Test and login the session is applicable"""
     if session.logged_in:
@@ -762,6 +774,12 @@ def activate_session(session, options):
             or getattr(options, 'user', None) \
             and options.authtype is None:
         # authenticate using user/password
+        if not getattr(options, 'user', None):
+            error("Password authentication needs a username: set 'user' in the profile "
+                  "or pass --user")
+        if not getattr(options, 'password', None):
+            options.password = _prompt_login_password(options.user)
+            session.opts['password'] = options.password
         session.login()
     elif options.authtype == "kerberos":
         error("Kerberos authentication is no longer supported; use --authtype ssl "

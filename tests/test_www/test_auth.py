@@ -30,10 +30,11 @@ class TestForceSSL(unittest.TestCase):
 
                 with mock.patch.object(webidx, '_initValues', return_value={}), \
                         mock.patch.object(webidx, '_setUserCookie'), \
+                        mock.patch.object(webidx, 'flash'), \
                         mock.patch.object(webidx, '_redirectBack') as redirect_back:
                     webidx._password_login(environ)
 
-                redirect_back.assert_called_once_with(environ, None, forceSSL=force_ssl)
+                redirect_back.assert_called_once_with(environ, 'index', forceSSL=force_ssl)
 
     def test_force_ssl_controls_password_cookie_only(self):
         for auth_type, secure in (
