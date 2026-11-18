@@ -1,0 +1,24 @@
+# Managed by Ansible -- role deploy. Do not edit by hand.
+# configparser is used with raw=True, so %(...)s fields in LogFormat are safe.
+[web]
+
+SiteName = {{ koji_web_site_name }}
+
+## Key URLs ##
+KojiHubURL = {{ koji_hub_url }}
+KojiFilesURL = {{ koji_files_url }}
+
+## Authentication ##
+WebAuthType = {{ koji_web_auth_type }}
+AllowRegistration = {{ 'On' if koji_web_allow_registration | bool else 'Off' }}
+ForceSSL = {{ 'On' if koji_web_force_ssl | bool else 'Off' }}
+Secret = {{ koji_web_secret }}
+LoginTimeout = {{ koji_web_login_timeout }}
+
+## Application layout ##
+LibPath = /usr/share/koji-web/lib
+LiteralFooter = True
+
+## Logging ##
+LogLevel = {{ koji_log_level }}
+LogFormat = {{ koji_web_log_format }}

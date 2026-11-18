@@ -1,0 +1,28 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  vars:
+    # All templates exercised on a single container. Services are left
+    # stopped: there is no PostgreSQL or reachable hub in this scenario.
+    koji_components:
+      - client
+      - hub
+      - web
+      - kojira
+      - builder
+    koji_service_enabled: false
+    koji_db_password: "koji"
+    koji_web_secret: "change-me-secret"
+    koji_kojira_password: "kojira"
+    koji_db_host: localhost
+    koji_hub_url: "http://localhost/kojihub"
+    koji_files_url: "http://localhost/kojifiles"
+    koji_web_url: "http://localhost/koji"
+  tasks:
+    # playbook_dir here is deploy/molecule/default; ../../../deploy is the
+    # role root. Using an explicit path keeps this independent of the CWD
+    # molecule happens to invoke ansible-playbook from.
+    - name: Include the deploy role
+      ansible.builtin.include_role:
+        name: "{{ playbook_dir }}/../../../deploy"

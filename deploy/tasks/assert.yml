@@ -1,0 +1,53 @@
+---
+- name: Check that the target is a supported RHEL-based system
+  ansible.builtin.assert:
+    that:
+      - "ansible_facts['os_family'] | default('') == 'RedHat'"
+      - "ansible_facts['distribution_major_version'] | default('') in koji_supported_major_versions"
+    fail_msg: >-
+      This role supports RHEL / Rocky / AlmaLinux 9 and 10 only.
+      Detected os_family={{ ansible_facts['os_family'] | default('unknown') }},
+      major={{ ansible_facts['distribution_major_version'] | default('unknown') }}.
+    quiet: true
+
+- name: Check that all requested components are known
+  ansible.builtin.assert:
+    that:
+      - "koji_components | difference(koji_known_components) | length == 0"
+    fail_msg: >-
+      Unknown Koji component(s): {{ koji_components | difference(koji_known_components) | join(', ') }}.
+      Valid components: {{ koji_known_components | join(', ') }}.
+    quiet: true
+
+- name: Check that Koji endpoints are configured
+  ansible.builtin.assert:
+    that:
+      - "koji_hub_url | length > 0"
+      - "koji_files_url | length > 0"
+      - "koji_web_url | length > 0"
+    fail_msg: "koji_hub_url, koji_files_url and koji_web_url must be non-empty."
+    quiet: true
+
+- name: Check that hub secrets are configured
+  ansible.builtin.assert:
+    that:
+      - "koji_db_password | length > 0"
+    fail_msg: "koji_db_password is required for the 'hub' component. Supply it via Ansible Vault."
+    quiet: true
+  when: "'hub' in koji_components"
+
+- name: Check that web secrets are configured
+  ansible.builtin.assert:
+    that:
+      - "koji_web_secret | length > 0"
+    fail_msg: "koji_web_secret is required for the 'web' component. Supply it via Ansible Vault."
+    quiet: true
+  when: "'web' in koji_components"
+
+- name: Check that kojira secrets are configured
+  ansible.builtin.assert:
+    that:
+      - "koji_kojira_password | length > 0"
+    fail_msg: "koji_kojira_password is required for the 'kojira' component. Supply it via Ansible Vault."
+    quiet: true
+  when: "'kojira' in koji_components"

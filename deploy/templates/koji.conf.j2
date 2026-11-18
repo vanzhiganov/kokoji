@@ -1,0 +1,14 @@
+# Managed by Ansible -- role deploy. Do not edit by hand.
+[koji]
+
+; URL of the XML-RPC hub
+server = {{ koji_hub_url }}
+
+; URL of the web interface
+weburl = {{ koji_web_url }}
+
+; URL of the package download site
+pkgurl = {{ koji_files_url }}
+
+; Path to the Koji top directory
+topdir = {{ koji_topdir }}

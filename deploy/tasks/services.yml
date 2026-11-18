@@ -1,0 +1,48 @@
+---
+- name: Manage httpd on hub and web hosts
+  ansible.builtin.systemd_service:
+    name: "{{ koji_httpd_service }}"
+    enabled: "{{ koji_service_enabled | bool }}"
+    state: "{{ 'started' if koji_service_enabled | bool else 'stopped' }}"
+  become: true
+  when: "'hub' in koji_components or 'web' in koji_components"
+
+- name: Manage kojira
+  ansible.builtin.systemd_service:
+    name: "{{ koji_kojira_service }}"
+    enabled: "{{ koji_service_enabled | bool }}"
+    state: "{{ 'started' if koji_service_enabled | bool else 'stopped' }}"
+  become: true
+  when: "'kojira' in koji_components"
+
+- name: Manage kojid (builder)
+  ansible.builtin.systemd_service:
+    name: "{{ koji_kojid_service }}"
+    enabled: "{{ koji_service_enabled | bool }}"
+    state: "{{ 'started' if koji_service_enabled | bool else 'stopped' }}"
+  become: true
+  when: "'builder' in koji_components"
+
+- name: Manage kojivmd
+  ansible.builtin.systemd_service:
+    name: "{{ koji_kojivmd_service }}"
+    enabled: "{{ koji_service_enabled | bool }}"
+    state: "{{ 'started' if koji_service_enabled | bool else 'stopped' }}"
+  become: true
+  when: "'vm' in koji_components"
+
+- name: Enable the koji-sweep-db timer on hub hosts
+  ansible.builtin.systemd_service:
+    name: koji-sweep-db.timer
+    enabled: true
+    state: started
+  become: true
+  when: "'hub' in koji_components and koji_sweep_db_timer_enabled | bool"
+
+- name: Enable the koji-gc timer on kojira hosts
+  ansible.builtin.systemd_service:
+    name: koji-gc.timer
+    enabled: true
+    state: started
+  become: true
+  when: "'kojira' in koji_components and koji_gc_timer_enabled | bool"

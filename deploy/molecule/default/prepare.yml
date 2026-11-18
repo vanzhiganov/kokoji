@@ -1,0 +1,25 @@
+---
+- name: Prepare
+  hosts: all
+  become: true
+  gather_facts: false
+  tasks:
+    # rockylinux:9 has python3 but not the dnf python bindings that
+    # ansible.builtin.dnf needs, so bootstrap with raw first.
+    - name: Bootstrap python3 and dnf bindings for Ansible
+      ansible.builtin.raw: dnf install -y python3 python3-dnf
+      changed_when: false
+
+    # The role assumes these are already enabled on real hosts; the test
+    # container needs them set up explicitly.
+    - name: Install EPEL release and dnf-plugins-core
+      ansible.builtin.dnf:
+        name:
+          - epel-release
+          - dnf-plugins-core
+        state: present
+
+    - name: Enable the CRB repository
+      ansible.builtin.command:
+        cmd: dnf config-manager --set-enabled crb
+      changed_when: false

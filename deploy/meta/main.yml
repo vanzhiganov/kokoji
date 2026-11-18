@@ -1,0 +1,23 @@
+---
+galaxy_info:
+  role_name: deploy
+  namespace: platformos
+  author: PlatformOS
+  description: >-
+    Deploy Koji (client, hub, web, kojira, builder, vm) from RPM packages on
+    RHEL-based distributions.
+  license: LGPL-2.1-only
+  min_ansible_version: "2.15"
+  # EL covers RHEL, Rocky Linux and AlmaLinux.
+  platforms:
+    - name: EL
+      versions:
+        - "9"
+        - "10"
+  galaxy_tags:
+    - koji
+    - rpm
+    - rhel
+    - buildsystem
+
+dependencies: []

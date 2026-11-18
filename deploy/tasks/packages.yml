@@ -1,0 +1,24 @@
+---
+- name: Compute the package list for the enabled components
+  ansible.builtin.set_fact:
+    koji_packages: >-
+      {{ (['client'] + koji_components)
+         | unique
+         | map('extract', koji_component_packages)
+         | flatten
+         | unique
+         | list }}
+
+- name: Compute package specs (optionally version-pinned)
+  ansible.builtin.set_fact:
+    koji_package_specs: >-
+      {{ (koji_packages | map('regex_replace', '$', '-' ~ koji_version) | list)
+         if koji_version | length > 0
+         else koji_packages }}
+
+- name: Install Koji RPM packages
+  ansible.builtin.dnf:
+    name: "{{ koji_package_specs }}"
+    state: present
+    enablerepo: "{{ koji_repo_name }}"
+  become: true

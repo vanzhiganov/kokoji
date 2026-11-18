@@ -1,0 +1,9 @@
+---
+# Run with:  cd deploy && ansible-lint .
+exclude_paths:
+  - molecule/
+  - .ansible/
+  - .git/
+  - .venv/
+warn_list:
+  - yaml[line-length]

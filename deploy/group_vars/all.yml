@@ -1,0 +1,23 @@
+---
+# ---------------------------------------------------------------------------
+# Development placeholders. In a real deployment keep these in an encrypted
+# file instead:
+#   ansible-vault encrypt group_vars/all.yml
+#   ansible-playbook -i inventory.ini playbook.yml --ask-vault-pass
+# ---------------------------------------------------------------------------
+koji_db_password: "koji"
+koji_web_secret: "change-me-secret"
+koji_kojira_password: "kojira"
+
+# Endpoints are derived from the inventory groups by default (see
+# defaults/main.yml). Set them here to FQDNs / load balancer addresses when
+# the inventory hostnames are not resolvable by clients, e.g.:
+#   koji_hub_host: koji-hub.example.internal
+#   koji_web_host: koji-web.example.internal
+#   koji_db_host: koji-db.example.internal
+#   koji_hub_url: https://koji-hub.example.internal/kojihub
+#   koji_files_url: https://koji-hub.example.internal/kojifiles
+#   koji_web_url: https://koji-web.example.internal/koji
+
+koji_web_allow_registration: true
+koji_web_force_ssl: false

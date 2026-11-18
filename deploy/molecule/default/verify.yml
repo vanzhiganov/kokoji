@@ -1,0 +1,83 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: Collect installed RPM packages
+      ansible.builtin.package_facts:
+        manager: rpm
+
+    - name: Assert that RPM {{ item }} is installed
+      ansible.builtin.assert:
+        that:
+          - "item in ansible_facts.packages"
+        quiet: true
+      loop:
+        - koji
+        - python3-koji
+        - koji-hub
+        - python3-koji-hub
+        - koji-web
+        - python3-koji-web
+        - koji-utils
+        - koji-builder
+      loop_control:
+        label: "{{ item }}"
+
+    - name: Stat the rendered configuration files
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: koji_config_stats
+      loop:
+        - /etc/koji.conf
+        - /etc/koji-hub/hub.conf
+        - /etc/kojiweb/web.conf
+        - /etc/kojira/kojira.conf
+        - /etc/kojid/kojid.conf
+      loop_control:
+        label: "{{ item }}"
+
+    - name: Assert that {{ item.item }} exists and is a regular file
+      ansible.builtin.assert:
+        that:
+          - "item.stat.exists"
+          - "item.stat.isreg"
+        quiet: true
+      loop: "{{ koji_config_stats.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: Assert the hub config keeps its packaged ownership and mode
+      ansible.builtin.assert:
+        that:
+          - "item.stat.mode == '0640'"
+          - "item.stat.gr_name == 'apache'"
+        quiet: true
+      loop: "{{ koji_config_stats.results | selectattr('item', 'equalto', '/etc/koji-hub/hub.conf') | list }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: Read the rendered hub configuration
+      ansible.builtin.slurp:
+        src: /etc/koji-hub/hub.conf
+      register: koji_hub_conf
+
+    - name: Assert the hub configuration contains the rendered database settings
+      ansible.builtin.assert:
+        that:
+          - "'DBHost = localhost' in (koji_hub_conf.content | b64decode)"
+          - "'DBPass = koji' in (koji_hub_conf.content | b64decode)"
+          - "'KojiWebURL = http://localhost/koji' in (koji_hub_conf.content | b64decode)"
+        quiet: true
+
+    - name: Read the rendered client configuration
+      ansible.builtin.slurp:
+        src: /etc/koji.conf
+      register: koji_client_conf
+
+    - name: Assert the client configuration points at the configured hub
+      ansible.builtin.assert:
+        that:
+          - "'server = http://localhost/kojihub' in (koji_client_conf.content | b64decode)"
+        quiet: true

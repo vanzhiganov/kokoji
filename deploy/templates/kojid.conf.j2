@@ -1,0 +1,23 @@
+# Managed by Ansible -- role deploy. Do not edit by hand.
+[kojid]
+
+; The number of seconds to sleep between tasks
+sleeptime = {{ koji_builder_sleeptime }}
+
+; Maximum number of jobs handled at a time
+maxjobs = {{ koji_builder_maxjobs }}
+
+; Directory root where work data can be found from the hub
+topdir = {{ koji_topdir }}
+
+; Directory root for temporary storage
+workdir = {{ koji_builder_workdir }}
+
+; The user to run as when doing builds
+mockuser = {{ koji_builder_mockuser }}
+
+; URL of the XML-RPC server
+server = {{ koji_hub_url }}
+
+; URL for file access
+topurl = {{ koji_builder_topurl }}

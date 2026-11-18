@@ -1,0 +1,19 @@
+---
+- name: Determine the effective Koji top directory ownership
+  ansible.builtin.set_fact:
+    koji_storage_owner: >-
+      {{ ('hub' in koji_components or 'web' in koji_components)
+         | ternary(koji_topdir_owner, 'root') }}
+    koji_storage_group: >-
+      {{ ('hub' in koji_components or 'web' in koji_components)
+         | ternary(koji_topdir_group, 'root') }}
+
+- name: Ensure the Koji top directory exists
+  ansible.builtin.file:
+    path: "{{ koji_topdir }}"
+    state: directory
+    owner: "{{ koji_storage_owner }}"
+    group: "{{ koji_storage_group }}"
+    mode: "{{ koji_topdir_mode }}"
+  become: true
+  when: koji_manage_storage | bool

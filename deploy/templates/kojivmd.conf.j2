@@ -1,0 +1,16 @@
+# Managed by Ansible -- role deploy. Do not edit by hand.
+[kojivmd]
+
+sleeptime = {{ koji_vmd_sleeptime }}
+maxjobs = {{ koji_vmd_maxjobs }}
+workdir = {{ koji_vmd_workdir }}
+
+; URL where the Koji root directory can be accessed
+topurl = {{ koji_files_url }}
+
+; URL of the XML-RPC server
+server = {{ koji_hub_url }}
+
+; Mail settings for notifications
+smtphost = {{ koji_vmd_smtphost }}
+from_addr = {{ koji_vmd_from_addr }}

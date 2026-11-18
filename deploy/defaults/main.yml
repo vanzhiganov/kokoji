@@ -1,0 +1,143 @@
+---
+# ---------------------------------------------------------------------------
+# RPM repository
+# ---------------------------------------------------------------------------
+# The published repository is versioned by EL major version:
+#   https://dl.platform-os.org/platformos/9/koji/   (published)
+#   https://dl.platform-os.org/platformos/10/koji/  (not published yet)
+# The baseurl is templated so EL10 starts working as soon as packages appear.
+# All Koji RPMs are noarch: override koji_repo_baseurl with the /9/ URL as a
+# temporary workaround on EL10 hosts.
+koji_repo_name: platformos-koji
+koji_repo_file: platformos-koji
+koji_repo_description: PlatformOS Koji RPM repository
+koji_repo_baseurl: "https://dl.platform-os.org/platformos/{{ ansible_facts['distribution_major_version'] }}/koji/"
+koji_repo_enabled: true
+# The repository publishes neither a GPG key nor a signed repomd.xml.
+koji_repo_gpgcheck: false
+koji_repo_repo_gpgcheck: false
+koji_repo_gpgkey: ""
+
+# Optional NVR pin, e.g. "1.35.3-1.el9". Empty means "latest available".
+koji_version: ""
+
+# ---------------------------------------------------------------------------
+# Components
+# ---------------------------------------------------------------------------
+# `client` is always installed so /etc/koji.conf and the CLI exist everywhere.
+# Additional components are selected per host, normally through group_vars.
+koji_components:
+  - client
+
+koji_known_components:
+  - client
+  - hub
+  - web
+  - kojira
+  - builder
+  - vm
+
+# Package sets match the packages actually published in the repository.
+# Runtime dependencies (httpd, python3-mod_wsgi, python3-psycopg2,
+# python3-cheetah, mock, ...) are resolved by dnf from EPEL / CRB.
+koji_component_packages:
+  client:
+    - koji
+    - python3-koji
+    - python3-koji-cli-plugins
+  hub:
+    - koji-hub
+    - python3-koji-hub
+    - koji-hub-plugins
+    - python3-koji-hub-plugins
+  web:
+    - koji-web
+    - python3-koji-web
+  kojira:
+    - koji-utils
+  builder:
+    - koji-builder
+    - koji-builder-plugins
+  vm:
+    - koji-vm
+
+koji_supported_major_versions:
+  - "9"
+  - "10"
+
+# ---------------------------------------------------------------------------
+# Endpoints (derived from the example inventory, overridable in group_vars)
+# ---------------------------------------------------------------------------
+koji_hub_host: "{{ groups['koji_hub'] | default([]) | first | default('localhost') }}"
+koji_web_host: "{{ groups['koji_web'] | default([]) | first | default('localhost') }}"
+koji_db_host: "{{ groups['koji_db'] | default([]) | first | default('localhost') }}"
+
+koji_hub_url: "http://{{ koji_hub_host }}/kojihub"
+koji_files_url: "http://{{ koji_hub_host }}/kojifiles"
+koji_web_url: "http://{{ koji_web_host }}/koji"
+
+# Koji top directory. Shared/NFS storage across hosts is an operator task.
+koji_topdir: /mnt/koji
+koji_manage_storage: true
+koji_topdir_mode: "0755"
+# Used only on hub/web hosts; other hosts keep the directory root-owned.
+koji_topdir_owner: apache
+koji_topdir_group: apache
+
+# ---------------------------------------------------------------------------
+# Database (PostgreSQL is NOT managed by this role)
+# ---------------------------------------------------------------------------
+koji_db_name: koji
+koji_db_user: koji
+koji_db_port: 5432
+# Required when `hub` is in koji_components. Supply via Ansible Vault.
+koji_db_password: ""
+
+# ---------------------------------------------------------------------------
+# Authentication / secrets (supply via Ansible Vault in real deployments)
+# ---------------------------------------------------------------------------
+koji_web_secret: ""
+koji_web_site_name: Koji Web
+koji_web_auth_type: password
+koji_web_allow_registration: true
+koji_web_force_ssl: false
+koji_web_login_timeout: 72
+koji_hub_login_creates_user: true
+koji_kojira_user: kojira
+koji_kojira_password: ""
+koji_kojira_logfile: /var/log/kojira.log
+
+# ---------------------------------------------------------------------------
+# Logging
+# ---------------------------------------------------------------------------
+# Koji reads these files with configparser raw=True, so the %(...)s fields in
+# the log formats are safe.
+koji_log_level: INFO
+koji_hub_log_format: "%(asctime)s [%(levelname)s] m=%(method)s u=%(user_name)s p=%(process)s r=%(remoteaddr)s %(name)s: %(message)s"
+koji_web_log_format: "%(asctime)s [%(levelname)s] m=%(method)s u=%(user_name)s r=%(remoteaddr)s %(name)s: %(message)s"
+
+# ---------------------------------------------------------------------------
+# Services
+# ---------------------------------------------------------------------------
+koji_httpd_service: httpd
+koji_kojira_service: kojira.service
+koji_kojid_service: kojid.service
+koji_kojivmd_service: kojivmd.service
+# Setting this to false stops and disables the component services.
+koji_service_enabled: true
+koji_sweep_db_timer_enabled: false
+koji_gc_timer_enabled: false
+
+# ---------------------------------------------------------------------------
+# Builder / VM
+# ---------------------------------------------------------------------------
+koji_builder_sleeptime: 15
+koji_builder_maxjobs: 10
+koji_builder_workdir: /tmp/koji
+koji_builder_mockuser: kojibuilder
+koji_builder_topurl: "{{ koji_files_url }}"
+koji_vmd_sleeptime: 15
+koji_vmd_maxjobs: 10
+koji_vmd_workdir: /tmp/koji
+koji_vmd_smtphost: localhost
+koji_vmd_from_addr: "Koji Build System <buildsys@localhost>"

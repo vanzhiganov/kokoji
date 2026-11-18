@@ -1,0 +1,76 @@
+---
+# The RPMs ship these files as %config(noreplace). Rendering them from the
+# role templates is intentional: every value is driven by a role variable.
+# `backup: true` keeps a .<timestamp>.bak copy of the packaged defaults.
+- name: Deploy the Koji client configuration
+  ansible.builtin.template:
+    src: koji.conf.j2
+    dest: /etc/koji.conf
+    owner: root
+    group: root
+    mode: "0644"
+    backup: true
+  become: true
+
+- name: Deploy the Koji hub configuration
+  ansible.builtin.template:
+    src: hub.conf.j2
+    dest: /etc/koji-hub/hub.conf
+    owner: root
+    group: apache
+    mode: "0640"
+    backup: true
+  become: true
+  notify: Restart httpd
+  when: "'hub' in koji_components"
+
+# mod_wsgi's WSGIDaemonProcess has no user= directive, so the web app runs as
+# the httpd user (apache). Keep the file readable by that group so the Secret
+# stays private without breaking kojiweb.
+- name: Deploy the Koji web configuration
+  ansible.builtin.template:
+    src: web.conf.j2
+    dest: /etc/kojiweb/web.conf
+    owner: root
+    group: apache
+    mode: "0640"
+    backup: true
+  become: true
+  notify: Restart httpd
+  when: "'web' in koji_components"
+
+- name: Deploy the kojira configuration
+  ansible.builtin.template:
+    src: kojira.conf.j2
+    dest: /etc/kojira/kojira.conf
+    owner: root
+    group: root
+    mode: "0600"
+    backup: true
+  become: true
+  notify: Restart kojira
+  when: "'kojira' in koji_components"
+
+- name: Deploy the kojid (builder) configuration
+  ansible.builtin.template:
+    src: kojid.conf.j2
+    dest: /etc/kojid/kojid.conf
+    owner: root
+    group: root
+    mode: "0644"
+    backup: true
+  become: true
+  notify: Restart kojid
+  when: "'builder' in koji_components"
+
+- name: Deploy the kojivmd configuration
+  ansible.builtin.template:
+    src: kojivmd.conf.j2
+    dest: /etc/kojivmd/kojivmd.conf
+    owner: root
+    group: root
+    mode: "0644"
+    backup: true
+  become: true
+  notify: Restart kojivmd
+  when: "'vm' in koji_components"

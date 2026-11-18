@@ -1,0 +1,9 @@
+---
+# Run from inside deploy/, e.g.:
+#   cd deploy && ansible-playbook -i inventory.ini playbook.yml
+# ansible.cfg sets roles_path = .. so the role `deploy` resolves to ../deploy.
+- name: Deploy Koji from RPM packages
+  hosts: koji_servers
+  become: true
+  roles:
+    - role: deploy

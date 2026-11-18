@@ -1,0 +1,22 @@
+# Managed by Ansible -- role deploy. Do not edit by hand.
+# This file is deliberately minimal: configparser raw=True is used by the hub,
+# so %(...)s fields in LogFormat are safe.
+[hub]
+
+## Database connection (PostgreSQL is not managed by this role) ##
+DBName = {{ koji_db_name }}
+DBUser = {{ koji_db_user }}
+DBHost = {{ koji_db_host }}
+DBPort = {{ koji_db_port }}
+DBPass = {{ koji_db_password }}
+
+## Authentication ##
+LoginCreatesUser = {{ 'On' if koji_hub_login_creates_user | bool else 'Off' }}
+
+## URLs and storage ##
+KojiWebURL = {{ koji_web_url }}
+KojiDir = {{ koji_topdir }}
+
+## Logging ##
+LogLevel = {{ koji_log_level }}
+LogFormat = {{ koji_hub_log_format }}

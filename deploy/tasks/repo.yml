@@ -1,0 +1,13 @@
+---
+- name: Add the PlatformOS Koji RPM repository
+  ansible.builtin.yum_repository:
+    name: "{{ koji_repo_name }}"
+    file: "{{ koji_repo_file }}"
+    description: "{{ koji_repo_description }}"
+    baseurl: "{{ koji_repo_baseurl }}"
+    enabled: "{{ koji_repo_enabled | bool }}"
+    gpgcheck: "{{ koji_repo_gpgcheck | bool }}"
+    repo_gpgcheck: "{{ koji_repo_repo_gpgcheck | bool }}"
+    gpgkey: "{{ koji_repo_gpgkey | default(omit, true) }}"
+    state: present
+  become: true

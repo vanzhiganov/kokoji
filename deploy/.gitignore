@@ -1,0 +1,4 @@
+# ansible-lint creates a temporary roles symlink here.
+.ansible/
+.retry/
+__pycache__/

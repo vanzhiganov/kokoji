@@ -1,0 +1,4 @@
+---
+koji_components:
+  - client
+  - vm
