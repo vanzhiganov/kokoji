@@ -1,0 +1,26 @@
+# Molecule-managed systemd-enabled image for the Koji deploy role.
+# The upstream rockylinux/rockylinux:9 image has no /usr/sbin/init, so it
+# cannot be used as a systemd container without installing systemd first.
+#
+# EPEL, CRB and the dnf metadata cache are baked in here (rather than in
+# prepare.yml) so that converge/idempotence do not spend several minutes
+# refreshing repository metadata on every run.
+FROM {{ item.image }}
+
+RUN printf 'max_parallel_downloads=10\nfastestmirror=True\ntimeout=30\nretries=2\n' >> /etc/dnf/dnf.conf \
+    && dnf -y install \
+           systemd \
+           python3 \
+           python3-dnf \
+           sudo \
+           iproute \
+           procps-ng \
+           rsync \
+           epel-release \
+           dnf-plugins-core \
+    && dnf config-manager --set-enabled crb \
+    && dnf config-manager --set-disabled epel-cisco-openh264 epel-testing \
+    && dnf -y makecache \
+    && dnf clean packages
+
+# molecule.yml sets command: /usr/sbin/init so systemd runs as PID 1.
