@@ -10,4 +10,5 @@
     repo_gpgcheck: "{{ koji_repo_repo_gpgcheck | bool }}"
     gpgkey: "{{ koji_repo_gpgkey | default(omit, true) }}"
     state: present
+    priority: "1"
   become: true

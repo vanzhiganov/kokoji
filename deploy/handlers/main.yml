@@ -1,20 +1,27 @@
 ---
+# Restarting a service when the operator deliberately disabled service
+# management would start it again, which is both surprising and non-idempotent
+# (the next converge would stop it and report a change).
 - name: Restart httpd
   ansible.builtin.systemd_service:
     name: "{{ koji_httpd_service }}"
     state: restarted
+  when: koji_service_enabled | bool
 
 - name: Restart kojira
   ansible.builtin.systemd_service:
     name: "{{ koji_kojira_service }}"
     state: restarted
+  when: koji_service_enabled | bool
 
 - name: Restart kojid
   ansible.builtin.systemd_service:
     name: "{{ koji_kojid_service }}"
     state: restarted
+  when: koji_service_enabled | bool
 
 - name: Restart kojivmd
   ansible.builtin.systemd_service:
     name: "{{ koji_kojivmd_service }}"
     state: restarted
+  when: koji_service_enabled | bool

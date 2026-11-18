@@ -6,7 +6,9 @@ driver:
 platforms:
   - name: koji-el9
     image: rockylinux/rockylinux:9
-    pre_build_image: true
+    # Build Dockerfile.j2 so /usr/sbin/init (systemd) exists in the image.
+    dockerfile: Dockerfile.j2
+    pre_build_image: false
     privileged: true
     cgroupns_mode: host
     command: /usr/sbin/init

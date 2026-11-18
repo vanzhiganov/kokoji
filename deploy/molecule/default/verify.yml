@@ -8,7 +8,7 @@
       ansible.builtin.package_facts:
         manager: rpm
 
-    - name: Assert that RPM {{ item }} is installed
+    - name: Assert all expected Koji RPMs are installed
       ansible.builtin.assert:
         that:
           - "item in ansible_facts.packages"
@@ -38,7 +38,7 @@
       loop_control:
         label: "{{ item }}"
 
-    - name: Assert that {{ item.item }} exists and is a regular file
+    - name: Assert all rendered configuration files exist
       ansible.builtin.assert:
         that:
           - "item.stat.exists"

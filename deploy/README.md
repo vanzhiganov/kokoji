@@ -104,6 +104,8 @@ deploy/
 ├── templates/                 # koji.conf, hub.conf, web.conf, kojira.conf,
 │                              # kojid.conf, kojivmd.conf
 └── molecule/default/          # docker scenario (rockylinux:9)
+                               # molecule.yml, Dockerfile.j2,
+                               # prepare/converge/verify.yml
 ```
 
 ## Usage
@@ -271,7 +273,9 @@ not carried over; the RPM-shipped httpd snippets
 (`/etc/httpd/conf.d/kojihub.conf`, `kojiweb.conf`) are used as-is.
 
 Each template notifies the matching handler, so a config change restarts the
-affected service.
+affected service. Handlers are skipped when `koji_service_enabled: false` —
+otherwise a restart would start a service the operator asked to keep stopped
+and the next converge would report a spurious change.
 
 ## Testing
 
@@ -282,9 +286,12 @@ ansible-lint .
 ```
 
 A Molecule scenario is included in `molecule/default/` (Docker driver,
-`rockylinux:9` with systemd). It enables EPEL/CRB in `prepare.yml`, deploys all
-components with services stopped in `converge.yml`, and verifies packages,
-config files and rendered values in `verify.yml`.
+`rockylinux:9` with systemd). The stock image has no `/usr/sbin/init`, so
+`Dockerfile.j2` builds a systemd-enabled `molecule_local/rockylinux/rockylinux:9`
+image and bakes in EPEL, CRB and the dnf metadata cache — otherwise every
+converge spends several minutes refreshing metadata. `prepare.yml` verifies
+those prerequisites, `converge.yml` deploys all components with services
+stopped, and `verify.yml` checks packages, config files and rendered values.
 
 ```sh
 pip install molecule 'molecule-plugins[docker]'

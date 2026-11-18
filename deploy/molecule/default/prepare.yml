@@ -1,25 +1,26 @@
 ---
+# EPEL, CRB, systemd and the dnf metadata cache are baked into the image by
+# Dockerfile.j2. This playbook only verifies the prerequisites, keeping the
+# prepare/converge/idempotence cycle fast.
 - name: Prepare
   hosts: all
   become: true
   gather_facts: false
   tasks:
-    # rockylinux:9 has python3 but not the dnf python bindings that
-    # ansible.builtin.dnf needs, so bootstrap with raw first.
-    - name: Bootstrap python3 and dnf bindings for Ansible
-      ansible.builtin.raw: dnf install -y python3 python3-dnf
+    - name: Check that the dnf Python bindings are available
+      ansible.builtin.raw: python3 -c "import dnf; print(dnf.__version__)"
       changed_when: false
 
-    # The role assumes these are already enabled on real hosts; the test
-    # container needs them set up explicitly.
-    - name: Install EPEL release and dnf-plugins-core
-      ansible.builtin.dnf:
-        name:
-          - epel-release
-          - dnf-plugins-core
-        state: present
-
-    - name: Enable the CRB repository
+    - name: List enabled repositories
       ansible.builtin.command:
-        cmd: dnf config-manager --set-enabled crb
+        cmd: dnf -q repolist enabled
       changed_when: false
+      register: koji_repolist
+
+    - name: Assert that EPEL and CRB are enabled
+      ansible.builtin.assert:
+        that:
+          - "'epel' in koji_repolist.stdout"
+          - "'crb' in koji_repolist.stdout"
+        fail_msg: "EPEL and CRB must be enabled (see Dockerfile.j2)."
+        quiet: true

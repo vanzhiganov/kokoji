@@ -5,7 +5,7 @@
 # If the definition isn't available for python3_pkgversion, define it
 %{?!python3_pkgversion:%global python3_pkgversion 3}
 
-%define baserelease 1
+%define baserelease 2
 #build with --define 'testbuild 1' to have a timestamp appended to release
 %if "x%{?testbuild}" == "x1"
 %define release %{baserelease}.%(date +%%Y%%m%%d.%%H%%M.%%S)
@@ -239,6 +239,12 @@ for D in kojihub builder plugins util www vm schemas ; do
     popd
 done
 
+# www/lib/kojiweb/Makefile installs only the *.py modules.  The Flask-based
+# koji-web also needs its Jinja2 templates, otherwise every request fails
+# with "jinja2.exceptions.TemplateNotFound: error.html".
+mkdir -p %{buildroot}%{_datadir}/koji-web/lib/kojiweb/templates
+cp -a www/lib/kojiweb/templates/. %{buildroot}%{_datadir}/koji-web/lib/kojiweb/templates/
+
 %if 0%{?fedora}
 # handle extra byte compilation
 extra_dirs='
@@ -373,6 +379,9 @@ rm -rf $RPM_BUILD_ROOT
 %systemd_postun kojira.service
 
 %changelog
+* Wed Nov 18 2026 Viacheslav Anzhiganov <vanzhiganov@ya.ru> - 1.35.3-2
+- Install Jinja2 templates for the Flask-based koji-web UI
+
 * Mon Oct  7 2024 Mike McLean <mikem at redhat.com> - 1.35.1-1
 - Fix CVE-2024-9427: New XSS attack on kojiweb
 - PR#4154: Reformat watchlogs.js indentation for consistency
