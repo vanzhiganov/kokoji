@@ -382,6 +382,57 @@ The following commands will:
     This will ensure all objects are owned by the koji database user. Upgrades
     may be difficult if this was not done correctly.
 
+Database schema migrations
+--------------------------
+
+As an alternative to importing ``schema.sql`` manually, the hub schema can
+be managed with `Alembic <https://alembic.sqlalchemy.org/>`_ migrations via
+the ``koji-hub-migrate`` tool (SQLAlchemy models of the schema live in
+``kojihub/models``). The tool reads the database connection from the same
+hub configuration files that kojihub uses (``/etc/koji-hub/hub.conf`` and
+``/etc/koji-hub/hub.conf.d``), so it always targets the hub database.
+PostgreSQL 11 or later is required.
+
+* **New database** (instead of importing ``schema.sql``)::
+
+      koji-hub-migrate upgrade head
+
+* **Existing database** already created from ``schema.sql``: mark it as
+  being at the baseline revision without running any migrations::
+
+      koji-hub-migrate stamp head
+
+* **Later upgrades**: apply new schema migrations as they are shipped::
+
+      koji-hub-migrate upgrade head
+
+  This is also done automatically by the ``koji-hub`` package's ``%post``
+  scriptlet when the package is installed or upgraded (only if
+  ``/etc/koji-hub/hub.conf`` exists). If it fails, the package install still
+  succeeds and a warning is printed; fix the cause and run the command
+  manually before starting the hub.
+
+Useful commands: ``koji-hub-migrate current`` (show the current revision),
+``koji-hub-migrate history`` (list migrations), ``koji-hub-migrate check``
+(fail if there are pending migrations).
+
+.. note::
+    Alembic cannot reliably compare the text-based expression index
+    ``rpminfo_filename`` (PostgreSQL returns a normalized expression with
+    casts), so it is excluded from automatic change detection in
+    ``kojihub/migrations/env.py``. Any change to this index must be added
+    to a migration manually.
+
+The configuration source can be overridden with ``--config FILE`` /
+``--config-dir DIR``, the ``KOJI_HUB_CONFIG`` / ``KOJI_HUB_CONFIG_DIR``
+environment variables, or an explicit database URL::
+
+    koji-hub-migrate --url postgresql+psycopg2://koji:password@dbhost/koji upgrade head
+
+Migrations can also be run directly with Alembic::
+
+    alembic -c /path/to/kojihub/migrations/alembic.ini upgrade head
+
 Authorize Koji-hub to PostgreSQL
 --------------------------------
 

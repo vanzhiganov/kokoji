@@ -77,6 +77,7 @@ setup(
     scripts=[
         'cli/koji',
         'util/koji-gc',
+        'util/koji-hub-migrate',
         'util/koji-shadow',
         'util/koji-sweep-db',
         'util/kojira',

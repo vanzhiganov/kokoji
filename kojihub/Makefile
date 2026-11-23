@@ -1,5 +1,6 @@
 PACKAGE = kojihub
 PYFILES = $(wildcard *.py)
+SUBDIRS = models migrations migrations/versions
 PKGDIR = $(shell $(PYTHON) ../devtools/get_site_packages.py )/$(PACKAGE)
 
 SERVERDIR = /usr/share/koji-hub
@@ -10,6 +11,7 @@ _default:
 clean:
 	rm -f *.o *.so *.pyc *~
 	rm -rf __pycache__
+	for d in $(SUBDIRS) ; do rm -rf $$d/__pycache__ ; done
 
 install:
 	@if [ "$(DESTDIR)" = "" ]; then \
@@ -23,6 +25,12 @@ install:
 	for p in $(PYFILES) ; do \
 		install -p -m 644 $$p $(DESTDIR)/$(PKGDIR)/$$p; \
 	done
+	for d in $(SUBDIRS) ; do \
+		mkdir -p $(DESTDIR)/$(PKGDIR)/$$d; \
+		install -p -m 644 $$d/*.py $(DESTDIR)/$(PKGDIR)/$$d/; \
+	done
+	install -p -m 644 migrations/alembic.ini migrations/script.py.mako \
+		$(DESTDIR)/$(PKGDIR)/migrations/
 
 	$(PYTHON) -c "import compileall; compileall.compile_dir('$(DESTDIR)/$(PKGDIR)', 1, '$(PYDIR)', 1)"
 

@@ -402,8 +402,10 @@ library for thread-safe interactions. The database schema is captured in
 the **docs** directory in the root of a git clone. A visualization of
 the schema is not available at the time of this writing.
 
-If you plan to introduce schema changes, please update both
-``schema.sql`` and provide a migration script if necessary.
+If you plan to introduce schema changes, please update ``schema.sql``,
+the SQLAlchemy models in ``kojihub/models``, and add an Alembic migration
+in ``kojihub/migrations/versions`` (see ``koji-hub-migrate`` and
+:doc:`server_howto` for how migrations are applied).
 
 Troubleshooting
 ~~~~~~~~~~~~~~~

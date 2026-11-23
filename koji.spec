@@ -5,7 +5,7 @@
 # If the definition isn't available for python3_pkgversion, define it
 %{?!python3_pkgversion:%global python3_pkgversion 3}
 
-%define baserelease 5
+%define baserelease 1
 #build with --define 'testbuild 1' to have a timestamp appended to release
 %if "x%{?testbuild}" == "x1"
 %define release %{baserelease}.%(date +%%Y%%m%%d.%%H%%M.%%S)
@@ -13,7 +13,7 @@
 %define release %{baserelease}
 %endif
 Name: koji
-Version: 1.35.3
+Version: 2.0.0
 Release: %{release}%{?dist}
 License: LGPL-2.1-only and GPL-2.0-or-later
 # rpmdiff lib (from rpmlint) is GPLv2+
@@ -90,6 +90,8 @@ License: LGPL-2.1-only
 Requires: httpd
 Requires: python%{python3_pkgversion}-mod_wsgi
 Requires: python%{python3_pkgversion}-psycopg2
+Requires: python%{python3_pkgversion}-sqlalchemy >= 2.0
+Requires: python%{python3_pkgversion}-alembic
 Requires: python%{python3_pkgversion}-%{name} = %{version}-%{release}
 Provides: %{name}-hub-code = %{version}-%{release}
 
@@ -223,14 +225,14 @@ koji-web is a web UI to the Koji system.
 sed -e '/util\/koji/g' -e '/koji_cli_plugins/g' -i setup.py
 
 %build
-%py3_build_wheel
+%pyproject_wheel
 
 %install
 rm -rf $RPM_BUILD_ROOT
 %define make_with_dirs make DESTDIR=$RPM_BUILD_ROOT SBINDIR=%{_sbindir}
 
 # python3 build
-%py3_install_wheel %{name}-%{version}-py3-none-any.whl
+%pyproject_install
 mkdir -p %{buildroot}/etc/koji.conf.d
 cp cli/koji.conf %{buildroot}/etc/koji.conf
 
@@ -277,7 +279,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/*
 %files -n python%{python3_pkgversion}-koji
 %{python3_sitelib}/%{name}
-%{python3_sitelib}/%{name}-%{version}.*-info
+%{python3_sitelib}/%{name}-*.dist-info
 %{python3_sitelib}/koji_cli
 %{_datadir}/koji/*.sql
 
@@ -293,6 +295,7 @@ rm -rf $RPM_BUILD_ROOT
 %config(noreplace) %attr(0640, root, apache) /etc/koji-hub/hub.conf
 %dir /etc/koji-hub/hub.conf.d
 %{_sbindir}/koji-sweep-db
+%{_sbindir}/koji-hub-migrate
 %{_unitdir}/koji-sweep-db.service
 %{_unitdir}/koji-sweep-db.timer
 
@@ -300,6 +303,16 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/koji-hub/*.py
 %{_datadir}/koji-hub/__pycache__
 %{python3_sitelib}/kojihub
+
+%post hub
+# Bring the hub database schema up to date when the package is installed or
+# upgraded, i.e. before the hub service is started/restarted.  Databases
+# created from schemas/schema.sql must be stamped with
+# "koji-hub-migrate stamp head" before installing a package with migrations.
+if [ -f /etc/koji-hub/hub.conf ]; then
+    %{_sbindir}/koji-hub-migrate upgrade head || \
+        echo "WARNING: koji-hub-migrate upgrade head failed; run it manually before starting the hub" >&2
+fi
 
 %files hub-plugins
 %dir /etc/koji-hub/plugins

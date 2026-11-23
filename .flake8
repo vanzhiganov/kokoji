@@ -23,6 +23,7 @@ filename =
     ./hub/rpmdiff,
     ./util/kojira,
     ./util/koji-gc,
+    ./util/koji-hub-migrate,
     ./util/koji-shadow,
     ./util/koji-sweep-db,
     ./util/koji-sidetag-cleanup,
