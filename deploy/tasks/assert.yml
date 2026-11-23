@@ -51,3 +51,12 @@
     fail_msg: "koji_kojira_password is required for the 'kojira' component. Supply it via Ansible Vault."
     quiet: true
   when: "'kojira' in koji_components"
+
+- name: Check that builder secrets are configured
+  ansible.builtin.assert:
+    that:
+      - "koji_builder_user | length > 0"
+      - "koji_builder_password | length > 0"
+    fail_msg: "koji_builder_user and koji_builder_password are required for the 'builder' component. Supply them via Ansible Vault."
+    quiet: true
+  when: "'builder' in koji_components"

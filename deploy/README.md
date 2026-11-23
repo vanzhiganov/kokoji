@@ -50,8 +50,10 @@ For each host it:
 - **An existing PostgreSQL instance.** The role does not install PostgreSQL or
   load `schemas/schema.sql`. It only writes the `DB*` values into
   `/etc/koji-hub/hub.conf`. The hub, web and kojira hosts must be able to reach
-  the database. See `containers/db/` for the schema and the `admin`/`kojira`
-  seed users used by the container deployment.
+  the database. For a local all-in-one setup, run `bootstrap-db.yml` first (see
+  [Bootstrapping the database](#bootstrapping-the-database)); otherwise point
+  `koji_db_host` at your existing server. See `containers/db/` for the schema
+  and the `admin`/`kojira` seed users used by the container deployment.
 - **Shared storage.** `/mnt/koji` (`koji_topdir`) is created locally and owned
   by `apache` on hub/web hosts. Making it a shared/NFS volume across hub,
   builder, kojira and vm hosts is an operator task.
@@ -87,6 +89,7 @@ to `true` and provide `koji_repo_gpgkey` once signing is available.
 deploy/
 ├── ansible.cfg                # roles_path = .. so `roles: [deploy]` resolves
 ├── .ansible-lint
+├── bootstrap-db.yml           # optional local PostgreSQL bootstrap
 ├── playbook.yml               # example playbook
 ├── inventory.ini              # example inventory with component groups
 ├── group_vars/                # per-component koji_components + shared secrets
@@ -95,6 +98,7 @@ deploy/
 ├── handlers/main.yml          # restart httpd / kojira / kojid / kojivmd
 ├── tasks/
 │   ├── main.yml               # orchestration
+│   ├── bootstrap-db.yml       # optional PostgreSQL bootstrap tasks
 │   ├── assert.yml             # OS + component + secret validation
 │   ├── repo.yml               # yum_repository
 │   ├── packages.yml           # dnf
@@ -102,7 +106,7 @@ deploy/
 │   ├── storage.yml            # /mnt/koji
 │   └── services.yml           # systemd
 ├── templates/                 # koji.conf, hub.conf, web.conf, kojira.conf,
-│                              # kojid.conf, kojivmd.conf
+│                              # kojid.conf, kojivmd.conf, seed-users.sql.j2
 └── molecule/default/          # docker scenario (rockylinux:9)
                                # molecule.yml, Dockerfile.j2,
                                # prepare/converge/verify.yml
@@ -134,11 +138,35 @@ To target a single group:
 ansible-playbook -i inventory.ini playbook.yml --limit koji_hub
 ```
 
+## Bootstrapping the database
+
+For a local/all-in-one deployment (or any fresh `koji_db` host), the optional
+`bootstrap-db.yml` playbook installs PostgreSQL, loads `schemas/schema.sql` and
+seeds the `admin`, `kojira` and `builder` service users, and registers `builder`
+as a Koji host (required for `kojid`/`kojivmd` login). Run it **before**
+`playbook.yml`, from inside `deploy/`:
+
+```sh
+cd deploy
+ansible-playbook -i inventory.ini bootstrap-db.yml
+ansible-playbook -i inventory.ini playbook.yml
+```
+
+It targets only the `koji_db` group and is idempotent: an existing database,
+schema or role is left alone, and the seed SQL only inserts users that are
+missing. It sets `password_encryption = scram-sha-256`, a matching `pg_hba.conf`
+for loopback connections and `max_connections = 150` (override with
+`-e koji_postgres_max_connections=<n>`); review those settings if you use it
+against a shared PostgreSQL host.
+
+If you already have PostgreSQL elsewhere, skip this playbook and set
+`koji_db_host` (plus the other `koji_db_*` values) in `group_vars/all.yml`.
+
 ## Secrets
 
 `group_vars/all.yml` ships development placeholders matching the container
-defaults (`koji`, `change-me-secret`, `kojira`). Replace them before any real
-deployment — encrypt the file with Ansible Vault:
+defaults (`koji`, `change-me-secret`, `kojira`, `builder` / `builder`). Replace
+them before any real deployment — encrypt the file with Ansible Vault:
 
 ```sh
 ansible-vault encrypt group_vars/all.yml
@@ -152,6 +180,12 @@ ansible-playbook -i inventory.ini playbook.yml --ask-vault-pass
 | `koji_db_password` | `hub` |
 | `koji_web_secret` | `web` |
 | `koji_kojira_password` | `kojira` |
+| `koji_builder_user`, `koji_builder_password` | `builder` |
+
+The builder credentials are written to `/etc/kojid/kojid.conf` and
+`/etc/kojivmd/kojivmd.conf`; the user must
+also exist on the hub with the `host` permission **and** a `host` table entry
+(see the seed SQL in `deploy/templates/seed-users.sql.j2`).
 
 All endpoints (`koji_hub_url`, `koji_files_url`, `koji_web_url`) are validated
 as non-empty as well.
@@ -240,10 +274,19 @@ All variables are defined in `defaults/main.yml`.
 | `koji_sweep_db_timer_enabled` | `false` | Manage `koji-sweep-db.timer` on hub hosts. |
 | `koji_gc_timer_enabled` | `false` | Manage `koji-gc.timer` on kojira hosts. |
 
+### Apache worker limit
+
+| Variable | Default | Description |
+|---|---|---|
+| `koji_httpd_max_request_workers` | `0` | Cap Apache workers on hub hosts; `0` keeps the packaged MPM settings. The hub holds one PostgreSQL connection per worker, so set this below the database's `max_connections` to avoid `FATAL: remaining connection slots are reserved...`. |
+
 ### Builder / VM
 
 | Variable | Default |
 |---|---|
+| `koji_builder_user` | `""` (required for `builder`, supply via Ansible Vault) |
+| `koji_builder_password` | `""` (required for `builder`, supply via Ansible Vault) |
+| `koji_builder_arches` | `x86_64` (arches registered when `bootstrap-db.yml` seeds the host) |
 | `koji_builder_sleeptime` | `15` |
 | `koji_builder_maxjobs` | `10` |
 | `koji_builder_workdir` | `/tmp/koji` |
@@ -262,8 +305,8 @@ All variables are defined in `defaults/main.yml`.
 | `hub.conf.j2` | `/etc/koji-hub/hub.conf` | `root:apache 0640` |
 | `web.conf.j2` | `/etc/kojiweb/web.conf` | `root:apache 0640` |
 | `kojira.conf.j2` | `/etc/kojira/kojira.conf` | `root:root 0600` |
-| `kojid.conf.j2` | `/etc/kojid/kojid.conf` | `root:root 0644` |
-| `kojivmd.conf.j2` | `/etc/kojivmd/kojivmd.conf` | `root:root 0644` |
+| `kojid.conf.j2` | `/etc/kojid/kojid.conf` | `root:root 0600` |
+| `kojivmd.conf.j2` | `/etc/kojivmd/kojivmd.conf` | `root:root 0600` |
 
 These are `%config(noreplace)` files in the RPMs. Rendering them from the role
 is intentional — every value is a role variable — and `backup: true` keeps a

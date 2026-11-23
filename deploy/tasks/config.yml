@@ -39,6 +39,29 @@
   notify: Restart httpd
   when: "'web' in koji_components"
 
+# The hub keeps one PostgreSQL connection per Apache worker. Without a bound
+# on MaxRequestWorkers a busy hub can exhaust the database connection limit.
+- name: Limit Apache workers on hub hosts
+  ansible.builtin.template:
+    src: koji-mpm-limits.conf.j2
+    dest: /etc/httpd/conf.d/koji-mpm-limits.conf
+    owner: root
+    group: root
+    mode: "0644"
+  become: true
+  notify: Restart httpd
+  when:
+    - "'hub' in koji_components"
+    - koji_httpd_max_request_workers | int > 0
+
+- name: Remove stale Apache worker limit config
+  ansible.builtin.file:
+    path: /etc/httpd/conf.d/koji-mpm-limits.conf
+    state: absent
+  become: true
+  notify: Restart httpd
+  when: "'hub' not in koji_components or koji_httpd_max_request_workers | int <= 0"
+
 - name: Deploy the kojira configuration
   ansible.builtin.template:
     src: kojira.conf.j2
@@ -51,25 +74,27 @@
   notify: Restart kojira
   when: "'kojira' in koji_components"
 
+# kojid.conf now contains the builder password, so keep it root-only.
 - name: Deploy the kojid (builder) configuration
   ansible.builtin.template:
     src: kojid.conf.j2
     dest: /etc/kojid/kojid.conf
     owner: root
     group: root
-    mode: "0644"
+    mode: "0600"
     backup: true
   become: true
   notify: Restart kojid
   when: "'builder' in koji_components"
 
+# kojivmd.conf now contains the builder password, so keep it root-only.
 - name: Deploy the kojivmd configuration
   ansible.builtin.template:
     src: kojivmd.conf.j2
     dest: /etc/kojivmd/kojivmd.conf
     owner: root
     group: root
-    mode: "0644"
+    mode: "0600"
     backup: true
   become: true
   notify: Restart kojivmd

@@ -15,6 +15,8 @@
     koji_db_password: "koji"
     koji_web_secret: "change-me-secret"
     koji_kojira_password: "kojira"
+    koji_builder_user: "builder"
+    koji_builder_password: "builder"
     koji_db_host: localhost
     koji_hub_url: "http://localhost/kojihub"
     koji_files_url: "http://localhost/kojifiles"

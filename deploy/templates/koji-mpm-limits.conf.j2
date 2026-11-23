@@ -1,0 +1,35 @@
+{%- set koji_mpm_workers = koji_httpd_max_request_workers | int -%}
+{%- set koji_mpm_threads = 25 -%}
+{%- set koji_mpm_processes = ((koji_mpm_workers / koji_mpm_threads) | round(0, 'ceil') | int) -%}
+{%- set koji_mpm_threaded_workers = koji_mpm_processes * koji_mpm_threads -%}
+# Managed by the deploy role. Koji's hub keeps one PostgreSQL connection per
+# Apache worker for the lifetime of that worker, so leaving MaxRequestWorkers
+# unbounded can exhaust the database's connection limit.
+<IfModule mpm_prefork_module>
+    StartServers              4
+    MinSpareServers           2
+    MaxSpareServers           8
+    ServerLimit               {{ koji_mpm_workers }}
+    MaxRequestWorkers         {{ koji_mpm_workers }}
+    MaxConnectionsPerChild    0
+</IfModule>
+
+<IfModule mpm_worker_module>
+    StartServers              2
+    MinSpareThreads          25
+    MaxSpareThreads          75
+    ThreadsPerChild          {{ koji_mpm_threads }}
+    ServerLimit              {{ koji_mpm_processes }}
+    MaxRequestWorkers        {{ koji_mpm_threaded_workers }}
+    MaxConnectionsPerChild   0
+</IfModule>
+
+<IfModule mpm_event_module>
+    StartServers              2
+    MinSpareThreads          25
+    MaxSpareThreads          75
+    ThreadsPerChild          {{ koji_mpm_threads }}
+    ServerLimit              {{ koji_mpm_processes }}
+    MaxRequestWorkers        {{ koji_mpm_threaded_workers }}
+    MaxConnectionsPerChild   0
+</IfModule>

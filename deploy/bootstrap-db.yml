@@ -1,0 +1,22 @@
+---
+# Bootstraps a local PostgreSQL instance for the Koji hub.
+#
+# The deploy role deliberately does not manage the database (see README), so
+# run this once against the koji_db host before playbook.yml:
+#
+#   cd deploy && ansible-playbook -i inventory.ini bootstrap-db.yml
+#
+# DB credentials and the kojira/builder service-user passwords come from
+# group_vars/all.yml — encrypt that file with Ansible Vault for real use.
+# include_role with tasks_from loads the role's defaults and handlers without
+# running the normal component deployment tasks.
+- name: Bootstrap PostgreSQL for Koji
+  hosts: koji_db
+  become: true
+  tasks:
+    # Use the playbook's own directory as the role path so this works even
+    # when invoked from the repository root without deploy/ansible.cfg.
+    - name: Run the database bootstrap from the deploy role
+      ansible.builtin.include_role:
+        name: "{{ playbook_dir }}"
+        tasks_from: bootstrap-db

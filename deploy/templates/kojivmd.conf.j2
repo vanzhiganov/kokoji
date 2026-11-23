@@ -1,5 +1,7 @@
 # Managed by Ansible -- role deploy. Do not edit by hand.
 [kojivmd]
+user = {{ koji_builder_user }}
+password = {{ koji_builder_password }}
 
 sleeptime = {{ koji_vmd_sleeptime }}
 maxjobs = {{ koji_vmd_maxjobs }}

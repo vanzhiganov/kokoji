@@ -1,0 +1,63 @@
+-- Rendered by deploy/bootstrap-db.yml. Kept out of task output because it
+-- contains the development kojira and builder passwords.
+DO $$
+DECLARE
+    uid INTEGER;
+    pid INTEGER;
+    hid INTEGER;
+BEGIN
+    SELECT id INTO uid FROM users WHERE name = 'admin';
+    IF uid IS NULL THEN
+        INSERT INTO users (name, password, status, usertype)
+        VALUES ('admin', 'admin', 0, 0)
+        RETURNING id INTO uid;
+    END IF;
+    SELECT id INTO pid FROM permissions WHERE name = 'admin';
+    IF pid IS NOT NULL THEN
+        INSERT INTO user_perms (user_id, perm_id, creator_id)
+        VALUES (uid, pid, uid)
+        ON CONFLICT DO NOTHING;
+    END IF;
+
+    SELECT id INTO uid FROM users WHERE name = '{{ koji_kojira_user }}';
+    IF uid IS NULL THEN
+        INSERT INTO users (name, password, status, usertype)
+        VALUES ('{{ koji_kojira_user }}', '{{ koji_kojira_password | replace("'", "''") }}', 0, 0)
+        RETURNING id INTO uid;
+    END IF;
+    SELECT id INTO pid FROM permissions WHERE name = 'repo';
+    IF pid IS NOT NULL THEN
+        INSERT INTO user_perms (user_id, perm_id, creator_id)
+        VALUES (uid, pid, uid)
+        ON CONFLICT DO NOTHING;
+    END IF;
+
+    SELECT id INTO uid FROM users WHERE name = '{{ koji_builder_user }}';
+    IF uid IS NULL THEN
+        INSERT INTO users (name, password, status, usertype)
+        VALUES ('{{ koji_builder_user }}', '{{ koji_builder_password | replace("'", "''") }}', 0, 0)
+        RETURNING id INTO uid;
+    END IF;
+    SELECT id INTO pid FROM permissions WHERE name = 'host';
+    IF pid IS NOT NULL THEN
+        INSERT INTO user_perms (user_id, perm_id, creator_id)
+        VALUES (uid, pid, uid)
+        ON CONFLICT DO NOTHING;
+    END IF;
+
+    -- The 'host' permission alone is not enough: kojid/kojivmd need a row in
+    -- the host table to get a host id at login. Mirror `koji add-host --force`.
+    UPDATE users SET usertype = 1 WHERE id = uid;
+    SELECT id INTO hid FROM host WHERE user_id = uid;
+    IF hid IS NULL THEN
+        INSERT INTO host (id, user_id, name)
+        VALUES (nextval('host_id_seq'), uid, '{{ koji_builder_user }}')
+        RETURNING id INTO hid;
+
+        INSERT INTO host_config (host_id, arches, creator_id)
+        VALUES (hid, '{{ koji_builder_arches }}', uid);
+
+        INSERT INTO host_channels (host_id, channel_id, creator_id)
+        SELECT hid, id, uid FROM channels WHERE name = 'default';
+    END IF;
+END $$;

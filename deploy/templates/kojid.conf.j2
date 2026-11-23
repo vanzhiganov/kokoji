@@ -1,5 +1,7 @@
 # Managed by Ansible -- role deploy. Do not edit by hand.
 [kojid]
+user = {{ koji_builder_user }}
+password = {{ koji_builder_password }}
 
 ; The number of seconds to sleep between tasks
 sleeptime = {{ koji_builder_sleeptime }}

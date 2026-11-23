@@ -92,6 +92,10 @@ koji_db_user: koji
 koji_db_port: 5432
 # Required when `hub` is in koji_components. Supply via Ansible Vault.
 koji_db_password: ""
+# Used by the optional bootstrap-db.yml playbook for a local PostgreSQL
+# instance. Every Apache worker can hold a DB connection, so keep this above
+# the hub worker count plus kojira and ad-hoc sessions.
+koji_postgres_max_connections: 150
 
 # ---------------------------------------------------------------------------
 # Authentication / secrets (supply via Ansible Vault in real deployments)
@@ -129,8 +133,21 @@ koji_sweep_db_timer_enabled: false
 koji_gc_timer_enabled: false
 
 # ---------------------------------------------------------------------------
+# Apache worker limit (hub hosts)
+# ---------------------------------------------------------------------------
+# Koji's hub holds one PostgreSQL connection per Apache worker for the
+# lifetime of that worker. A positive value writes an httpd conf.d snippet
+# that caps MaxRequestWorkers; 0 leaves the packaged MPM settings untouched.
+koji_httpd_max_request_workers: 0
+
+# ---------------------------------------------------------------------------
 # Builder / VM
 # ---------------------------------------------------------------------------
+# Required when `builder` is in koji_components. Supply via Ansible Vault.
+koji_builder_user: ""
+koji_builder_password: ""
+# Arches registered for the builder host when bootstrap-db.yml seeds users.
+koji_builder_arches: x86_64
 koji_builder_sleeptime: 15
 koji_builder_maxjobs: 10
 koji_builder_workdir: /tmp/koji

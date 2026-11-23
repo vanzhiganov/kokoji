@@ -18,20 +18,7 @@
 
 - name: Install Koji RPM packages
   ansible.builtin.dnf:
-    name: [
-      # python3-click,
-      # python3-itsdangerous,
-      # python3-werkzeug,
-      python3-jinja2,
-      python3-flask,
-    ]
+    name: "{{ koji_package_specs }}"
     state: present
     enablerepo: "{{ koji_repo_name }}"
   become: true
-
-# - name: Install Koji RPM packages
-#   ansible.builtin.dnf:
-#     name: "{{ koji_package_specs }}"
-#     state: present
-#     enablerepo: "{{ koji_repo_name }}"
-#   become: true

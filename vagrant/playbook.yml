@@ -1,0 +1,220 @@
+---
+- name: Provision all-in-one Koji VM
+  hosts: koji_servers
+  become: true
+  vars:
+    koji_src_dir: /opt/koji-src
+    koji_schema_path: "{{ koji_src_dir }}/schemas/schema.sql"
+    koji_schema_staged_path: /tmp/koji-schema.sql
+  pre_tasks:
+    - name: Enable EPEL repository
+      ansible.builtin.dnf:
+        name: epel-release
+        state: present
+
+    - name: Enable CRB repository
+      ansible.builtin.command:
+        cmd: dnf config-manager --set-enabled crb
+      changed_when: false
+
+    - name: Install PostgreSQL and prerequisites
+      ansible.builtin.dnf:
+        name:
+          - postgresql-server
+          - postgresql-contrib
+          - python3-psycopg2
+          - acl
+        state: present
+
+    - name: Initialize PostgreSQL database
+      ansible.builtin.command:
+        cmd: postgresql-setup --initdb
+        creates: /var/lib/pgsql/data/PG_VERSION
+
+    - name: Configure PostgreSQL local authentication
+      ansible.builtin.copy:
+        dest: /var/lib/pgsql/data/pg_hba.conf
+        owner: postgres
+        group: postgres
+        mode: "0600"
+        content: |
+          # Managed by vagrant/playbook.yml for local Koji all-in-one VM.
+          local   all             all                                     peer
+          host    all             all             127.0.0.1/32            scram-sha-256
+          host    all             all             ::1/128                 scram-sha-256
+          local   replication     all                                     peer
+          host    replication     all             127.0.0.1/32            scram-sha-256
+          host    replication     all             ::1/128                 scram-sha-256
+      notify: Restart postgresql
+
+    # pg_hba.conf below requires scram-sha-256, but EL9's default config uses
+    # md5 password hashes. Set the encryption before creating the Koji role,
+    # otherwise password authentication via TCP fails with a misleading error.
+    - name: Configure PostgreSQL password encryption
+      ansible.builtin.lineinfile:
+        path: /var/lib/pgsql/data/postgresql.conf
+        regexp: '^#?password_encryption\s*='
+        line: "password_encryption = scram-sha-256"
+        owner: postgres
+        group: postgres
+        mode: "0600"
+      notify: Restart postgresql
+
+    # The packaged default of 100 is easy to exhaust on this all-in-one VM:
+    # every Apache worker that touches the hub holds a connection until the
+    # worker dies, and kojira/psql need slots as well.
+    - name: Configure PostgreSQL connection limit
+      ansible.builtin.lineinfile:
+        path: /var/lib/pgsql/data/postgresql.conf
+        regexp: '^#?max_connections\s*='
+        line: "max_connections = {{ koji_postgres_max_connections }}"
+        owner: postgres
+        group: postgres
+        mode: "0600"
+      notify: Restart postgresql
+
+    - name: Check SELinux setting for httpd database access
+      ansible.builtin.command:
+        cmd: getsebool httpd_can_network_connect_db
+      register: httpd_db_sebool
+      changed_when: false
+      failed_when: false
+
+    - name: Allow httpd to connect to PostgreSQL (SELinux)
+      ansible.builtin.command:
+        cmd: setsebool -P httpd_can_network_connect_db on
+      when: "'--> off' in httpd_db_sebool.stdout | default('')"
+
+    # koji-web reaches the hub over XML-RPC. With SELinux enforcing, that
+    # outbound HTTP connection is denied unless this boolean is enabled.
+    - name: Check SELinux setting for httpd outbound network access
+      ansible.builtin.command:
+        cmd: getsebool httpd_can_network_connect
+      register: httpd_network_sebool
+      changed_when: false
+      failed_when: false
+
+    - name: Allow httpd outbound network access (SELinux)
+      ansible.builtin.command:
+        cmd: setsebool -P httpd_can_network_connect on
+      when: "'--> off' in httpd_network_sebool.stdout | default('')"
+
+    - name: Start and enable PostgreSQL
+      ansible.builtin.systemd_service:
+        name: postgresql
+        enabled: true
+        state: started
+
+    - name: Flush handlers before DB bootstrap
+      ansible.builtin.meta: flush_handlers
+
+    - name: Ensure Koji PostgreSQL user exists
+      become_user: postgres
+      ansible.builtin.shell: |
+        set -euo pipefail
+        psql -v ON_ERROR_STOP=1 -tAc "SELECT 1 FROM pg_roles WHERE rolname='{{ koji_db_user }}'" | grep -q 1 || \
+          psql -v ON_ERROR_STOP=1 -c "CREATE USER {{ koji_db_user }} WITH PASSWORD '{{ koji_db_password }}';"
+        psql -v ON_ERROR_STOP=1 -c "ALTER USER {{ koji_db_user }} WITH PASSWORD '{{ koji_db_password }}';"
+      args:
+        executable: /bin/bash
+      changed_when: false
+      no_log: true
+
+    - name: Ensure Koji PostgreSQL database exists
+      become_user: postgres
+      ansible.builtin.shell: |
+        set -euo pipefail
+        psql -v ON_ERROR_STOP=1 -tAc "SELECT 1 FROM pg_database WHERE datname='{{ koji_db_name }}'" | grep -q 1 || \
+          psql -v ON_ERROR_STOP=1 -c "CREATE DATABASE {{ koji_db_name }} OWNER {{ koji_db_user }};"
+      args:
+        executable: /bin/bash
+      changed_when: false
+
+    - name: Check whether Koji schema is loaded
+      become_user: postgres
+      ansible.builtin.command:
+        cmd: psql -d {{ koji_db_name }} -tAc "SELECT to_regclass('public.users') IS NOT NULL;"
+      register: koji_schema_loaded
+      changed_when: false
+
+    # The synced source tree may not be traversable by the postgres user
+    # (e.g. schemas/ mode 0744 on the host). Stage the file as root so psql
+    # running as postgres can always read it.
+    - name: Stage Koji schema for the postgres user
+      ansible.builtin.copy:
+        src: "{{ koji_schema_path }}"
+        dest: "{{ koji_schema_staged_path }}"
+        owner: root
+        group: root
+        mode: "0644"
+        remote_src: true
+      when: koji_schema_loaded.stdout.strip() != 't'
+
+    - name: Load Koji schema
+      become_user: postgres
+      ansible.builtin.command:
+        cmd: psql -v ON_ERROR_STOP=1 -d {{ koji_db_name }} -f {{ koji_schema_staged_path }}
+      when: koji_schema_loaded.stdout.strip() != 't'
+      changed_when: true
+
+    - name: Grant Koji DB privileges
+      become_user: postgres
+      ansible.builtin.shell: |
+        set -euo pipefail
+        psql -v ON_ERROR_STOP=1 -d {{ koji_db_name }} <<'SQL'
+        GRANT ALL PRIVILEGES ON DATABASE {{ koji_db_name }} TO {{ koji_db_user }};
+        GRANT USAGE, CREATE ON SCHEMA public TO {{ koji_db_user }};
+        GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO {{ koji_db_user }};
+        GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO {{ koji_db_user }};
+        ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO {{ koji_db_user }};
+        ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO {{ koji_db_user }};
+        SQL
+      args:
+        executable: /bin/bash
+      changed_when: false
+
+    # Connect as the postgres superuser over the local socket. The old task
+    # connected over TCP as the non-superuser koji role, which fails with
+    # "remaining connection slots are reserved..." when the hub has exhausted
+    # the database connections. Staging the SQL keeps the kojira password out
+    # of the visible psql task, so real errors are no longer hidden by no_log.
+    - name: Seed default Koji admin and kojira users
+      become: true
+      block:
+        - name: Stage Koji seed SQL
+          ansible.builtin.template:
+            src: seed-users.sql.j2
+            dest: /tmp/koji-seed-users.sql
+            owner: postgres
+            group: postgres
+            mode: "0600"
+          no_log: true
+
+        - name: Apply Koji seed SQL
+          become_user: postgres
+          ansible.builtin.command:
+            cmd: psql -v ON_ERROR_STOP=1 -d {{ koji_db_name }} -f /tmp/koji-seed-users.sql
+          changed_when: false
+
+      always:
+        - name: Remove staged Koji seed SQL
+          ansible.builtin.file:
+            path: /tmp/koji-seed-users.sql
+            state: absent
+
+  roles:
+    - role: deploy
+      vars:
+        koji_components:
+          - client
+          - hub
+          - web
+          - kojira
+          - builder
+          - vm
+
+  handlers:
+    - name: Restart postgresql
+      ansible.builtin.systemd_service:
+        name: postgresql
+        state: restarted

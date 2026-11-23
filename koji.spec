@@ -5,7 +5,7 @@
 # If the definition isn't available for python3_pkgversion, define it
 %{?!python3_pkgversion:%global python3_pkgversion 3}
 
-%define baserelease 2
+%define baserelease 5
 #build with --define 'testbuild 1' to have a timestamp appended to release
 %if "x%{?testbuild}" == "x1"
 %define release %{baserelease}.%(date +%%Y%%m%%d.%%H%%M.%%S)
@@ -193,6 +193,7 @@ Group: Applications/Internet
 License: LGPL-2.1-only
 Requires: %{name} = %{version}-%{release}
 Requires: %{name}-web-code = %{version}-%{release}
+Requires: python%{python3_pkgversion}-flask
 %if 0%{?fedora} || 0%{?rhel} > 7
 Suggests: python%{python3_pkgversion}-%{name}-web
 %endif
@@ -244,6 +245,13 @@ done
 # with "jinja2.exceptions.TemplateNotFound: error.html".
 mkdir -p %{buildroot}%{_datadir}/koji-web/lib/kojiweb/templates
 cp -a www/lib/kojiweb/templates/. %{buildroot}%{_datadir}/koji-web/lib/kojiweb/templates/
+
+# www/static/Makefile only installs the top-level *.css files and the SUBDIRS
+# it knows about.  The Carbon Design System bundle in www/static/carbon/ is
+# referenced from the templates as /koji-static/carbon/carbon.min.css, so it
+# must be installed explicitly to be shipped in the koji-web package.
+mkdir -p %{buildroot}%{_datadir}/koji-web/static/carbon
+cp -a www/static/carbon/. %{buildroot}%{_datadir}/koji-web/static/carbon/
 
 %if 0%{?fedora}
 # handle extra byte compilation
@@ -379,6 +387,12 @@ rm -rf $RPM_BUILD_ROOT
 %systemd_postun kojira.service
 
 %changelog
+* Mon Nov 23 2026 Viacheslav Anzhiganov <vanzhiganov@ya.ru> - 1.35.3-4
+- Register the Cheetah SafeValue (S) alias in Jinja2 templates
+
+* Mon Nov 23 2026 Viacheslav Anzhiganov <vanzhiganov@ya.ru> - 1.35.3-3
+- Install Carbon CSS for the Flask-based koji-web UI
+
 * Wed Nov 18 2026 Viacheslav Anzhiganov <vanzhiganov@ya.ru> - 1.35.3-2
 - Install Jinja2 templates for the Flask-based koji-web UI
 

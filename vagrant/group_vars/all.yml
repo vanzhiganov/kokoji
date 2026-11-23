@@ -1,0 +1,34 @@
+---
+# Development defaults for the all-in-one Vagrant VM.
+# Change these before using outside a local disposable VM.
+koji_db_name: koji
+koji_db_user: koji
+koji_db_password: "koji"
+koji_db_host: localhost
+koji_db_port: 5432
+
+koji_web_secret: "change-me-secret"
+koji_kojira_user: kojira
+koji_kojira_password: "kojira"
+# Koji user kojid authenticates as (needs the host permission on the hub).
+koji_builder_user: builder
+koji_builder_password: "builder"
+
+koji_hub_host: localhost
+koji_web_host: localhost
+koji_hub_url: "http://localhost/kojihub"
+koji_files_url: "http://localhost/kojifiles"
+koji_web_url: "http://localhost/koji"
+
+koji_web_allow_registration: true
+koji_web_force_ssl: false
+
+koji_service_enabled: true
+koji_manage_storage: true
+koji_topdir: /mnt/koji
+
+# Apache and PostgreSQL share this VM. The hub holds one DB connection per
+# Apache worker, so keep the worker count below the Postgres limit; kojira and
+# ad-hoc psql sessions need slots too.
+koji_httpd_max_request_workers: 32
+koji_postgres_max_connections: 150

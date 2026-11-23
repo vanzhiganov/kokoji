@@ -1331,6 +1331,9 @@ def setup_jinja_env(env):
     env.globals['unquote'] = urllib.parse.unquote
     env.globals['greeting'] = _jinja_greeting
     env.globals['read_theme_file'] = _theme_file
+    # The old Cheetah tasks.chtml imported ``SafeValue as S``. Keep the alias
+    # available to Jinja templates that still call S('...') for safe markup.
+    env.globals['S'] = SafeValue
 
     # Context-aware template helpers (replace the old $self-based ones)
     env.globals['toggleOrder'] = _ctx_toggleOrder

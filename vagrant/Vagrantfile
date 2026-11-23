@@ -1,0 +1,73 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# All-in-one Koji VM using the PlatformOS Koji RPM repo:
+# https://dl.platform-os.org/platformos/9/koji/
+#
+# Usage:
+#   cd vagrant
+#   vagrant up
+
+# Default box has libvirt + virtualbox providers. Override with KOJI_VAGRANT_BOX
+# if you prefer another EL9 box (e.g. generic/rocky9).
+VAGRANT_BOX = ENV.fetch("KOJI_VAGRANT_BOX", "rockylinux/9")
+VAGRANT_CPUS = Integer(ENV.fetch("KOJI_VAGRANT_CPUS", "4"))
+VAGRANT_MEMORY = Integer(ENV.fetch("KOJI_VAGRANT_MEMORY", "4096"))
+# Root disk size in GB, applied when the VM is first created.
+VAGRANT_DISK_GB = Integer(ENV.fetch("KOJI_VAGRANT_DISK_GB", "14"))
+VAGRANT_IP = ENV.fetch("KOJI_VAGRANT_IP", "192.168.56.10")
+VAGRANT_HOST_HTTP = Integer(ENV.fetch("KOJI_VAGRANT_HOST_HTTP", "8080"))
+VAGRANT_HOST_HUB = Integer(ENV.fetch("KOJI_VAGRANT_HOST_HUB", "8081"))
+
+Vagrant.configure("2") do |config|
+  #config.vm.box = VAGRANT_BOX
+
+  config.vm.box = "centos/9-stream"
+  config.vm.box_url = "https://cloud.centos.org/centos/9-stream/x86_64/images/CentOS-Stream-Vagrant-9-20260728.1.x86_64.vagrant-libvirt.box"
+
+
+  config.vm.hostname = "builder"
+
+  config.vm.network "private_network", ip: VAGRANT_IP
+  config.vm.network "forwarded_port", guest: 80, host: VAGRANT_HOST_HTTP, auto_correct: true
+
+  config.vm.synced_folder "..", "/opt/koji-src", type: "rsync",
+    rsync__exclude: [".git/", ".venv/", ".pytest_cache/", "__pycache__/", ".tox/", "build/"]
+
+  config.vm.provider "virtualbox" do |vb|
+    vb.name = "koji-allinone"
+    vb.cpus = VAGRANT_CPUS
+    vb.memory = VAGRANT_MEMORY
+  end
+
+  config.vm.provider "libvirt" do |lv|
+    lv.cpus = VAGRANT_CPUS
+    lv.memory = VAGRANT_MEMORY
+    # vagrant-libvirt grows the box image at creation time. It ignores this
+    # value if the box itself declares a larger disk, and does not resize the
+    # filesystem inside the guest.
+    lv.machine_virtual_size = VAGRANT_DISK_GB
+    # vagrant-libvirt defaults to qemu:///session, where it cannot create
+    # libvirt networks. With the session connection, private_network only works
+    # with an already existing network. Use qemu:///system so the network for
+    # VAGRANT_IP is created automatically.
+    lv.qemu_use_session = false
+  end
+
+  config.vm.provision "shell", inline: <<-SHELL
+    set -euo pipefail
+    dnf -y install epel-release
+    dnf config-manager --set-enabled crb || true
+    dnf -y install ansible-core rsync
+    ansible-galaxy collection install community.postgresql community.general --collections-path /usr/share/ansible/collections || true
+  SHELL
+
+  config.vm.provision "ansible_local" do |ansible|
+    ansible.playbook = "playbook.yml"
+    ansible.provisioning_path = "/opt/koji-src/vagrant"
+    ansible.inventory_path = "inventory.ini"
+    ansible.config_file = "ansible.cfg"
+    ansible.limit = "all"
+    ansible.install = false
+  end
+end

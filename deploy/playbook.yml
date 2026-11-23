@@ -5,5 +5,7 @@
 - name: Deploy Koji from RPM packages
   hosts: koji_servers
   become: true
+  environment:
+    koji_hub_url: http://localhost/kojihub
   roles:
     - role: deploy

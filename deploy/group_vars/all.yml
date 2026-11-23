@@ -8,6 +8,10 @@
 koji_db_password: "koji"
 koji_web_secret: "change-me-secret"
 koji_kojira_password: "kojira"
+# Koji user kojid authenticates as (needs the host permission on the hub).
+# Must match the user seeded in the hub database.
+koji_builder_user: builder
+koji_builder_password: "builder"
 
 # Endpoints are derived from the inventory groups by default (see
 # defaults/main.yml). Set them here to FQDNs / load balancer addresses when
