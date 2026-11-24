@@ -165,15 +165,9 @@
         </div>
       </div>
       {% if 'tag' in perms %}
-      <div class="cds--structured-list-row">
-        <div class="cds--structured-list-td">
-          <a class="cds--btn cds--btn--ghost cds--btn--sm" href="tagedit?tagID={{ tag.id }}{{ koji_authToken() }}">Edit tag</a>
-        </div>
-      </div>
-      <div class="cds--structured-list-row">
-        <div class="cds--structured-list-td">
-          <a class="cds--btn cds--btn--danger--ghost cds--btn--sm" href="tagdelete?tagID={{ tag.id }}{{ koji_authToken() }}">Delete tag</a>
-        </div>
+      <div class="cds--btn-set">
+        <a class="cds--btn cds--btn--primary cds--btn--sm" href="tagedit?tagID={{ tag.id }}{{ koji_authToken() }}">Edit tag</a>
+        <a class="cds--btn cds--btn--danger cds--btn--sm" href="tagdelete?tagID={{ tag.id }}{{ koji_authToken() }}">Delete tag</a>
       </div>
       {% endif %}
       {% if tag.get('extra') %}
