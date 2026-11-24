@@ -5,7 +5,8 @@ the PlatformOS RPM repository:
 
 - Repo: https://dl.platform-os.org/platformos/9/koji/
 - Components: `client`, `hub`, `web`, `kojira`, `builder` (`kojid`), `vm` (`kojivmd`)
-- Local PostgreSQL with Koji schema loaded and default users seeded
+- Local PostgreSQL with the hub schema created by Alembic migrations and
+  default users seeded
 
 Provisioning uses `ansible_local` inside the guest and reuses the repository's
 `deploy/` Ansible role.
@@ -46,6 +47,8 @@ Development defaults, defined in `group_vars/all.yml`:
 ```bash
 vagrant ssh
 sudo systemctl status postgresql httpd kojira kojid kojivmd
+sudo /usr/sbin/koji-hub-migrate current   # current schema revision (0001_baseline)
+sudo /usr/sbin/koji-hub-migrate check     # no pending migrations
 koji --server=http://localhost/kojihub --user=admin --password=admin --authtype=password hello
 ```
 
@@ -66,8 +69,13 @@ koji --server=http://localhost/kojihub --user=admin --password=admin --authtype=
 ## Notes
 
 - PostgreSQL is bootstrapped by `vagrant/playbook.yml`; the `deploy/` role only
-  configures Koji to use an existing database. The VM sets
-  `max_connections = 150` and caps Apache at 32 workers (`MaxRequestWorkers`)
+  configures Koji to use an existing database. The hub schema is created by
+  `koji-hub-migrate upgrade head` (the baseline Alembic revision), not by
+  importing `schemas/schema.sql` by hand. If you are re-provisioning an older
+  VM whose schema was loaded from `schema.sql`, the playbook detects that and
+  runs `koji-hub-migrate stamp head` instead, so no tables are re-created.
+  The VM sets `max_connections = 150` and caps Apache at 32 workers
+  (`MaxRequestWorkers`)
   because the hub holds one DB connection per worker for the worker's lifetime;
   without those limits a busy hub can exhaust Postgres' connection slots.
   Seeding is done as the `postgres` superuser over the local socket, so a

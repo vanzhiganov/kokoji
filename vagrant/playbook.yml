@@ -2,10 +2,6 @@
 - name: Provision all-in-one Koji VM
   hosts: koji_servers
   become: true
-  vars:
-    koji_src_dir: /opt/koji-src
-    koji_schema_path: "{{ koji_src_dir }}/schemas/schema.sql"
-    koji_schema_staged_path: /tmp/koji-schema.sql
   pre_tasks:
     - name: Enable EPEL repository
       ansible.builtin.dnf:
@@ -130,32 +126,60 @@
         executable: /bin/bash
       changed_when: false
 
-    - name: Check whether Koji schema is loaded
+  roles:
+    - role: deploy
+      vars:
+        koji_components:
+          - client
+          - hub
+          - web
+          - kojira
+          - builder
+          - vm
+
+  # The deploy role installed koji-hub (and therefore koji-hub-migrate) and
+  # rendered hub.conf with the final DB settings. Only now can the schema be
+  # created/marked through Alembic, using the same connection the hub uses.
+  post_tasks:
+    - name: Check whether the hub schema revision is tracked by Alembic
+      become_user: postgres
+      ansible.builtin.command:
+        cmd: psql -d {{ koji_db_name }} -tAc "SELECT to_regclass('public.alembic_version') IS NOT NULL;"
+      register: koji_migrations_tracked
+      changed_when: false
+
+    - name: Check whether a legacy schema.sql schema exists
       become_user: postgres
       ansible.builtin.command:
         cmd: psql -d {{ koji_db_name }} -tAc "SELECT to_regclass('public.users') IS NOT NULL;"
-      register: koji_schema_loaded
+      register: koji_legacy_schema
       changed_when: false
 
-    # The synced source tree may not be traversable by the postgres user
-    # (e.g. schemas/ mode 0744 on the host). Stage the file as root so psql
-    # running as postgres can always read it.
-    - name: Stage Koji schema for the postgres user
-      ansible.builtin.copy:
-        src: "{{ koji_schema_path }}"
-        dest: "{{ koji_schema_staged_path }}"
-        owner: root
-        group: root
-        mode: "0644"
-        remote_src: true
-      when: koji_schema_loaded.stdout.strip() != 't'
-
-    - name: Load Koji schema
-      become_user: postgres
+    # Old Vagrant VMs were bootstrapped from schemas/schema.sql. Their tables
+    # are already at the baseline revision, so mark the DB instead of
+    # re-creating the schema (which would fail with "relation already exists").
+    - name: Stamp existing schema.sql database at head
       ansible.builtin.command:
-        cmd: psql -v ON_ERROR_STOP=1 -d {{ koji_db_name }} -f {{ koji_schema_staged_path }}
-      when: koji_schema_loaded.stdout.strip() != 't'
+        cmd: /usr/sbin/koji-hub-migrate stamp head
+      when:
+        - koji_migrations_tracked.stdout.strip() != 't'
+        - koji_legacy_schema.stdout.strip() == 't'
       changed_when: true
+
+    # Idempotent: creates the whole schema on a fresh DB (tables, functions,
+    # initial data and grants come from the baseline revision) and applies any
+    # later migrations on an existing one. When the revision is already head
+    # this only prints the current revision and changes nothing.
+    - name: Bring the hub schema to the latest revision
+      ansible.builtin.command:
+        cmd: /usr/sbin/koji-hub-migrate upgrade head
+      register: koji_hub_upgrade
+      changed_when: "'Running upgrade' in koji_hub_upgrade.stdout"
+
+    - name: Check that no hub migrations are pending
+      ansible.builtin.command:
+        cmd: /usr/sbin/koji-hub-migrate check
+      changed_when: false
 
     - name: Grant Koji DB privileges
       become_user: postgres
@@ -201,17 +225,6 @@
           ansible.builtin.file:
             path: /tmp/koji-seed-users.sql
             state: absent
-
-  roles:
-    - role: deploy
-      vars:
-        koji_components:
-          - client
-          - hub
-          - web
-          - kojira
-          - builder
-          - vm
 
   handlers:
     - name: Restart postgresql
